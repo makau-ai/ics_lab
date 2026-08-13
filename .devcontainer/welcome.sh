@@ -32,5 +32,12 @@ cat <<'EOF'
 ════════════════════════════════════════════════════════════════════════════
 EOF
 
+# Ensure the pre-filtered Wireshark is up on the noVNC desktop. Runs on every
+# attach (when the X display is reliably up); the launcher is idempotent, so this
+# is the dependable path even if the postStart background launch lost the race.
+mkdir -p /tmp/icslab
+HERE_D="$(cd "$(dirname "$0")" && pwd)"
+nohup bash "$HERE_D/wait-and-launch-gui.sh" >/tmp/icslab/gui-attach.log 2>&1 &
+
 # Best-effort: open the guided path (Markdown renders in VS Code) when a client attaches.
 command -v code >/dev/null 2>&1 && code CURRICULUM.md LAB_GUIDE.md >/dev/null 2>&1 || true
