@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning Path — DNP3 &amp; MQTT Packet Analysis</title>
+<style>
+:root{--accent:#4f46e5;--accent2:#7c3aed;--ink:#1e293b;--mut:#475569;--line:#e2e8f0;--bg:#f1f5f9;--card:#fff;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+color:var(--ink);background:var(--bg);line-height:1.55;font-size:15.5px}
+a{color:var(--accent)}
+header{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:30px 22px 22px}
+header .kick{font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.9}
+header h1{margin:.15em 0 .12em;font-size:27px}
+header .sub{opacity:.96;margin:0 0 14px;max-width:70ch}
+.progwrap{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);border-radius:12px;
+padding:12px 14px;max-width:560px}
+.progrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:7px}
+.progbar{height:10px;background:rgba(255,255,255,.25);border-radius:20px;overflow:hidden}
+.progfill{height:100%;width:0;background:#fff;border-radius:20px;transition:width .3s ease}
+.reset{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;
+padding:3px 10px;font-size:12px;cursor:pointer}
+.reset:hover{background:rgba(255,255,255,.28)}
+.layout{max-width:1080px;margin:0 auto;padding:20px 18px 70px;display:grid;grid-template-columns:210px 1fr;gap:22px}
+/* left rail nav */
+.rail{position:sticky;top:16px;align-self:start;max-height:92vh;overflow:auto}
+.railh{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:2px 0 8px 6px}
+.navdot{display:flex;gap:9px;align-items:center;text-decoration:none;color:var(--ink);padding:7px 8px;
+border-radius:9px;margin-bottom:2px}
+.navdot:hover{background:#eef2ff}
+.navdot .nd-n{flex:0 0 auto;width:23px;height:23px;border-radius:50%;background:#e2e8f0;color:var(--mut);
+font-weight:700;font-size:12.5px;display:flex;align-items:center;justify-content:center}
+.navdot.done .nd-n{background:#16a34a;color:#fff}
+.navdot .nd-t{font-size:12.5px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navdot.active{background:#eef2ff}
+.navdot.active .nd-t{color:var(--ink);font-weight:600}
+main{min-width:0}
+.intro{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--accent);
+border-radius:12px;padding:14px 18px;margin:0 0 18px}
+.intro h2{margin:.1em 0 .3em;font-size:18px}
+.intro p{margin:.4em 0}
+.pathline{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:10px 0 2px;font-size:12.5px;color:var(--mut)}
+.pathline .pl{background:#eef2ff;border:1px solid #e0e7ff;color:var(--accent);border-radius:20px;padding:2px 9px;font-weight:600}
+.pathline .arr{color:#94a3b8}
+/* level card */
+.lvl{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:0;margin:0 0 16px;
+box-shadow:0 1px 2px rgba(15,23,42,.05);overflow:hidden}
+.lvl.done{border-color:#bbf7d0}
+.lvl.mp{border-color:#ddd6fe;box-shadow:0 3px 16px rgba(124,58,237,.12)}
+.lvlhead{display:flex;gap:14px;align-items:center;padding:15px 18px 12px}
+.lvlnum{flex:0 0 auto;width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));
+color:#fff;font-weight:800;font-size:19px;display:flex;align-items:center;justify-content:center}
+.lvl.done .lvlnum{background:linear-gradient(135deg,#16a34a,#15803d)}
+.lvlmeta{flex:1;min-width:0}
+.lvltitle{font-size:17px;font-weight:700;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.lvlsub{color:var(--mut);font-size:13.5px;margin-top:1px}
+.dbadge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px}
+.d-start{background:#e0f2fe;color:#0369a1}.d-intro{background:#dcfce7;color:#15803d}
+.d-inter{background:#fef9c3;color:#a16207}.d-adv{background:#ffedd5;color:#9a3412}
+.d-cap{background:#ede9fe;color:#6d28d9}
+.mins{font-size:12px;color:var(--mut);font-weight:600}
+.donebox{flex:0 0 auto;display:flex;gap:6px;align-items:center;font-size:13px;color:var(--mut);
+cursor:pointer;user-select:none;border:1px solid var(--line);border-radius:20px;padding:5px 11px}
+.donebox:hover{background:#f8fafc}
+.donebox input{accent-color:#16a34a;width:15px;height:15px}
+.lvl.done .donebox{color:#15803d;border-color:#bbf7d0;background:#f0fdf4}
+.lvlgoal{margin:0 18px 12px;background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:14.5px}
+.goallabel{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);
+margin-right:7px}
+.mplaunch{margin:0 18px 12px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:9px;padding:10px 13px;font-size:14px}
+.lvlbody{margin:0 0 4px;border-top:1px solid var(--line)}
+.lvlbody>summary{cursor:pointer;list-style:none;padding:11px 18px;font-weight:600;color:var(--accent);font-size:14px;
+display:flex;align-items:center;gap:8px}
+.lvlbody>summary::-webkit-details-marker{display:none}
+.lvlbody>summary::before{content:"▸";display:inline-block;transition:transform .15s}
+.lvlbody[open]>summary::before{transform:rotate(90deg)}
+.lvlbody .closelabel{display:none}.lvlbody[open] .openlabel{display:none}.lvlbody[open] .closelabel{display:inline}
+.lvlinner{padding:2px 18px 18px}
+h4{margin:1.1em 0 .4em;font-size:14px;color:#334155;text-transform:uppercase;letter-spacing:.03em;font-weight:800}
+.obj{margin:.2em 0;padding-left:1.2em}
+.obj li{margin:.2em 0}
+.prereq{font-size:13.5px;color:var(--mut);background:#f8fafc;border-radius:7px;padding:6px 10px}
+.bg p{margin:.5em 0}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:#eef2ff;padding:1px 5px;border-radius:4px;font-size:.9em}
+/* steps */
+.step{margin:9px 0;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.step.cmd{border-color:#1e293b}
+.cmdbar{display:flex;align-items:center;justify-content:space-between;background:#1e293b;padding:5px 10px}
+.kind{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;padding:2px 8px;border-radius:20px}
+.kind-cmd{background:#334155;color:#e2e8f0}
+.copy{border:1px solid #475569;background:#0f172a;color:#e2e8f0;border-radius:6px;padding:2px 10px;cursor:pointer;font-size:12px}
+.copy:hover{background:#1e293b}
+.term{margin:0;background:#0f172a;color:#e2e8f0;padding:11px 13px;font-size:12.9px;overflow-x:auto;white-space:pre;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.5}
+.expect{background:#f8fafc;border-top:1px dashed var(--line);padding:8px 12px}
+.explabel{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#16a34a}
+.expbody{margin:5px 0 0;white-space:pre-wrap;font-size:12.6px;color:#334155;
+font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.step.gui,.step.note{display:flex;gap:11px;align-items:flex-start;padding:10px 13px;background:#fff}
+.step.gui{background:#eff6ff}.step.note{background:#fffbeb}
+.kind-gui{background:#dbeafe;color:#1d4ed8;flex:0 0 auto;margin-top:1px}
+.kind-note{background:#fef3c7;color:#92400e;flex:0 0 auto;margin-top:1px}
+.steptext{flex:1}
+/* checkpoints */
+.cp{border:1px solid var(--line);border-radius:9px;margin:7px 0;background:#fff}
+.cp>summary{cursor:pointer;padding:9px 12px;list-style:none;font-size:14px;display:flex;gap:8px;align-items:flex-start}
+.cp>summary::-webkit-details-marker{display:none}
+.cp>summary::before{content:"?";flex:0 0 auto;width:19px;height:19px;border-radius:50%;background:var(--accent);
+color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.cp[open]>summary::before{content:"✓";background:#16a34a}
+.cpq{font-weight:600}
+.cpa{padding:2px 12px 11px 40px;color:#334155;font-size:14px}
+.levelup{margin-top:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:9px 12px;font-size:14px}
+.lulabel{font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#15803d;margin-right:7px}
+.footer{max-width:1080px;margin:0 auto;padding:0 18px 50px;color:var(--mut);font-size:12.8px}
+.footer a{white-space:nowrap}
+.jump{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin:0 0 18px}
+.jump h3{margin:.1em 0 .5em;font-size:15px}
+.jump .links{display:flex;flex-wrap:wrap;gap:9px}
+.jump .links a{text-decoration:none;background:#eef2ff;border:1px solid #e0e7ff;border-radius:9px;padding:7px 12px;
+font-size:13.5px;color:var(--accent);font-weight:600}
+.jump .links a:hover{background:#e0e7ff}
+@media(max-width:820px){.layout{grid-template-columns:1fr}.rail{position:static;max-height:none;
+display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}.railh{width:100%}.navdot .nd-t{display:none}
+.navdot{padding:6px}}
+</style></head>
+<body>
+<header>
+  <div class="kick">ICS / OT Protocol Analysis Lab Kit &nbsp;·&nbsp; Learning Path</div>
+  <h1>DNP3 &amp; MQTT — from first packet to a UIUC-style Machine Problem</h1>
+  <p class="sub">Seven levels, in order. Start by watching live traffic, learn who is talking, then what they say,
+  then open the packets byte by byte — and finish by catching an intruder you've never seen. Everything auto-starts
+  in this Codespace; you just work the levels.</p>
+  <div class="progwrap">
+    <div class="progrow"><span id="progtext">0 of 7 levels complete</span>
+      <button class="reset" id="resetbtn" type="button">Reset progress</button></div>
+    <div class="progbar"><div class="progfill" id="progfill"></div></div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="rail" aria-label="Level navigation">
+    <div class="railh">Levels</div>
+    <a href="#level-0" class="navdot" data-level="0" title="Level 0: Orientation — see it running"><span class="nd-n">0</span><span class="nd-t">Orientation — see it running</span></a><a href="#level-1" class="navdot" data-level="1" title="Level 1: Who is talking?"><span class="nd-n">1</span><span class="nd-t">Who is talking?</span></a><a href="#level-2" class="navdot" data-level="2" title="Level 2: What kind of messages?"><span class="nd-n">2</span><span class="nd-t">What kind of messages?</span></a><a href="#level-3" class="navdot" data-level="3" title="Level 3: Inside the packet"><span class="nd-n">3</span><span class="nd-t">Inside the packet</span></a><a href="#level-4" class="navdot" data-level="4" title="Level 4: Find the attack"><span class="nd-n">4</span><span class="nd-t">Find the attack</span></a><a href="#level-5" class="navdot" data-level="5" title="Level 5: Catch it automatically"><span class="nd-n">5</span><span class="nd-t">Catch it automatically</span></a><a href="#level-6" class="navdot" data-level="6" title="Level 6: Machine Problem — ICS Intrusion Analysis"><span class="nd-n">6</span><span class="nd-t">Machine Problem — ICS Intrusion Analysis</span></a>
+  </aside>
+  <main>
+    <div class="intro">
+      <h2>How this path works</h2>
+      <p>Each level builds on the one before it. Read the <b>Goal</b>, expand the level, and run the commands in
+      the terminal (a <span class="kind kind-cmd" style="text-transform:uppercase">Terminal</span> block copies with one click) or follow the
+      <span class="kind kind-gui" style="text-transform:uppercase">In&nbsp;Wireshark</span> steps on the noVNC desktop. Tick <b>Done</b> as you finish — your
+      progress is saved in this browser. The last level is a graded-style capstone.</p>
+      <div class="pathline">
+        <span class="pl">tooling</span><span class="arr">→</span>
+        <span class="pl">endpoints</span><span class="arr">→</span>
+        <span class="pl">message types</span><span class="arr">→</span>
+        <span class="pl">inside the packet</span><span class="arr">→</span>
+        <span class="pl">find the attack</span><span class="arr">→</span>
+        <span class="pl">detection</span><span class="arr">→</span>
+        <span class="pl">Machine Problem</span>
+      </div>
+    </div>
+
+    <div class="jump">
+      <h3>Reference material (open in a second tab as you go)</h3>
+      <div class="links">
+        <a href="../modules/dnp3_module.html">DNP3 module — frame explorer</a>
+        <a href="../modules/mqtt_module.html">MQTT module — frame explorer</a>
+        <a href="../mp/README.md">Machine Problem handout</a>
+        <a href="../LAB_GUIDE.md">Lab guide</a>
+      </div>
+    </div>
+
+    
+<section class="lvl" id="level-0">
+  <div class="lvlhead">
+    <div class="lvlnum" aria-hidden="true">0</div>
+    <div class="lvlmeta">
+      <div class="lvltitle">Level 0 — Orientation — see it running
+        <span class="dbadge d-start">Start here</span>
+        <span class="mins">~10 min</span>
+      </div>
+      <div class="lvlsub">One click, and the lab is already live</div>
+    </div>
+    <label class="donebox" title="Mark this level complete">
+      <input type="checkbox" class="donechk" data-level="0"><span>Done</span>
+    </label>
+  </div>
+  <div class="lvlgoal"><span class="goallabel">Goal</span> Confirm the environment is up and watch real DNP3 + MQTT packets move.</div>
+  
+  <details class="lvlbody" open>
+    <summary><span class="openlabel">Open this level</span><span class="closelabel">Hide this level</span></summary>
+    <div class="lvlinner">
+      <h4>What you'll be able to do</h4>
+      <ul class="obj"><li>Open the noVNC desktop and confirm Wireshark is capturing on &#x27;lo&#x27;.</li><li>Recognize that you are watching a live conversation between real endpoints.</li></ul>
+      <p class="prereq"><b>Prerequisite:</b> None — this is the first level.</p>
+      <h4>Background</h4>
+      <div class="bg"><p>This Codespace auto-started everything: an MQTT broker, a DNP3 outstation, a publishing sensor, a subscriber, a pump-controller, and Wireshark already capturing. You don&#x27;t set anything up — you observe.</p><p>Two protocols are flowing. <b>MQTT</b> is publish/subscribe messaging (IoT/IIoT telemetry). <b>DNP3</b> is a SCADA protocol (electric/water utilities). By the end of this path you&#x27;ll read both down to the byte and catch an intruder in them.</p></div>
+      <h4>Do this</h4>
+      <div class="steps"><div class="step note"><span class="kind kind-note">Note</span><div class="steptext">Open the forwarded port <b>6080</b> (&#x27;noVNC Desktop&#x27;, password <code>vscode</code>). Wireshark is already open and capturing.</div></div><div class="step gui"><span class="kind kind-gui">In Wireshark</span><div class="steptext">In Wireshark&#x27;s green display-filter bar, type <code>mqtt</code> and press Enter. Watch the telemetry. Then clear it and type <code>dnp3</code>.</div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># prefer the terminal? watch it headless:
+tshark -i lo -c 10 -f &quot;tcp port 1883 or tcp port 20000&quot;</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">10 packets summarised — a mix of MQTT (1883) and DNP3 (20000).</pre></div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># re-run the attacks any time and watch them appear:
+./lab/intrude.sh</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">MQTT anonymous connect + command injection, then a DNP3 trip.</pre></div></div></div>
+      <h4>Check yourself</h4>
+      <div class="checks"><details class="cp"><summary><span class="cpq">What are the two protocols you see, and what TCP ports identify them?</span></summary><div class="cpa">MQTT on TCP/1883 and DNP3 on TCP/20000.</div></details><details class="cp"><summary><span class="cpq">Did you have to install or start anything?</span></summary><div class="cpa">No — the devcontainer auto-built and auto-started the whole lab.</div></details></div>
+      <div class="levelup"><span class="lulabel">Level up</span> You can see live <code>mqtt</code> and <code>dnp3</code> traffic in Wireshark (or tshark). Continue to Level 1.</div>
+    </div>
+  </details>
+</section>
+<section class="lvl" id="level-1">
+  <div class="lvlhead">
+    <div class="lvlnum" aria-hidden="true">1</div>
+    <div class="lvlmeta">
+      <div class="lvltitle">Level 1 — Who is talking?
+        <span class="dbadge d-intro">Introductory</span>
+        <span class="mins">~25 min</span>
+      </div>
+      <div class="lvlsub">Endpoints &amp; conversations — the map before the message</div>
+    </div>
+    <label class="donebox" title="Mark this level complete">
+      <input type="checkbox" class="donechk" data-level="1"><span>Done</span>
+    </label>
+  </div>
+  <div class="lvlgoal"><span class="goallabel">Goal</span> Identify every host, which ports they use, and who connects to whom — without opening a single packet&#x27;s guts.</div>
+  
+  <details class="lvlbody">
+    <summary><span class="openlabel">Open this level</span><span class="closelabel">Hide this level</span></summary>
+    <div class="lvlinner">
+      <h4>What you'll be able to do</h4>
+      <ul class="obj"><li>List the IP endpoints in a capture and rank them by traffic.</li><li>Identify TCP conversations and the server port that names the protocol.</li><li>Spot the &#x27;hub&#x27; (MQTT broker / DNP3 master↔outstation) and any host that looks out of place.</li></ul>
+      <p class="prereq"><b>Prerequisite:</b> Level 0.</p>
+      <h4>Background</h4>
+      <div class="bg"><p>Before you read bytes, understand the <b>graph</b>: who are the endpoints and who talks to whom. This is exactly how a real analyst starts triage. Two protocols, two shapes: MQTT is a <b>star</b> (every client talks to one broker); DNP3 is usually a <b>master↔outstation</b> pair. Anything that breaks the expected shape is a lead.</p></div>
+      <h4>Do this</h4>
+      <div class="steps"><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term">tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z endpoints,ip</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">10.10.20.10  (61 pkts)  &lt;- the broker (busiest)
+10.10.20.30  (22)   &lt;- HMI
+10.10.20.7   (22)   &lt;- sensor
+10.10.20.66  (17)   &lt;- rogue</pre></div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term">tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z conv,tcp</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">three TCP conversations, all to 10.10.20.10:1883 — the broker is the hub.</pre></div></div><div class="step gui"><span class="kind kind-gui">In Wireshark</span><div class="steptext">In Wireshark: <b>Statistics ▸ Conversations</b> (TCP tab) and <b>Statistics ▸ Endpoints</b> (IPv4). Then <b>Statistics ▸ Protocol Hierarchy</b> to see mqtt under tcp.</div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term">tshark -r pcaps/dnp3_substation.pcap -q -z conv,tcp</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">the master (10.20.0.5) ↔ outstation (10.20.0.20:20000), plus a second session from 10.20.0.66 — the rogue.</pre></div></div></div>
+      <h4>Check yourself</h4>
+      <div class="checks"><details class="cp"><summary><span class="cpq">In the MQTT capture, which IP is the broker, and how did you know from endpoints alone?</span></summary><div class="cpa">10.10.20.10 — it has the most packets and is the common endpoint of every TCP conversation (the star center).</div></details><details class="cp"><summary><span class="cpq">Which port tells you a conversation is MQTT? DNP3?</span></summary><div class="cpa">TCP/1883 = MQTT; TCP/20000 = DNP3 (the server side of each conversation).</div></details><details class="cp"><summary><span class="cpq">Which host looks out of place in each capture, before you&#x27;ve read any payload?</span></summary><div class="cpa">10.10.20.66 (MQTT) and 10.20.0.66 (DNP3) — extra endpoints that aren&#x27;t the expected broker/master/outstation.</div></details></div>
+      <div class="levelup"><span class="lulabel">Level up</span> You can name the endpoints, the protocol ports, the hub, and the odd host out — using only conversation/endpoint statistics.</div>
+    </div>
+  </details>
+</section>
+<section class="lvl" id="level-2">
+  <div class="lvlhead">
+    <div class="lvlnum" aria-hidden="true">2</div>
+    <div class="lvlmeta">
+      <div class="lvltitle">Level 2 — What kind of messages?
+        <span class="dbadge d-intro">Introductory</span>
+        <span class="mins">~25 min</span>
+      </div>
+      <div class="lvlsub">Message types &amp; the request/response rhythm — the envelope</div>
+    </div>
+    <label class="donebox" title="Mark this level complete">
+      <input type="checkbox" class="donechk" data-level="2"><span>Done</span>
+    </label>
+  </div>
+  <div class="lvlgoal"><span class="goallabel">Goal</span> Classify the control packets / function codes and see the protocol&#x27;s rhythm — still on the surface, not yet inside the fields.</div>
+  
+  <details class="lvlbody">
+    <summary><span class="openlabel">Open this level</span><span class="closelabel">Hide this level</span></summary>
+    <div class="lvlinner">
+      <h4>What you'll be able to do</h4>
+      <ul class="obj"><li>Filter to a single protocol and read the Info column.</li><li>Count the message types (MQTT control packets; DNP3 function codes).</li><li>Tell request from response, and spot the control (write) messages among the reads.</li></ul>
+      <p class="prereq"><b>Prerequisite:</b> Level 1.</p>
+      <h4>Background</h4>
+      <div class="bg"><p>Every protocol has a small vocabulary of message types. MQTT: CONNECT/CONNACK, SUBSCRIBE/SUBACK, PUBLISH/PUBACK, PINGREQ/PINGRESP, DISCONNECT. DNP3: READ, RESPONSE, UNSOLICITED RESPONSE, SELECT, OPERATE, DIRECT OPERATE, COLD RESTART, CONFIRM. Learn to count them — anomalies often show up as the *wrong type* in the wrong place.</p></div>
+      <h4>Do this</h4>
+      <div class="steps"><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term">tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt -T fields -e mqtt.msgtype | sort | uniq -c</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">3 CONNECT(1), 3 CONNACK(2), 8 PUBLISH(3), 2 PUBACK(4), 2 SUBSCRIBE(8), 2 SUBACK(9), 1 PINGREQ(12), 1 PINGRESP(13), 1 DISCONNECT(14).</pre></div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term">tshark -r pcaps/dnp3_substation.pcap -Y dnp3 -T fields -e dnp3.al.func | sort | uniq -c</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">READ(1)x2, SELECT(3), OPERATE(4), DIRECT_OPERATE(5), COLD_RESTART(13), RESPONSE(129)x6, UNSOL(130), CONFIRM(0).</pre></div></div><div class="step gui"><span class="kind kind-gui">In Wireshark</span><div class="steptext">Apply <code>mqtt</code> then <code>dnp3</code> in Wireshark and read the <b>Info</b> column top-to-bottom — you can follow the whole story without expanding a packet.</div></div><div class="step note"><span class="kind kind-note">Note</span><div class="steptext">Controls are the dangerous ones: MQTT PUBLISH to a command topic, and DNP3 SELECT/OPERATE/DIRECT_OPERATE (function codes 3/4/5). Note how few there are — they&#x27;re easy to enumerate.</div></div></div>
+      <h4>Check yourself</h4>
+      <div class="checks"><details class="cp"><summary><span class="cpq">How many PUBLISH vs SUBSCRIBE packets are in the MQTT capture, and why so many more PUBLISH?</span></summary><div class="cpa">8 PUBLISH vs 2 SUBSCRIBE — telemetry is published repeatedly and fanned out by the broker, while a client subscribes once.</div></details><details class="cp"><summary><span class="cpq">Which DNP3 function codes are *controls*, and how many are there?</span></summary><div class="cpa">SELECT (3), OPERATE (4), DIRECT OPERATE (5) — three control messages. (COLD RESTART 13 is an admin control too.)</div></details><details class="cp"><summary><span class="cpq">Which single DNP3 function code is the outstation talking without being asked?</span></summary><div class="cpa">UNSOLICITED RESPONSE (130) — a report-by-exception event.</div></details></div>
+      <div class="levelup"><span class="lulabel">Level up</span> You can enumerate message types for both protocols and point to the control messages — the surface is fully mapped.</div>
+    </div>
+  </details>
+</section>
+<section class="lvl" id="level-3">
+  <div class="lvlhead">
+    <div class="lvlnum" aria-hidden="true">3</div>
+    <div class="lvlmeta">
+      <div class="lvltitle">Level 3 — Inside the packet
+        <span class="dbadge d-inter">Intermediate</span>
+        <span class="mins">~40 min</span>
+      </div>
+      <div class="lvlsub">Fields &amp; layers — now we open it up</div>
+    </div>
+    <label class="donebox" title="Mark this level complete">
+      <input type="checkbox" class="donechk" data-level="3"><span>Done</span>
+    </label>
+  </div>
+  <div class="lvlgoal"><span class="goallabel">Goal</span> Read specific fields inside the packets: MQTT credentials/topics/QoS/retain, and DNP3&#x27;s three layers, addresses, IIN, and control objects.</div>
+  
+  <details class="lvlbody">
+    <summary><span class="openlabel">Open this level</span><span class="closelabel">Hide this level</span></summary>
+    <div class="lvlinner">
+      <h4>What you'll be able to do</h4>
+      <ul class="obj"><li>Expand the protocol tree and read named fields; use Apply as Column.</li><li>Extract exact field values with <code>tshark -T fields -e &lt;field&gt;</code>.</li><li>Read a DNP3 CROB control code and distinguish the DNP3 link address from the IP address.</li></ul>
+      <p class="prereq"><b>Prerequisite:</b> Level 2. This is where &#x27;endpoints&#x27; turns into &#x27;internals&#x27;.</p>
+      <h4>Background</h4>
+      <div class="bg"><p>Now we dive in. In Wireshark, click a frame and expand the protocol tree in the middle pane; <b>hover a field</b> to see its filter name in the status bar, and <b>right-click ▸ Apply as Column</b> to pull it up. On the CLI, <code>-T fields -e &lt;name&gt;</code> prints exact values — the analyst&#x27;s scalpel.</p><p>DNP3 is layered: <b>data link</b> (0x0564 start, addresses, CRC) → <b>pseudo-transport</b> → <b>application</b> (function code, IIN, objects). The Control Relay Output Block (group 12 var 1) is the object that moves a breaker.</p></div>
+      <h4>Do this</h4>
+      <div class="steps"><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># MQTT: read the cleartext login straight off the wire
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==1 -T fields -e mqtt.clientid -e mqtt.username -e mqtt.passwd</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">hmi-scada-01  hmi_operator  Plant!ntel2024   (…and the sensor&#x27;s creds). Cleartext — no TLS.</pre></div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># MQTT: topic, QoS and the RETAIN flag on each publish
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==3 -T fields -e frame.number -e mqtt.topic -e mqtt.qos -e mqtt.retain</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">plant/tank1/telemetry with QoS 0 and 1; retain False. (mqtt.retain prints True/False.)</pre></div></div><div class="step gui"><span class="kind kind-gui">In Wireshark</span><div class="steptext">In Wireshark, click a DNP3 frame and expand <b>Distributed Network Protocol 3.0</b>: the Data Link Layer (Source/Destination link addresses + CRC), the Transport, and the Application Layer (Function Code, Internal Indications, Objects).</div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># DNP3: compare the IP source with the DNP3 LINK source, and read the control
+tshark -r pcaps/dnp3_substation.pcap -Y &quot;dnp3.al.func in {3,4,5}&quot; -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.ctl.trip -e dnp3.ctl.op</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">the legitimate close (Close/Pulse-On) from the master, and the rogue Trip — note ip.src vs dnp3.src.</pre></div></div></div>
+      <h4>Check yourself</h4>
+      <div class="checks"><details class="cp"><summary><span class="cpq">What is the HMI&#x27;s MQTT password, and which field held it?</span></summary><div class="cpa">Plant!ntel2024, in mqtt.passwd — sent in cleartext inside the CONNECT.</div></details><details class="cp"><summary><span class="cpq">In DNP3, what&#x27;s the difference between <code>ip.src</code> and <code>dnp3.src</code>?</span></summary><div class="cpa">ip.src is the network (IP) source; dnp3.src is the 16-bit DNP3 *link* address inside the data-link header. They can disagree — which is the whole game in Level 4.</div></details><details class="cp"><summary><span class="cpq">Which object carries a breaker command, and which fields tell you trip vs close?</span></summary><div class="cpa">The CROB (group 12 var 1). dnp3.ctl.trip = Trip/Close code; dnp3.ctl.op = operation type (e.g., pulse on).</div></details></div>
+      <div class="levelup"><span class="lulabel">Level up</span> You can extract any field by name and read a DNP3 control down to trip-vs-close, and you understand IP-address vs DNP3-link-address.</div>
+    </div>
+  </details>
+</section>
+<section class="lvl" id="level-4">
+  <div class="lvlhead">
+    <div class="lvlnum" aria-hidden="true">4</div>
+    <div class="lvlmeta">
+      <div class="lvltitle">Level 4 — Find the attack
+        <span class="dbadge d-inter">Intermediate</span>
+        <span class="mins">~35 min</span>
+      </div>
+      <div class="lvlsub">Security analysis — turn fields into findings</div>
+    </div>
+    <label class="donebox" title="Mark this level complete">
+      <input type="checkbox" class="donechk" data-level="4"><span>Done</span>
+    </label>
+  </div>
+  <div class="lvlgoal"><span class="goallabel">Goal</span> Use your field skills to locate the planted anomalies in the teaching captures and name the weakness each one exploits.</div>
+  
+  <details class="lvlbody">
+    <summary><span class="openlabel">Open this level</span><span class="closelabel">Hide this level</span></summary>
+    <div class="lvlinner">
+      <h4>What you'll be able to do</h4>
+      <ul class="obj"><li>Find the MQTT anomalies: cleartext creds, anonymous connect, &#x27;#&#x27; wildcard, unauthorized command publish.</li><li>Find the DNP3 anomalies: spoofed source/link address, the unauthenticated trip, the cold restart.</li><li>Tie each finding to a control (TLS, ACLs, DNP3-SA, segmentation).</li></ul>
+      <p class="prereq"><b>Prerequisite:</b> Level 3. Read the modules&#x27; Security &amp; Controls tab alongside this.</p>
+      <h4>Background</h4>
+      <div class="bg"><p>Attacks in these protocols rarely look &#x27;malformed&#x27; — they look like *valid messages from the wrong party*. That&#x27;s why the field skills from Level 3 matter: the anomaly is a legal packet whose fields tell on it.</p></div>
+      <h4>Do this</h4>
+      <div class="steps"><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># MQTT: anonymous CONNECT (no username) the broker accepted
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y &quot;mqtt.msgtype==1 &amp;&amp; !mqtt.username&quot; -T fields -e frame.number -e mqtt.clientid</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">frame 38, client mqtt-explorer-x — no credentials.</pre></div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># MQTT: the &#x27;#&#x27; wildcard subscribe (eavesdrop-all) and the injected command
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y &#x27;mqtt.topic==&quot;#&quot; || mqtt.topic==&quot;plant/tank1/command&quot;&#x27; -T fields -e frame.number -e mqtt.msgtype -e mqtt.topic</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">the &#x27;#&#x27; SUBSCRIBE and the PUBLISH to plant/tank1/command (frame 52).</pre></div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># DNP3: the unauthenticated trip and the cold restart, and who sent them
+tshark -r pcaps/dnp3_substation.pcap -Y &quot;dnp3.al.func==5 || dnp3.al.func==13&quot; -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.al.func</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">DIRECT_OPERATE (5) and COLD_RESTART (13) from 10.20.0.66 — with dnp3.src forged to the master&#x27;s 100.</pre></div></div><div class="step note"><span class="kind kind-note">Note</span><div class="steptext">For each finding, open the matching module (modules/*.html) ▸ <b>Frame Explorer</b> and jump to that frame to read the full teaching note and the control that stops it.</div></div></div>
+      <h4>Check yourself</h4>
+      <div class="checks"><details class="cp"><summary><span class="cpq">How does the outstation &#x27;know&#x27; the trip in frame 27 came from the master?</span></summary><div class="cpa">It doesn&#x27;t — DNP3 has no authentication. The frame&#x27;s dnp3.src claims 100 (the master) but ip.src is 10.20.0.66. The link address is just a number the attacker wrote in.</div></details><details class="cp"><summary><span class="cpq">The anonymous MQTT client was accepted. Is the later command injection an authentication or authorization failure?</span></summary><div class="cpa">Authorization — the broker *authenticated* it (accepted the anonymous identity); it failed to *constrain* what that identity could publish (no topic ACL).</div></details></div>
+      <div class="levelup"><span class="lulabel">Level up</span> You can locate every planted anomaly by field evidence and state the weakness + control for each.</div>
+    </div>
+  </details>
+</section>
+<section class="lvl" id="level-5">
+  <div class="lvlhead">
+    <div class="lvlnum" aria-hidden="true">5</div>
+    <div class="lvlmeta">
+      <div class="lvltitle">Level 5 — Catch it automatically
+        <span class="dbadge d-adv">Advanced</span>
+        <span class="mins">~40 min</span>
+      </div>
+      <div class="lvlsub">Detection engineering — from one packet to a rule</div>
+    </div>
+    <label class="donebox" title="Mark this level complete">
+      <input type="checkbox" class="donechk" data-level="5"><span>Done</span>
+    </label>
+  </div>
+  <div class="lvlgoal"><span class="goallabel">Goal</span> Write detection that survives a real adversary — key on invariants, not on a single spoofable field — and turn packets into logs with Zeek + CISA ICSNPP.</div>
+  
+  <details class="lvlbody">
+    <summary><span class="openlabel">Open this level</span><span class="closelabel">Hide this level</span></summary>
+    <div class="lvlinner">
+      <h4>What you'll be able to do</h4>
+      <ul class="obj"><li>Write tshark/display-filter detections for the anomalies.</li><li>Run Zeek + the ICSNPP DNP3 parser and read dnp3_control.log / mqtt_*.log.</li><li>Explain why &#x27;alert on wrong source IP&#x27; is naive and what invariant beats it.</li></ul>
+      <p class="prereq"><b>Prerequisite:</b> Level 4.</p>
+      <h4>Background</h4>
+      <div class="bg"><p>A detection is only as good as its evasion resistance. The obvious DNP3 rule — &#x27;alert if a control&#x27;s source IP isn&#x27;t the master&#x27; — fails the moment the attacker spoofs the master&#x27;s IP. The durable rule binds an <b>invariant</b>: {DNP3 link address ↔ expected source ↔ known-master set ↔ SELECT-before-OPERATE}. Read the modules&#x27; &#x27;Detection under adversarial and operational reality&#x27; section.</p></div>
+      <h4>Do this</h4>
+      <div class="steps"><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># a first-cut DNP3 rule: controls not from the master IP
+tshark -r pcaps/dnp3_substation.pcap -Y &quot;dnp3.al.func in {3,4,5,13} &amp;&amp; ip.src != 10.20.0.5&quot; -T fields -e frame.number -e ip.src -e dnp3.al.func</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">catches the rogue trip &amp; restart HERE — but only because the attacker kept his real IP.</pre></div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># turn packets into readable logs with Zeek + CISA ICSNPP
+docker compose -f lab/docker-compose.yml --profile tools run --rm zeek run-zeek /kit/pcaps/dnp3_substation.pcap
+cat lab/zeek_reference_output/dnp3/dnp3_control.log | grep -i direct</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">a DIRECT_OPERATE / Trip / Success line whose source host is 10.20.0.66 — your best single alert.</pre></div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># MQTT detections: anonymous connect, and a &#x27;#&#x27; subscribe
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y &quot;mqtt.msgtype==1 &amp;&amp; !mqtt.username&quot; -T fields -e frame.number
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y &#x27;mqtt.msgtype==8 &amp;&amp; mqtt.topic==&quot;#&quot;&#x27; -T fields -e frame.number</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">the anonymous CONNECT and the wildcard SUBSCRIBE.</pre></div></div><div class="step note"><span class="kind kind-note">Note</span><div class="steptext">Now break your own rule: in the lab, re-run the DNP3 attack with <code>--src-addr 100</code> (spoofing the master&#x27;s link address) and with a spoofed IP, and watch the naive source-IP rule miss it. That&#x27;s why Level 6 asks for an invariant detector.</div></div></div>
+      <h4>Check yourself</h4>
+      <div class="checks"><details class="cp"><summary><span class="cpq">Why is &#x27;alert when a control&#x27;s source IP isn&#x27;t the master&#x27; insufficient?</span></summary><div class="cpa">The source IP (and the DNP3 link address) are attacker-controlled/spoofable, and real outstations answer to *several* legitimate masters — so it both misses spoofed sources and false-positives on backups/FEPs.</div></details><details class="cp"><summary><span class="cpq">What does Zeek + ICSNPP give you that a raw pcap doesn&#x27;t?</span></summary><div class="cpa">Structured, queryable logs (dnp3_control.log, dnp3_objects.log, mqtt_*.log) you can alert and hunt on at scale — e.g., every control with its operation type, source host, and status.</div></details></div>
+      <div class="levelup"><span class="lulabel">Level up</span> You can write detections, generate ICSNPP logs, and articulate the invariant-based rule that resists spoofing. You are ready for the Machine Problem.</div>
+    </div>
+  </details>
+</section>
+<section class="lvl mp" id="level-6">
+  <div class="lvlhead">
+    <div class="lvlnum" aria-hidden="true">6</div>
+    <div class="lvlmeta">
+      <div class="lvltitle">Level 6 — Machine Problem — ICS Intrusion Analysis
+        <span class="dbadge d-cap">UIUC-level capstone</span>
+        <span class="mins">~120 min</span>
+      </div>
+      <div class="lvlsub">Capstone: analyze two unseen captures, build a detector, write the incident up</div>
+    </div>
+    <label class="donebox" title="Mark this level complete">
+      <input type="checkbox" class="donechk" data-level="6"><span>Done</span>
+    </label>
+  </div>
+  <div class="lvlgoal"><span class="goallabel">Goal</span> Apply Levels 1–5 to captures you&#x27;ve never seen, using DIFFERENT attacks. Autograded (100 pts) + a written incident report.</div>
+  <div class="mplaunch"><b>This is the capstone.</b> The full handout, the two evidence captures, the answer template, the self-check autograder, and the report rubric are in the <code>mp/</code> folder. Start with <a href="../mp/README.md">mp/README.md</a>.</div>
+  <details class="lvlbody">
+    <summary><span class="openlabel">Open this level</span><span class="closelabel">Hide this level</span></summary>
+    <div class="lvlinner">
+      <h4>What you'll be able to do</h4>
+      <ul class="obj"><li>Triage two unseen captures and prove findings with named fields (Part 1, autograded).</li><li>Implement an invariant-based detector.py (Part 2, autograded).</li><li>Write an incident report with evidence, authN-vs-authZ, and controls (Part 3 + rubric).</li></ul>
+      <p class="prereq"><b>Prerequisite:</b> Levels 1–5.</p>
+      <h4>Background</h4>
+      <div class="bg"><p>This is a formal, UIUC-style Machine Problem. The handout, the two evidence captures, an answer template, a self-check autograder, and the report rubric are all in the <b><code>mp/</code></b> folder. The attacks are new: a spoofed DNP3 status report (not a control), and an MQTT retained-message harvest + persistent command injection.</p></div>
+      <h4>Do this</h4>
+      <div class="steps"><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term">cd mp &amp;&amp; cat README.md      # the full handout: parts, deliverables, grading</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">MP: ICS Intrusion Analysis — Parts 1–3 + bonus.</pre></div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># analyze the two unseen captures
+../lab/open-wireshark.sh captures/dnp3_assessment.pcap
+tshark -r captures/mqtt_assessment.pcap -Y mqtt</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">two captures you have not walked — apply everything from Levels 1–5.</pre></div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># fill submission/answers.json, write detector.py and report.md, then self-check:
+python3 grade.py</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">PASS/FAIL per item and a score /100. Iterate to green.</pre></div></div></div>
+      <h4>Check yourself</h4>
+      <div class="checks"><details class="cp"><summary><span class="cpq">Where is the handout, and how do you check your work?</span></summary><div class="cpa">mp/README.md is the handout; <code>python3 mp/grade.py</code> autogrades Part 1 (answers.json) + Part 2 (detector.py) + Part 3 (format), and mp/rubric.md scores the written report.</div></details><details class="cp"><summary><span class="cpq">Why must your detector.py use an invariant instead of printing the frame number?</span></summary><div class="cpa">The proctored re-run uses a freshly generated capture with different addresses; only an invariant (link-address↔IP inconsistency; anon-connect↔retained-command) generalizes.</div></details></div>
+      <div class="levelup"><span class="lulabel">Level up</span> Score 90+ on the autograder and meet the report rubric&#x27;s mastery gates. You&#x27;ve completed the path.</div>
+    </div>
+  </details>
+</section>
+  </main>
+</div>
+<div class="footer">
+  <p>All commands and expected outputs on this page were verified with tshark 4.2 against the shipped captures
+  (<code>pcaps/dnp3_substation.pcap</code>, <code>pcaps/mqtt_iot_telemetry.pcap</code>). Progress tracking uses this
+  browser's local storage only — nothing leaves your machine. See <code>FORMAL_VERIFICATION.md</code> for the full
+  verification record and <code>EXTERNAL_CAPTURES.md</code> for additional government/university captures you can
+  practice on.</p>
+</div>
+
+<script>
+(function(){
+  var KEY = "icskit.path.progress.v1";
+  var TOTAL = 7;
+  var done = new Set();
+  function load(){
+    try{ var raw = localStorage.getItem(KEY); if(raw){ JSON.parse(raw).forEach(function(n){done.add(+n);}); } }
+    catch(e){ /* storage unavailable — run without persistence */ }
+  }
+  function save(){
+    try{ localStorage.setItem(KEY, JSON.stringify([].concat(Array.from(done)))); }
+    catch(e){ /* ignore */ }
+  }
+  function apply(){
+    document.querySelectorAll('.donechk').forEach(function(chk){
+      var n = +chk.dataset.level, on = done.has(n);
+      chk.checked = on;
+      var card = document.getElementById('level-'+n); if(card) card.classList.toggle('done', on);
+      var dot = document.querySelector('.navdot[data-level="'+n+'"]'); if(dot) dot.classList.toggle('done', on);
+    });
+    var c = done.size, pct = TOTAL? Math.round(c/TOTAL*100):0;
+    var fill = document.getElementById('progfill'); if(fill) fill.style.width = pct+'%';
+    var t = document.getElementById('progtext'); if(t) t.textContent = c+' of '+TOTAL+' levels complete';
+  }
+  load();
+  document.querySelectorAll('.donechk').forEach(function(chk){
+    chk.addEventListener('change', function(){
+      var n = +chk.dataset.level;
+      if(chk.checked) done.add(n); else done.delete(n);
+      save(); apply();
+    });
+  });
+  var rb = document.getElementById('resetbtn');
+  if(rb) rb.addEventListener('click', function(){ done.clear(); save(); apply(); });
+  apply();
+
+  // active-level highlight in the rail
+  var cards = [].slice.call(document.querySelectorAll('.lvl'));
+  function onScroll(){
+    var y = window.scrollY + 140, cur = null;
+    cards.forEach(function(c){ if(c.offsetTop <= y) cur = c.id; });
+    document.querySelectorAll('.navdot').forEach(function(d){
+      d.classList.toggle('active', d.getAttribute('href') === '#'+cur);
+    });
+  }
+  window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+})();
+
+function cpPre(btn){
+  var pre = btn.closest('.step').querySelector('pre.term');
+  if(!pre) return;
+  var txt = pre.textContent, orig = btn.textContent;
+  function ok(){ btn.textContent = 'Copied ✓'; setTimeout(function(){ btn.textContent = orig; }, 1200); }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok, function(){ btn.textContent = 'Select & copy'; });
+  } else {
+    var r = document.createRange(); r.selectNodeContents(pre);
+    var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); ok();
+  }
+}
+</script>
+</body></html>

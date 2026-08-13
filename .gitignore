@@ -1,0 +1,14 @@
+# Live captures written by the lab (keep the folder, ignore the pcaps)
+lab/captures/*.pcap
+lab/captures/*.pcapng
+
+# Python
+__pycache__/
+*.pyc
+
+# Zeek run output (the checked-in reference logs live in lab/zeek_reference_output/)
+lab/**/zeek_out/
+*.log
+
+# OS / editor cruft
+.DS_Store

@@ -1,0 +1,177 @@
+name: ics-ot-protocol-lab-segmented
+
+# ===========================================================================
+#  SEGMENTED lab — IEC 62443 zones & conduits (the fix for the flat network)
+#
+#  Two zones, isolated by Docker's native inter-network isolation:
+#    ot_cell   172.28.10.0/24  — process cell (Purdue L1/L2): RTU + field sensor
+#    site_dmz  172.28.20.0/24  — site ops / OT-DMZ (Purdue L3/L3.5): HMI + jump box
+#
+#  The DNP3 master (front-end processor) is the ONLY device with a leg in both
+#  zones — the sanctioned conduit. An attacker in the DMZ, even handed the RTU's
+#  exact address, cannot reach it; an attacker on the cell can. That contrast is
+#  the whole lesson. Docker user-defined networks stand in for VLANs / zone
+#  firewalls — this models the conduit boundary, not a specific vendor ruleset.
+#
+#  Run:   docker compose -f docker-compose.segmented.yml up -d --build
+#  See the "Segment it and watch the attack die at the conduit" exercise in README.
+# ===========================================================================
+
+services:
+  # ---------------- OT CELL (Purdue L1/L2) ----------------
+  dnp3-outstation:                       # RTU / IED (DNP3 addr 10)
+    build: ./dnp3
+    container_name: seg-outstation
+    command: python outstation.py
+    networks:
+      ot_cell:
+        ipv4_address: 172.28.10.10
+
+  ot-broker:                             # cell MQTT broker — NOT published to the host
+    image: eclipse-mosquitto:2
+    container_name: seg-ot-broker
+    volumes:
+      - ./mosquitto/mosquitto.insecure.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - ./mosquitto/acl:/mosquitto/config/acl:ro
+    networks:
+      ot_cell:
+        ipv4_address: 172.28.10.20
+
+  mqtt-publisher:                        # field sensor
+    build: ./mqtt
+    container_name: seg-sensor
+    command: python publisher.py
+    environment: { BROKER: ot-broker, PORT: "1883", MQTT_USER: sensor_svc, MQTT_PASS: s3ns0r-pw }
+    depends_on: [ot-broker]
+    restart: on-failure
+    networks:
+      ot_cell:
+        ipv4_address: 172.28.10.21
+
+  pump-controller:                       # simulated actuator on the cell broker
+    build: ./mqtt
+    container_name: seg-pump
+    command: python pump-controller.py
+    environment: { BROKER: ot-broker, PORT: "1883" }
+    depends_on: [ot-broker]
+    restart: on-failure
+    networks:
+      ot_cell:
+        ipv4_address: 172.28.10.22
+
+  # ---------------- SANCTIONED CONDUIT (dual-homed) ----------------
+  dnp3-master:                           # front-end processor — the ONLY bridge between zones
+    build: ./dnp3
+    command: python master.py --host 172.28.10.10
+    depends_on: [dnp3-outstation]
+    profiles: ["tools"]
+    networks:
+      ot_cell:
+        ipv4_address: 172.28.10.100
+      site_dmz:
+        ipv4_address: 172.28.20.100
+
+  # ---------------- SITE / DMZ (Purdue L3/L3.5) ----------------
+  dmz-broker:                            # edge broker, host-published
+    image: eclipse-mosquitto:2
+    container_name: seg-dmz-broker
+    ports: ["1883:1883", "8883:8883"]
+    volumes:
+      - ./mosquitto/mosquitto.insecure.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - ./mosquitto/acl:/mosquitto/config/acl:ro
+    networks:
+      site_dmz:
+        ipv4_address: 172.28.20.50
+
+  mqtt-subscriber:                       # HMI dashboard (in the DMZ; sees the DMZ broker only)
+    build: ./mqtt
+    container_name: seg-hmi
+    command: python subscriber.py
+    environment: { BROKER: dmz-broker, PORT: "1883", MQTT_USER: hmi_operator, MQTT_PASS: Plant!ntel2024 }
+    depends_on: [dmz-broker]
+    restart: on-failure
+    networks:
+      site_dmz:
+        ipv4_address: 172.28.20.30
+
+  historian:                             # historian / operator jump box (has ping/nc)
+    image: nicolaka/netshoot
+    container_name: seg-historian
+    command: sleep infinity
+    networks:
+      site_dmz:
+        ipv4_address: 172.28.20.40
+
+  # ---------------- ATTACKERS (same payload; only the ZONE differs) ----------------
+  dnp3-attacker-dmz:                     # DMZ only -> isolation drops it (cannot reach the RTU)
+    build: ./dnp3
+    command: python master.py --host 172.28.10.10 --attack
+    profiles: ["attack"]
+    networks:
+      site_dmz:
+        ipv4_address: 172.28.20.66
+
+  dnp3-attacker-otcell:                  # L2-adjacent to the RTU -> succeeds, from a non-FEP source IP
+    build: ./dnp3
+    command: python master.py --host 172.28.10.10 --attack
+    profiles: ["attack"]
+    networks:
+      ot_cell:
+        ipv4_address: 172.28.10.66
+
+  mqtt-attacker-dmz:                     # DMZ only -> cannot open TCP to the cell broker
+    build: ./mqtt
+    command: python attacker.py
+    environment: { BROKER: 172.28.10.20, PORT: "1883" }
+    profiles: ["attack"]
+    networks:
+      site_dmz:
+        ipv4_address: 172.28.20.67
+
+  mqtt-attacker-otcell:                  # L2-adjacent to the cell broker -> eavesdrop + inject succeed
+    build: ./mqtt
+    command: python attacker.py
+    environment: { BROKER: 172.28.10.20, PORT: "1883" }
+    profiles: ["attack"]
+    networks:
+      ot_cell:
+        ipv4_address: 172.28.10.67
+
+  # ---------------- Analysis + capture ----------------
+  zeek:
+    build: ./zeek
+    volumes: [ "..:/kit" ]
+    working_dir: /kit/pcaps
+    command: sleep infinity
+    profiles: ["tools"]
+    networks: [ ot_cell ]
+
+  sniff-dnp3:                            # taps AT the RTU, inside the cell
+    image: nicolaka/netshoot
+    network_mode: "service:dnp3-outstation"
+    cap_add: [NET_ADMIN, NET_RAW]
+    command: tcpdump -i any -U -w /caps/dnp3_live.pcap "tcp port 20000"
+    volumes: [ "./captures:/caps" ]
+    profiles: ["capture"]
+
+  sniff-mqtt:                            # taps the cell broker
+    image: nicolaka/netshoot
+    network_mode: "service:ot-broker"
+    cap_add: [NET_ADMIN, NET_RAW]
+    command: tcpdump -i any -U -w /caps/mqtt_live.pcap "tcp port 1883 or tcp port 8883"
+    volumes: [ "./captures:/caps" ]
+    profiles: ["capture"]
+
+networks:
+  ot_cell:                               # IEC 62443 zone: OT process cell (Purdue L1/L2)
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.10.0/24
+  site_dmz:                              # IEC 62443 zone: site operations / OT-DMZ (Purdue L3/L3.5)
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.20.0/24

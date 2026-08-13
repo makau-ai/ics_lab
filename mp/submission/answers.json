@@ -1,0 +1,24 @@
+{
+  "student_netid": "",
+
+  "part1_dnp3": {
+    "malicious_frame": null,
+    "attacker_ip": "",
+    "forged_link_source": null,
+    "genuine_unsolicited_frame": null,
+    "real_outstation_ip": "",
+    "master_link_addresses": [],
+    "false_breaker_state": "",
+    "attack_technique_ttp": ""
+  },
+
+  "part1_mqtt": {
+    "anonymous_connect_frame": null,
+    "connack_return_code": null,
+    "injection_frame": null,
+    "injection_retain_flag": null,
+    "leaked_service_username": "",
+    "leaked_hi_setpoint": null,
+    "failure_class": ""
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "ICS/OT Protocol Lab — DNP3 & MQTT (auto-start, noVNC)",
+  "build": { "dockerfile": "Dockerfile" },
+
+  "features": {
+    "ghcr.io/devcontainers/features/desktop-lite:1": {
+      "password": "vscode",
+      "webPort": "6080",
+      "vncPort": "5901"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+
+  "forwardPorts": [8080, 6080, 1883, 20000],
+  "portsAttributes": {
+    "8080": { "label": "▶ Learning Path — START HERE", "onAutoForward": "openPreview" },
+    "6080": { "label": "noVNC Desktop (Wireshark)", "onAutoForward": "notify" },
+    "1883": { "label": "MQTT broker", "onAutoForward": "silent" },
+    "20000": { "label": "DNP3 outstation", "onAutoForward": "silent" }
+  },
+
+  "postCreateCommand": "bash .devcontainer/postcreate.sh",
+  "postStartCommand": "bash .devcontainer/autostart.sh",
+  "postAttachCommand": "bash .devcontainer/welcome.sh",
+
+  "remoteUser": "vscode",
+  "runArgs": ["--shm-size=2g", "--cap-add=NET_ADMIN"],
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "workbench.startupEditor": "readme",
+        "security.workspace.trust.enabled": false,
+        "terminal.integrated.defaultProfile.linux": "bash"
+      },
+      "extensions": ["ms-python.python"]
+    }
+  }
+}

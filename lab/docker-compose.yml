@@ -1,0 +1,127 @@
+name: ics-ot-protocol-lab
+
+# ---------------------------------------------------------------------------
+#  ICS/OT Protocol Analysis Lab
+#  Default `up` runs the INSECURE MQTT broker + sensor/HMI and the DNP3
+#  outstation, so you immediately have live traffic to capture.
+#  Optional profiles: attack | tools | capture   (see lab README.md)
+# ---------------------------------------------------------------------------
+
+services:
+  # ---- MQTT ----
+  broker:
+    image: eclipse-mosquitto:2
+    container_name: lab-broker
+    ports:
+      - "1883:1883"
+      - "8883:8883"
+    volumes:
+      # swap .insecure for .secure to harden the broker (Exercise 4)
+      - ./mosquitto/mosquitto.insecure.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - ./mosquitto/acl:/mosquitto/config/acl:ro
+    networks: [otlan]
+
+  mqtt-subscriber:              # the HMI dashboard
+    build: ./mqtt
+    container_name: lab-hmi
+    command: python subscriber.py
+    environment:
+      BROKER: broker
+      PORT: "1883"
+      MQTT_USER: hmi_operator
+      MQTT_PASS: Plant!ntel2024
+    depends_on: [broker]
+    restart: on-failure
+    networks: [otlan]
+
+  mqtt-publisher:               # the field sensor
+    build: ./mqtt
+    container_name: lab-sensor
+    command: python publisher.py
+    environment:
+      BROKER: broker
+      PORT: "1883"
+      MQTT_USER: sensor_svc
+      MQTT_PASS: s3ns0r-pw
+    depends_on: [broker]
+    restart: on-failure
+    networks: [otlan]
+
+  pump-controller:              # simulated actuator that ACTS on plant/tank1/command (makes the injection's impact real)
+    build: ./mqtt
+    container_name: lab-pump
+    command: python pump-controller.py
+    environment:
+      BROKER: broker
+      PORT: "1883"
+    depends_on: [broker]
+    restart: on-failure
+    networks: [otlan]
+
+  mqtt-attacker:                # profile: attack  ->  docker compose --profile attack run mqtt-attacker
+    build: ./mqtt
+    command: python attacker.py
+    environment:
+      BROKER: broker
+      PORT: "1883"
+    depends_on: [broker]
+    profiles: ["attack"]
+    networks: [otlan]
+
+  # ---- DNP3 ----
+  dnp3-outstation:              # the substation RTU/IED
+    build: ./dnp3
+    container_name: lab-outstation
+    command: python outstation.py
+    networks: [otlan]
+
+  dnp3-master:                  # profile: tools -> docker compose --profile tools run dnp3-master python master.py --host dnp3-outstation --close
+    build: ./dnp3
+    command: python master.py --host dnp3-outstation
+    depends_on: [dnp3-outstation]
+    profiles: ["tools"]
+    networks: [otlan]
+
+  dnp3-attacker:                # profile: attack -> injects from its OWN container IP (a non-master source), so the
+    build: ./dnp3               #   live capture matches the provided pcap AND the "wrong-source" detection actually fires
+    command: python master.py --host dnp3-outstation --attack
+    depends_on: [dnp3-outstation]
+    profiles: ["attack"]
+    networks: [otlan]
+
+  # ---- Analysis: Zeek + CISA ICSNPP ----
+  zeek:                         # profile: tools -> docker compose --profile tools run zeek run-zeek /kit/pcaps/dnp3_substation.pcap
+    build: ./zeek
+    volumes:
+      - ..:/kit                 # mounts the whole kit so /kit/pcaps is available
+    working_dir: /kit/pcaps
+    command: sleep infinity
+    profiles: ["tools"]
+    networks: [otlan]
+
+  # ---- Packet capture (share a service's network namespace) ----
+  sniff-mqtt:                   # profile: capture
+    image: nicolaka/netshoot
+    network_mode: "service:broker"
+    cap_add: [NET_ADMIN, NET_RAW]
+    command: tcpdump -i any -U -w /caps/mqtt_live.pcap "tcp port 1883 or tcp port 8883"
+    volumes:
+      - ./captures:/caps
+    profiles: ["capture"]
+
+  sniff-dnp3:                   # profile: capture
+    image: nicolaka/netshoot
+    network_mode: "service:dnp3-outstation"
+    cap_add: [NET_ADMIN, NET_RAW]
+    command: tcpdump -i any -U -w /caps/dnp3_live.pcap "tcp port 20000"
+    volumes:
+      - ./captures:/caps
+    profiles: ["capture"]
+
+networks:
+  otlan:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/24

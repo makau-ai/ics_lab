@@ -1,0 +1,104 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ICS/OT Protocol Analysis Lab Kit — DNP3 &amp; MQTT</title>
+<style>
+:root{--ink:#1e293b;--mut:#64748b;--line:#e2e8f0}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:#f1f5f9;line-height:1.55}
+header{background:linear-gradient(135deg,#3730a3,#0f766e);color:#fff;padding:44px 24px 34px}
+header .kick{font-size:12px;letter-spacing:.16em;text-transform:uppercase;opacity:.85}
+header h1{margin:.2em 0 .1em;font-size:30px}
+header p{margin:.2em 0 0;max-width:60ch;opacity:.96}
+main{max-width:960px;margin:0 auto;padding:24px 18px 64px}
+h2{font-size:18px;border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:30px}
+.mods{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
+.mod{display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:0 1px 2px rgba(15,23,42,.05);transition:.15s}
+.mod:hover{box-shadow:0 8px 22px rgba(15,23,42,.12);transform:translateY(-2px)}
+.mod h3{margin:.1em 0 .3em;font-size:19px}
+.badge{display:inline-block;font-size:12px;font-weight:700;color:#fff;padding:3px 10px;border-radius:20px;margin-bottom:8px}
+.d{background:#b45309}.m{background:#0f766e}
+.hero{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:16px;padding:22px 24px;margin:18px 0 6px;box-shadow:0 8px 26px rgba(79,70,229,.22)}
+.hero .step0{font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.9}
+.hero h2{border:0;color:#fff;font-size:22px;margin:.2em 0 .1em;padding:0}
+.hero p{opacity:.96;margin:.3em 0 0;max-width:66ch}
+.hero .go{display:inline-block;margin-top:14px;background:#fff;color:#4f46e5;font-weight:700;text-decoration:none;padding:11px 20px;border-radius:10px;font-size:15px}
+.hero .go:hover{background:#eef2ff}
+.hero .arc{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px;font-size:12.5px}
+.hero .arc span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.34);border-radius:20px;padding:2px 10px}
+.hero .arc .a{opacity:.7}
+.mod .fmts{margin-top:10px;font-size:13px;color:var(--mut)}
+.mod .fmts a{color:#4f46e5;text-decoration:none;margin-right:10px;white-space:nowrap}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:14px 0}
+code{background:#eef2ff;padding:1px 5px;border-radius:4px;font-family:ui-monospace,monospace;font-size:.92em}
+ul{margin:.4em 0}
+li{margin:.28em 0}
+.muted{color:var(--mut)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td,th{border:1px solid var(--line);padding:7px 9px;text-align:left}
+th{background:#f8fafc}
+a{color:#4f46e5}
+@media(max-width:720px){.mods,.grid{grid-template-columns:1fr}}
+</style></head><body>
+<header>
+  <div class="kick">Hands-on packet analysis · CISA ICSNPP · Wireshark · Zeek</div>
+  <h1>ICS/OT Protocol Analysis Lab Kit</h1>
+  <p>Learn <strong>DNP3</strong> and <strong>MQTT</strong> by reading real captures frame by frame — protocol function, security risk, and defensive control, tied to documented real-world activity. Intermediate level.</p>
+</header>
+<main>
+
+  <div class="hero">
+    <div class="step0">Start here · one click</div>
+    <h2>▶ The Learning Path — 7 levels, in order</h2>
+    <p>From watching live traffic, to naming the endpoints, to opening packets byte by byte, to catching an
+    intruder you've never seen — ending in a UIUC-style Machine Problem. Progress is tracked as you go.</p>
+    <div class="arc">
+      <span>0 · Orientation</span><span class="a">→</span><span>1 · Endpoints</span><span class="a">→</span>
+      <span>2 · Messages</span><span class="a">→</span><span>3 · Inside the packet</span><span class="a">→</span>
+      <span>4 · Find the attack</span><span class="a">→</span><span>5 · Detection</span><span class="a">→</span>
+      <span>6 · Machine Problem</span>
+    </div>
+    <a class="go" href="curriculum/index.html">Start the Learning Path →</a>
+  </div>
+  <p class="muted">New here? Take the path above. Want a reference instead? The two protocol modules are below.</p>
+
+  <h2>The two modules</h2>
+  <div class="mods">
+    <a class="mod" href="modules/dnp3_module.html">
+      <span class="badge d">DNP3</span>
+      <h3>Substation SCADA</h3>
+      <p class="muted">Master/outstation polling &amp; control on TCP/20000, a supervised breaker close, and an unauthenticated command-injection attack — frame by frame.</p>
+      <div class="fmts">Also: <a href="modules/dnp3_module.pdf">PDF</a><a href="modules/dnp3_module.docx">Word</a><a href="modules/dnp3_module.md">Markdown</a></div>
+    </a>
+    <a class="mod" href="modules/mqtt_module.html">
+      <span class="badge m">MQTT</span>
+      <h3>IIoT Telemetry</h3>
+      <p class="muted">Publish/subscribe telemetry on TCP/1883, QoS &amp; broker fan-out, and an anonymous eavesdrop-and-inject intrusion — frame by frame.</p>
+      <div class="fmts">Also: <a href="modules/mqtt_module.pdf">PDF</a><a href="modules/mqtt_module.docx">Word</a><a href="modules/mqtt_module.md">Markdown</a></div>
+    </a>
+  </div>
+  <p class="muted">Tip: open a module's <strong>Frame Explorer</strong> with the matching capture below open in Wireshark.</p>
+
+  <h2>Captures &amp; lab</h2>
+  <div class="grid">
+    <div class="card"><h3 style="margin-top:0">Packet captures</h3>
+      <ul>
+        <li><a href="pcaps/dnp3_substation.pcap">dnp3_substation.pcap</a> — 37 frames, TCP/20000</li>
+        <li><a href="pcaps/mqtt_iot_telemetry.pcap">mqtt_iot_telemetry.pcap</a> — 61 frames, TCP/1883</li>
+      </ul>
+      <p class="muted">Curated teaching captures — synthetic but protocol-valid (CRC-checked, ICSNPP-parsed).</p>
+    </div>
+    <div class="card"><h3 style="margin-top:0">Runnable Docker lab</h3>
+      <p>Mosquitto broker, a Python DNP3 outstation/master, MQTT pub/sub + attacker scripts, packet capture, and Zeek + CISA ICSNPP.</p>
+      <p><code>cd lab &amp;&amp; docker compose up --build</code></p>
+      <p class="muted">Guide: <a href="lab/README.md">lab/README.md</a> · Worksheets: <a href="lab/worksheets/student_worksheet.pdf">student</a> / <a href="lab/worksheets/instructor_answer_key.pdf">instructor key</a></p>
+    </div>
+  </div>
+
+  <h2>What each module covers</h2>
+  <div class="card">
+    <p>Overview &amp; objectives · industry and use cases · protocol anatomy · a frame-by-frame walkthrough tied to exact frame numbers · security risks &amp; controls (each mapped to a real incident, a MITRE ATT&amp;CK for ICS technique, and a control) · a hands-on lab with answer keys · O*NET personas and career pathways · full references.</p>
+    <p class="muted">Built and verified with tshark/Wireshark and CISA's ICSNPP/Zeek parsers. See <a href="README.md">README.md</a> for the full contents and the accuracy/ethics note.</p>
+  </div>
+
+</main></body></html>

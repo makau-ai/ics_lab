@@ -1,0 +1,39 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>ICS/OT Protocol Analysis Lab Kit</title>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#1e293b;background:#f1f5f9;line-height:1.55}
+header{background:linear-gradient(135deg,#3730a3,#0f766e);color:#fff;padding:40px 24px}
+header h1{margin:0 0 6px;font-size:28px}
+main{max-width:900px;margin:0 auto;padding:24px 18px 60px}
+.mods{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
+.mod{display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+.mod:hover{box-shadow:0 6px 18px rgba(15,23,42,.10);transform:translateY(-2px);transition:.15s}
+.mod h2{margin:.1em 0}
+.badge{display:inline-block;font-size:12px;font-weight:700;color:#fff;padding:3px 10px;border-radius:20px}
+.d{background:#b45309}.m{background:#0f766e}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin:14px 0}
+code{background:#eef2ff;padding:1px 5px;border-radius:4px;font-family:ui-monospace,monospace}
+ul{margin:.3em 0}
+.muted{color:#64748b}
+@media(max-width:720px){.mods{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>ICS / OT Protocol Analysis Lab Kit</h1>
+<p>Hands-on packet analysis for DNP3 &amp; MQTT — built with CISA ICSNPP, Wireshark, and Zeek. Intermediate level.</p></header>
+<main>
+<div class="mods">
+  <a class="mod" href="dnp3_module.html"><span class="badge d">DNP3</span>
+    <h2>DNP3 — Substation SCADA</h2>
+    <p class="muted">Master/outstation polling &amp; control on TCP/20000, a supervised breaker close, and an unauthenticated command-injection attack — frame by frame.</p></a>
+  <a class="mod" href="mqtt_module.html"><span class="badge m">MQTT</span>
+    <h2>MQTT — IIoT Telemetry</h2>
+    <p class="muted">Publish/subscribe telemetry on TCP/1883, broker fan-out, and an anonymous eavesdrop-and-inject intrusion — frame by frame.</p></a>
+</div>
+<div class="card"><h3>What's in the kit</h3>
+<ul>
+<li>Two verified teaching captures: <code>dnp3_substation.pcap</code> and <code>mqtt_iot_telemetry.pcap</code>.</li>
+<li>Two interactive modules (this HTML) plus Word, PDF, and Markdown versions.</li>
+<li>A runnable Docker lab: Mosquitto broker, a Python DNP3 outstation/master, tcpreplay, and Zeek + CISA ICSNPP parsers.</li>
+<li>Student worksheets, instructor answer keys, and real Zeek/ICSNPP reference logs.</li>
+</ul>
+<p class="muted">Open a module, read the Overview, then work the Frame Explorer with the matching .pcap open in Wireshark.</p></div>
+</main></body></html>
