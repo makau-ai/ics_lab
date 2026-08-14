@@ -24,7 +24,7 @@ There are two places to type, and they behave differently — use the right one:
 | | Use it for | Paste |
 |---|---|---|
 | **VS Code terminal** (the panel at the bottom of the editor) | Every `⌨ Type` command — `lab l1`, `tshark …`, `docker compose …` | **Ctrl/Cmd + Shift + V** (the browser asks for clipboard permission the first time — allow it) |
-| **noVNC desktop** (port **6080**) | The **Wireshark GUI** — the `🖱 Click` steps (menus, filters, columns) | Don't paste here — the remote desktop can't take your clipboard. Type short filters (`mqtt`, `dnp3`) directly, and run *commands* in the VS Code terminal instead |
+| **noVNC desktop** (port **6080**) | The **Wireshark GUI** — the `🖱 Click` steps (menus, filters, columns) | Paste **through noVNC's Clipboard panel** (clipboard icon, left edge), then **Ctrl+V** in Wireshark / **Shift+Insert** in xterm. Short filters (`mqtt`, `dnp3`) are faster to just type. Full steps below. |
 
 Because the `lab` tokens are two keystrokes, you never need to paste a long command into either terminal.
 
@@ -34,9 +34,28 @@ Open the forwarded port **6080** from the Ports panel. It opens **straight to th
 
 *(The desktop feature does set a VNC password of `vscode` under the hood, but the browser connects for you, so you won't be asked. If a prompt ever does appear, the password is `vscode`.)*
 
+### Pasting a command or filter onto the noVNC desktop
+
+The noVNC desktop is a *remote screen*, so your machine's Ctrl/Cmd+V doesn't land there directly — you paste **through noVNC's own clipboard**, which the lab keeps in sync with the desktop's apps for you (an `autocutsel` bridge, started automatically). To get a long display filter or command onto the desktop:
+
+1. **Copy** the text on your side as usual — Ctrl/Cmd+C (from the Learning Path, this guide, anywhere).
+2. On the noVNC desktop, open the **Clipboard panel** — the 📋 clipboard icon on the **control bar at the left edge** of the noVNC window (hover the strip of icons: move, keyboard, **clipboard**, fullscreen, settings, disconnect).
+3. **Paste into that panel's text box** (Ctrl/Cmd+V). That pushes your text onto the desktop's clipboard.
+4. Now paste it where you need it:
+   - **Wireshark** display‑filter bar → **Ctrl+V**
+   - an **xterm** on the desktop → **Shift+Insert** (or middle‑click)
+5. Click the clipboard icon again to close the panel, and carry on.
+
+It works the other way too: text you **select** on the desktop (drag‑highlight a value in Wireshark, say) appears in that same Clipboard panel, ready to copy back out.
+
+> **Is the bridge live?** From any terminal: `DISPLAY=:1 xclip -selection clipboard -o` prints whatever is on the desktop clipboard right now. If pasting isn't working, re‑arm it with `bash .devcontainer/wait-and-launch-gui.sh` (idempotent — it just (re)starts the bridge and Wireshark).
+
+**You usually won't need this at all.** Commands run from the **VS Code terminal** with the `lab` runner (`l1`, `l2`, …), and Wireshark filters are short enough to type (`dnp3`, `mqtt`, even `dnp3.al.func == 4`). The Clipboard panel is for the occasional long paste.
+
 ## When something's wrong
 
 - **No packets / Wireshark looks frozen** → the loopback services may have stopped. Run `lab reset` (restarts the broker, outstation, and telemetry), then re‑apply your filter.
+- **Paste into the noVNC desktop does nothing** → paste through noVNC's **Clipboard panel** first (see "Pasting a command or filter onto the noVNC desktop" above), not straight into Wireshark. Confirm the bridge with `DISPLAY=:1 xclip -selection clipboard -o`; if it's dead, re‑arm it with `bash .devcontainer/wait-and-launch-gui.sh`. (For commands you rarely need this — use the `lab` runner in the VS Code terminal.)
 - **`l1: command not found`** → use `lab l1`, or run `source lab/aliases.sh` in that terminal once.
 - **A `tshark` command prints nothing** → check you're at the repo root (`/workspaces/ics_lab`) so the `pcaps/…` paths resolve, and that the filter is spelled exactly as shown in the step.
 - **Port didn't forward** → open the **Ports** tab in VS Code; the labelled ports are **▶ Learning Path (8080)**, **noVNC Desktop (6080)**, **MQTT broker (1883)**, **DNP3 outstation (20000)**. The three twin ports (1881 / 3000 / 8088) only appear once you launch the digital twin.

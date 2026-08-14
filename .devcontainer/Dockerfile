@@ -6,6 +6,10 @@ FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Preseed Wireshark so non-root users may capture, then install the lab toolchain.
+# autocutsel + xclip: the clipboard bridge for the noVNC desktop. desktop-lite ships
+# TigerVNC + noVNC but NO selection bridge, so a filter/command copied in the browser
+# can't be pasted into Wireshark/xterm. autocutsel keeps the noVNC clipboard in sync
+# with BOTH X selections; xclip is the tool students/instructors use to verify it.
 RUN echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections \
  && apt-get update \
  && apt-get install -y --no-install-recommends \
@@ -13,7 +17,7 @@ RUN echo "wireshark-common wireshark-common/install-setuid boolean true" | debco
       mosquitto mosquitto-clients \
       python3 python3-pip python3-venv \
       libcap2-bin iproute2 iputils-ping netcat-openbsd \
-      xterm x11-utils curl ca-certificates \
+      xterm x11-utils autocutsel xclip curl ca-certificates \
  && rm -rf /var/lib/apt/lists/*
 
 # Let the non-root 'vscode' user capture packets without sudo.

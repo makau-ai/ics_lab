@@ -27,6 +27,7 @@ LEVELS = [
         "steps": [
             {"kind": "note", "text": "Open the forwarded port **6080** ('noVNC Desktop'). It opens **straight to the desktop — no password prompt** — with Wireshark already capturing on `lo`. (If a VNC prompt ever appears, the password is `vscode`.)"},
             {"kind": "gui", "text": "In Wireshark's green display-filter bar, type `mqtt` and press Enter. Watch the telemetry. Then clear it and type `dnp3`."},
+            {"kind": "note", "text": "Short filters like these you just **type** — quickest by far. When you need to **paste** a longer filter or command onto this remote desktop, your normal Ctrl/Cmd+V won't reach it: open noVNC's **Clipboard panel** (clipboard icon on the left edge), paste your text there, then **Ctrl+V** in Wireshark (or **Shift+Insert** in an xterm). A bridge keeps that panel in sync with the desktop automatically. Full guide: `RUNNING_COMMANDS.md`."},
             {"kind": "cmd", "text": "# prefer the terminal? watch it headless:\ntshark -i lo -c 10 -f \"tcp port 1883 or tcp port 20000\"",
              "expect": "10 packets summarised — a mix of MQTT (1883) and DNP3 (20000)."},
             {"kind": "cmd", "text": "# re-run the attacks any time and watch them appear:\n./lab/intrude.sh", "expect": "MQTT anonymous connect + command injection, then a DNP3 trip."},

@@ -35,6 +35,13 @@ type `dnp3`, and press Enter.
 **Check —** you should see MQTT telemetry rows fill the packet list (then DNP3 rows on the second
 filter); if not, confirm the capture is running on `lo` and run `lab reset`.
 
+> **Read** — Short filters like `mqtt` / `dnp3` you just **type**. To **paste** a longer filter or
+> command onto this remote desktop, your normal Ctrl/Cmd+V won't reach it — go through noVNC's
+> **Clipboard panel**: click the clipboard icon on the noVNC window's **left edge**, paste your text
+> into that box, then **Ctrl+V** in Wireshark (or **Shift+Insert** in an `xterm`). A bridge keeps that
+> panel in sync with the desktop for you. Most work needs no pasting at all — commands run from the
+> **VS Code terminal** with the `lab` runner. Details: `RUNNING_COMMANDS.md`.
+
 **Do · Type** — Re-run the attack demo any time from a terminal (or just type `l0b`):
 
 ```bash

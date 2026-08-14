@@ -11,9 +11,13 @@ cat <<'EOF'
       Your progress is tracked as you go. If the tab didn't open, click port 8080 in
       the PORTS panel (or open  http://localhost:8080/ ).
 
-  👀  SEE IT LIVE:  open the forwarded port  6080  ("noVNC Desktop"), password  vscode
-      Wireshark is already there, capturing on 'lo' — live DNP3 (20000) + MQTT (1883).
-      Level 0 walks you through this. Filters:  dnp3   |   mqtt
+  👀  SEE IT LIVE:  open the forwarded port  6080  ("noVNC Desktop") — it opens
+      straight to the desktop, no password prompt. Wireshark is already there,
+      capturing on 'lo' — live DNP3 (20000) + MQTT (1883). Level 0 walks you through it.
+      Type short filters directly in Wireshark's green bar:  dnp3   |   mqtt
+      Need to PASTE a longer filter/command onto the desktop? Open noVNC's Clipboard
+      panel (clipboard icon, left edge), paste there, then Ctrl+V in Wireshark /
+      Shift+Insert in xterm. Full guide:  RUNNING_COMMANDS.md
 
   ⚙️  RUNNING FOR YOU:  MQTT broker + DNP3 outstation, a continuously publishing
       sensor, an HMI subscriber, and a pump-controller actuator.

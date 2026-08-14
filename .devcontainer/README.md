@@ -12,7 +12,8 @@ Python/paho) and adds two devcontainer features:
 1. Push this folder to a GitHub repository (the repo root must contain this `.devcontainer/` directory).
 2. On the repo: **Code ▸ Codespaces ▸ Create codespace on main**. First build takes a few minutes.
 3. When it opens, go to the **Ports** tab and open **6080 “noVNC Desktop (Wireshark)”** in your browser.
-   Password: **`vscode`**. A desktop appears.
+   It opens **straight to the desktop — no password prompt** (if one ever appears, it's `vscode`). A Fluxbox
+   desktop with Wireshark appears.
 
 > Tip: a 4-core machine type is comfortable if you also run the `docker compose` labs; the localhost
 > lab below is fine on 2-core.
@@ -56,7 +57,14 @@ Pre-generated reference logs are in `lab/zeek_reference_output/` if you'd rather
 ## Troubleshooting
 
 - **Port 6080 didn't open / blank screen:** open it from the **Ports** tab, then refresh. Give the desktop
-  a few seconds after the Codespace starts. Password is `vscode`.
+  a few seconds after the Codespace starts. It connects with no password prompt (if one ever appears, it's `vscode`).
+- **Copy/paste into the noVNC desktop doesn't work:** the desktop is a remote framebuffer, so a plain
+  Ctrl/Cmd+V from your machine doesn't reach it. A clipboard bridge (`autocutsel`) is started for you, so the
+  path is: click noVNC's **Clipboard** panel (the clipboard icon on the left edge), paste your text into that
+  box, then **Ctrl+V** in Wireshark (or **Shift+Insert** / middle-click in an xterm). Verify the bridge with
+  `DISPLAY=:1 xclip -selection clipboard -o`. Usually you don't need this at all — run commands with the `lab`
+  runner (`l1`, `l2`, …) in the VS Code terminal and type short filters (`dnp3`, `mqtt`) straight into
+  Wireshark. Full guide: `RUNNING_COMMANDS.md`.
 - **Wireshark shows no interfaces / can't capture:** the image runs `setcap` on `dumpcap` and adds you to
   the `wireshark` group so non-root capture works; if a shell was opened before that finished, run
   `newgrp wireshark` or reopen the terminal. Headless alternative: `tshark -i lo -f "tcp port 20000"`.
