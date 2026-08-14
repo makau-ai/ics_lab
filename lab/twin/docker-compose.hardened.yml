@@ -8,7 +8,10 @@ name: ics-twin-liftstation
 #  it fail (CIE_HARDENING 6). One control at a time = set the same env by hand.
 #
 #   plant-sim      FLOAT_ENABLED true        -> hardwired HH float at 95 %  (W6)
-#   openplc        hardened_wetwell.st        -> clamp + interlock + local decision (W1/W5/W6)
+#   openplc        hardened_wetwell.st        -> clamp (SP_MAX 78 % < LAG_START 80 %) +
+#                                               stop-permissive interlock (driven by the real
+#                                               49/50 dry-run/dead-head fault) + comms-loss safe
+#                                               state (link watchdog) + local decision (W1/W5/W6)
 #   dnp3-gw        HARDEN=1 SAV5=1            -> arm-latch, no DIRECT_OPERATE, allow-list, SAv5 (W1/W4/W5)
 #   mqtt-broker    secure.conf + acl (+certs) -> auth + ACL (+8883 mTLS)      (W1/W3)
 #   pump-controller replicas 0                -> MQTT command path designed OUT (CIE #4)

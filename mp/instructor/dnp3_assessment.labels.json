@@ -1,0 +1,10 @@
+{
+  "_comment": "INSTRUCTOR-ONLY ground truth for the Part-2 detector precision/recall grader. Contains the answer (malicious_frames), so it lives under mp/instructor/ and must be stripped before a proctored hand-out. Regenerate with tshark when you build an address-shifted variant (see PROCTORING.md).",
+  "capture": "dnp3_assessment.pcap",
+  "protocol": "dnp3",
+  "malicious_frames": [26],
+  "attacker_ip": "10.30.0.66",
+  "forged_link": 10,
+  "ttp": "T0856",
+  "notes": "Frame 26 is a spoofed DNP3 UNSOLICITED RESPONSE (dnp3.al.func==130): ip.src 10.30.0.66 carries dnp3.src link 10, the real outstation's address (real outstation is 10.30.0.20). Frame 12 is the GENUINE unsolicited response from .20 and must NOT be flagged. A correct detector flags exactly frame 26."
+}

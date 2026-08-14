@@ -30,7 +30,7 @@ Work these exercises with the two teaching captures open in Wireshark (`dnp3_sub
 
 ### Q3. Turn packets into detections with ICSNPP
 
-1. In the lab container run: zeek -C -r /pcaps/dnp3_substation.pcap icsnpp-dnp3
+1. From `lab/`, run `docker compose --profile tools run --rm zeek run-zeek /kit/pcaps/dnp3_substation.pcap` (Zeek + CISA ICSNPP; the kit root is mounted at /kit inside the container)
 2. Open dnp3_control.log and dnp3_objects.log.
 
 **Question.** Which single log line is your best alert for the attack, and what field makes it detectable?
@@ -72,7 +72,7 @@ Work these exercises with the two teaching captures open in Wireshark (`dnp3_sub
 ### Q7. Catch the anonymous intruder
 
 1. Filter mqtt.msgtype==1 and compare the connect flags of frames 4, 15, and 38.
-2. In the lab container run: zeek -C -r /pcaps/mqtt_iot_telemetry.pcap and open mqtt_connect.log.
+2. From `lab/`, run `docker compose --profile tools run --rm zeek run-zeek /kit/pcaps/mqtt_iot_telemetry.pcap` (Zeek + CISA ICSNPP; the kit root is mounted at /kit inside the container) and open mqtt_connect.log.
 
 **Question.** Which CONNECT is anonymous, and what does mqtt_connect.log show for it?
 

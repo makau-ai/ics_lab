@@ -1,0 +1,24 @@
+# Pinned toolchain for the ICS/OT Protocol Analysis Lab Kit verification pass.
+# Reproduces build/verify_all.py exactly. Regenerate frozen pins with:
+#     python3 -m pip freeze > /tmp/freeze.txt
+# and reconcile the load-bearing lines below.
+#
+# ── Python packages (pip-installable; the verifier imports these) ────────────
+scapy==2.7.0          # raw-frame reads for the DNP3 CRC audit and frame counts
+paho-mqtt==2.1.0      # MQTT publisher/subscriber used to build the teaching captures
+#
+# ── Non-pip toolchain (NOT installed by pip; pinned here as the record) ──────
+# python==3.11.15     # verification harness + autograder (CPython)
+# tshark==4.2.2       # Wireshark 4.2.2 — field extraction & the exact filter dialect
+#                     #   students use (the `in {3,4,5}` comma syntax is 4.2-specific).
+#                     #   Debian/Ubuntu: apt-get install tshark=4.2.2-*  (wireshark-common)
+# zeek==8.2.x         # + CISA ICSNPP DNP3/MQTT parsers — ships as REFERENCE logs in
+#                     #   lab/zeek_reference_output/; the Zeek parse runs in the lab
+#                     #   container, not in verify_all.py. Install per zeek.org/get-zeek.
+# tcpreplay==4.4.x    # optional: replay the shipped pcaps on a lab interface
+#
+# ── Reproducible container digest (authoritative environment) ────────────────
+# The one-click lab pins its full environment in .devcontainer/ (Ubuntu 24.04 base).
+# Record the built image digest here once published, e.g.:
+#   ghcr.io/<org>/icsnpp-kit@sha256:<digest>
+# so a grader can reproduce tshark 4.2.2 + zeek + ICSNPP bit-for-bit.

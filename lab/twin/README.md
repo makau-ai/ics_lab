@@ -96,9 +96,10 @@ docker compose exec iiot-gw python attacker.py         # uses BROKER=172.30.30.3
 
 - **Vulnerable:** pumps stop / never start, `plant-sim` `spill` climbs > 0 (SSO
   reproduced), the HMI still reads "normal."
-- **Hardened:** DIRECT_OPERATE is rejected (`status ≠ Success`), the g41 write is
-  clamped to 85% in the ladder, and even if every digital layer is owned the
-  **hardwired float force-starts the pump at 95% → spill stays 0** (DB-1).
+- **Hardened:** DIRECT_OPERATE is rejected (`status ≠ Success`), a replayed SAv5
+  control is refused for stale CSQ, the g41 setpoint write is clamped to 78% in the
+  ladder (strictly below the 80% lag-start), and even if every digital layer is owned
+  the **hardwired float force-starts the pump at 95% → spill stays 0** (DB-1).
 - **From `attacker_net`:** `docker compose exec adversary python master.py --host
   172.30.10.12 --attack` → the packet is dropped at `zone-fw` and logged
   (`CONDUIT-DROP` in `dmesg` on the host).
@@ -147,10 +148,25 @@ Detection: pipe the pcaps to Zeek (`--profile tools`):
 `zone-fw` holds `.1` in every zone and is the default route for every container,
 so all cross-zone traffic is forced through its nftables `forward` chain
 (`zone-fw/conduits.nft`, deny-by-default). Sanctioned conduits: **C1** DNP3/20000
-(scada-master⇄dnp3-gw only) · **C2** MQTT/1883 up-only (cell/control→broker;
-command/setpoint down denied = data-diode) · **C3** eng 8080/502 (control→openplc)
-· **C4** ent→DMZ 1883/5001. Everything else → `CONDUIT-DROP` log + drop. The
-attacker zone has **no conduit**.
+(scada-master⇄dnp3-gw only) · **C2** MQTT/1883 cell/control→broker (**stateful
+egress filtering**, not a data-diode — see below) · **C3** eng 8080/502
+(control→openplc) · **C4** ent→DMZ 1883/5001. Everything else → `CONDUIT-DROP`
+log + drop. The attacker zone has **no conduit**.
+
+> **Assumption-audit — C2 is NOT a data-diode (residual risk).** Earlier drafts
+> called C2 a one-way "data-diode" that blocks downward MQTT commands. That claim
+> is false and is kept here as a deliberate teaching trap. The MQTT subscriber on
+> the cell (e.g. `pump-controller`) *initiates* the TCP session **up** to the
+> broker; because `conduits.nft` accepts `ct state established,related`, the broker
+> can then fan out **any** PUBLISH — including an injected `plant/tank1/command` —
+> back **down** that same established socket, and the stateful firewall accepts it.
+> A stateful L3/L4 firewall cannot make a bidirectional pub/sub protocol one-way.
+> **Residual risk:** broker-originated downward delivery to a cell subscriber is
+> unblocked. **Exercise:** empirically test the claim (inject a command from the
+> DMZ/broker side and watch it reach the cell subscriber), then design the real
+> control — split telemetry and command brokers, make the command broker
+> unreachable from the cell, or use a true unidirectional gateway. "Diode by
+> firewall rule" is a common and false OT assumption; auditing it is the lesson.
 
 **Route forcing:** kit-built Python services set their default route via
 `entrypoint.sh` (`ZONE_GW` env); the three upstream images (openplc, broker, hmi)
@@ -204,6 +220,11 @@ P-1/P-2 · `%QX100.2` HLA · `%MW10` LEAD_START · `%MW11` STOP · `%MW12` REMOT
   keeps the wire real and Wireshark-parseable (`mbtcp`), and needs zero pip installs.
 - **SAv5** is a truncated HMAC-SHA256 aggressive-mode approximation (teaching
   stand-in for the full opendnp3 SA stack), per `CIE_HARDENING.md` §7 scoping honesty.
+  It **now enforces freshness/anti-replay**: a monotonic 32-bit Challenge Sequence
+  Number (CSQ) is folded into the HMAC input and the gateway rejects any control
+  whose CSQ is not strictly greater than the last accepted CSQ for that association,
+  so a captured hardened SELECT+OPERATE pair replays verbatim and is refused
+  (`dnp3/gateway.py`; proven headlessly by `test_sav5.py`).
 - **Supervised control** writes a PLC command register (`%MW12`) the ST honors,
   rather than a raw coil the recomputing loop would overwrite — realistic SCADA
   remote-command semantics.

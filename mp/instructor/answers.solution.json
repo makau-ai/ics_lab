@@ -1,0 +1,24 @@
+{
+  "student_netid": "solution",
+
+  "part1_dnp3": {
+    "malicious_frame": 26,
+    "attacker_ip": "10.30.0.66",
+    "forged_link_source": 10,
+    "genuine_unsolicited_frame": 12,
+    "real_outstation_ip": "10.30.0.20",
+    "master_link_addresses": [100, 101],
+    "false_breaker_state": "open",
+    "attack_technique_ttp": "T0856"
+  },
+
+  "part1_mqtt": {
+    "anonymous_connect_frame": 39,
+    "connack_return_code": 0,
+    "injection_frame": 57,
+    "injection_retain_flag": 1,
+    "leaked_service_username": "svc_ingest",
+    "leaked_hi_setpoint": 80,
+    "failure_class": "authorization"
+  }
+}

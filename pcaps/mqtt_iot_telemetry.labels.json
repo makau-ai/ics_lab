@@ -1,0 +1,75 @@
+{
+  "capture": "mqtt_iot_telemetry.pcap",
+  "protocol": "MQTT",
+  "description": "Machine-readable ground truth for the MQTT teaching capture. A Mosquitto broker (10.10.20.10:1883) serves a small plant in cleartext. An HMI (10.10.20.30, client hmi-scada-01, user hmi_operator) subscribes to plant/+/telemetry; a field sensor (10.10.20.7, client field-sensor-07, user sensor_svc) connects with a Last Will and publishes tank readings the broker fans out. A rogue host at 10.10.20.66 (client mqtt-explorer-x) then connects anonymously, subscribes to '#', receives the leaked telemetry, and publishes a command to plant/tank1/command. Frame count is asserted by build/verify_all.py.",
+  "frame_count": 61,
+  "broker": {"ip": "10.10.20.10", "port": 1883, "tls": false},
+  "attacker_ip": "10.10.20.66",
+  "malicious_frames": [38, 42, 52],
+  "malicious_frame_detail": [
+    {
+      "frame": 38,
+      "ip_src": "10.10.20.66",
+      "mqtt_msgtype": 1,
+      "msgtype_name": "CONNECT",
+      "clientid": "mqtt-explorer-x",
+      "username": null,
+      "meaning": "Anonymous CONNECT (no username). The broker accepts it (CONNACK rc=0, frame 40), so the client is authenticated as an anonymous session."
+    },
+    {
+      "frame": 42,
+      "ip_src": "10.10.20.66",
+      "mqtt_msgtype": 8,
+      "msgtype_name": "SUBSCRIBE",
+      "topic": "#",
+      "meaning": "Wildcard '#' subscription: the rogue client asks for every topic on the broker and receives all telemetry the broker relays (e.g. the leaked fan-out at frame 50). No ACL prevents it."
+    },
+    {
+      "frame": 52,
+      "ip_src": "10.10.20.66",
+      "mqtt_msgtype": 3,
+      "msgtype_name": "PUBLISH",
+      "topic": "plant/tank1/command",
+      "retain": false,
+      "payload_json": {"actuator": "pump1", "cmd": "START", "valve": "open"},
+      "meaning": "Unauthorized PUBLISH to a command topic. With no write authorization, any connected client can command an actuator. If a controller trusts this topic, the attacker drives the process."
+    }
+  ],
+  "forged_link": null,
+  "identity_note": "No link-layer or address forgery is used in this capture (MQTT has no data-link address to spoof). The attacker abuses the broker's acceptance of anonymous connections (frame 38) and the absence of publish/subscribe authorization. This is an authentication-then-authorization failure, not spoofing — contrast with the DNP3 capture's forged dnp3.src.",
+  "ttp": {
+    "framework": "MITRE ATT&CK for ICS",
+    "techniques": [
+      {
+        "id": "T0855",
+        "name": "Unauthorized Command Message",
+        "frames": [52],
+        "note": "Unauthorized PUBLISH of a START command to plant/tank1/command with no write ACL."
+      }
+    ],
+    "additional_observations": [
+      {
+        "frames": [42, 50],
+        "behavior": "Wildcard-subscribe eavesdropping / data collection",
+        "note": "No single ATT&CK-for-ICS technique is an exact fit for MQTT wildcard eavesdropping; it maps most cleanly to CWE-862 Missing Authorization. Broadly analogous to Network Sniffing (T0842) but performed at the application layer via a legitimate protocol feature."
+      }
+    ],
+    "cwe": [
+      "CWE-306 Missing Authentication for Critical Function",
+      "CWE-862 Missing Authorization",
+      "CWE-319 Cleartext Transmission of Sensitive Information"
+    ],
+    "auth_classification": "The broker DID authenticate the rogue client (anonymous CONNECT accepted, CONNACK rc=0); the injection is therefore an authorization failure, not a lack of authentication."
+  },
+  "benign_frames_summary": {
+    "actors": {
+      "broker": {"ip": "10.10.20.10", "port": 1883, "role": "Mosquitto broker (cleartext)"},
+      "hmi": {"ip": "10.10.20.30", "clientid": "hmi-scada-01", "username": "hmi_operator", "role": "operator dashboard, subscribes plant/+/telemetry"},
+      "sensor": {"ip": "10.10.20.7", "clientid": "field-sensor-07", "username": "sensor_svc", "role": "tank sensor, publishes plant/tank1/telemetry with a Last Will"}
+    },
+    "mqtt_app_frames": [4, 6, 8, 10, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 46, 48],
+    "attacker_induced": [40, 44, 50, 54],
+    "description": "Frames 4-10 are the HMI's authenticated CONNECT/CONNACK and its plant/+/telemetry SUBSCRIBE/SUBACK. Frames 15-33 are the sensor's authenticated CONNECT, its plant/tank1/telemetry PUBLISHes (func 3), broker fan-out to the HMI, PUBACKs, and a PINGREQ/PINGRESP. Frames 46/48 are further legitimate sensor telemetry and fan-out. Attacker-induced frames: 40 (CONNACK to rogue), 44 (SUBACK to rogue '#'), 50 (broker leaks telemetry to the rogue subscriber), 54 (rogue DISCONNECT).",
+    "note": "Credentials travel in cleartext on 1883 (frames 4, 15) — usernames hmi_operator and sensor_svc are readable on the wire. Payloads are JSON tank readings, e.g. {\"level_pct\":72.4,\"temp_c\":21.6,\"flow_lpm\":11.8}."
+  }
+}

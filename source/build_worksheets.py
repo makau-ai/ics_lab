@@ -1,11 +1,32 @@
 # -*- coding: utf-8 -*-
 """Generate a consolidated student worksheet and instructor answer key."""
 import os
+import re
 from content_dnp3 import DNP3
 from content_mqtt import MQTT
 
 OUT = "/root/icsnpp_kit/lab/worksheets"
 os.makedirs(OUT, exist_ok=True)
+
+# The lab does not expose a bare `zeek` binary at `/pcaps/...`; the kit root is
+# mounted at `/kit` inside the Zeek container and Zeek+ICSNPP is invoked through
+# the `zeek` compose service and its `run-zeek` wrapper (see lab/README.md
+# "Analyze with Zeek + CISA ICSNPP" and lab/zeek/run-zeek.sh). The exercise steps
+# are authored in content_dnp3.py / content_mqtt.py with the wrong invocation;
+# normalize them here so the generated worksheets match how the lab actually runs.
+_ZEEK_STEP = re.compile(
+    r"In the lab container run:\s*zeek\s+-C\s+-r\s+/pcaps/(?P<pcap>\S+\.pcap)(?:\s+icsnpp-dnp3)?"
+)
+
+
+def fix_zeek(step):
+    """Rewrite a worksheet step's Zeek command to match the real lab invocation."""
+    return _ZEEK_STEP.sub(
+        r"From `lab/`, run `docker compose --profile tools run --rm zeek "
+        r"run-zeek /kit/pcaps/\g<pcap>` (Zeek + CISA ICSNPP; the kit root is "
+        r"mounted at /kit inside the container)",
+        step,
+    )
 
 INTRO = (
     "# ICS/OT Protocol Analysis — {kind}\n\n"
@@ -26,7 +47,7 @@ def render(modules, answers):
         L.append(f"*Capture: `{m['pcap']}`*\n")
         for ex in m["lab"]["exercises"]:
             L.append(f"### Q{qn}. {ex['title']}\n")
-            L += [f"{j+1}. {st}" for j, st in enumerate(ex["steps"])]
+            L += [f"{j+1}. {fix_zeek(st)}" for j, st in enumerate(ex["steps"])]
             L.append(f"\n**Question.** {ex['question']}\n")
             if answers:
                 L.append(f"**Answer.** {ex['answer']}\n")

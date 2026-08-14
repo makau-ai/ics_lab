@@ -2,11 +2,27 @@
 
 *Everything in this kit that can be checked mechanically, checked — and re-checkable by you.*
 
+> **What "verification" means here — read this first.** This is a **reproducible verification /
+> test record**, not formal methods. Every check is a *concrete, re-runnable assertion* —
+> byte-level CRC **recomputation** over the raw frames, exact frame counts, tshark histograms
+> compared to literal expected values, and a re-run of the Machine-Problem autograder. That is
+> reproducible, assertion-based integration testing. It is **not** model checking or symbolic
+> property proving: there is no state-space exploration and no theorem. We use the phrase "formal
+> verification" in its plain sense — *mechanically checked and reproducible* — and are explicit
+> about the boundary. One genuine **property-based** assertion is now included (Section A/B: for
+> random subsets of DNP3 frames, *every* recomputed CRC must equal the stored CRC — a `∀`
+> invariant, not a fixed total). The one place a real property proof would matter most — the
+> digital twin's Cyber-Informed-Engineering "even-if" backstop (**spill == 0 under full DNP3+MQTT
+> write access**) — is today asserted only in prose; see *Where a real property check would add
+> value* below.
+
 This document records the verification pass over the ICS/OT Protocol Analysis Lab Kit: what was
 tested, the tools and versions used, the evidence, and the two content refinements applied as a
-result. The headline: a single reproducible suite (`build/verify_all.py`) runs **18 independent
-checks and all 18 pass**, including a byte-level recomputation of **every DNP3 CRC (63/63)** and a
-full run of the Machine-Problem autograder.
+result. The headline: a single reproducible suite (`build/verify_all.py`) runs a set of
+**independent, re-runnable checks that all pass** — including **exact** frame-count assertions, a
+byte-level recomputation of **every DNP3 CRC (63/63)**, a `∀`-frame CRC property check, ground-truth
+label-file validation, and a full run of the Machine-Problem autograder. The toolchain is pinned in
+`requirements-lock.txt` beside the verifier.
 
 ## Method & tooling
 
@@ -25,18 +41,36 @@ cd build && python3 verify_all.py      # exit 0 == all checks pass
 
 ---
 
-## Part 1 — Automated suite (18/18 passed)
+## Part 1 — Automated suite (21/21 passed)
 
-### A. Capture integrity — frame counts
+*(The suite grew from 18 to 21 checks this pass: exact frame-count assertions replaced the dead
+`n>0` count check, a `∀`-frame CRC property check was added, and the two `.labels.json` ground-truth
+files are now schema-validated. The original 18 remain and still pass.)*
 
-| Capture | Frames | Purpose |
+### A. Capture integrity — frame counts (EXACT assertions)
+
+These counts are now **hard-asserted**: the verifier fails loudly if any capture has been
+regenerated or corrupted (`n == expected`, not merely `n > 0`). The earlier build carried a dead,
+stale count dict (33 vs the actual 37) that was never referenced — fixed this pass per the Data
+Scientist review.
+
+| Capture | Frames (asserted ==) | Purpose |
 |---|---|---|
-| `pcaps/dnp3_substation.pcap` | 37 | DNP3 teaching capture (14 DNP3 app frames) |
-| `pcaps/mqtt_iot_telemetry.pcap` | 61 | MQTT teaching capture |
-| `pcaps/dnp3_assessment.pcap` (= `mp/captures/`) | 30 | MP DNP3 evidence (unseen) |
-| `pcaps/mqtt_assessment.pcap` (= `mp/captures/`) | 66 | MP MQTT evidence (unseen) |
+| `pcaps/dnp3_substation.pcap` | **37** | DNP3 teaching capture (14 DNP3 app frames) |
+| `pcaps/mqtt_iot_telemetry.pcap` | **61** | MQTT teaching capture |
+| `pcaps/dnp3_assessment.pcap` (= `mp/captures/`) | **30** | MP DNP3 evidence (unseen) |
+| `pcaps/mqtt_assessment.pcap` (= `mp/captures/`) | **66** | MP MQTT evidence (unseen) |
 
 The CRC routine is self-tested against the standard vector: `crc_dnp(b"123456789") == 0xEA82` — **pass**.
+A **property-based** check then samples random DNP3 frames and requires *every* recomputed
+header/block CRC to equal the stored value (`∀`, not a literal total).
+
+Machine-readable ground truth ships beside the captures: `pcaps/dnp3_substation.labels.json` and
+`pcaps/mqtt_iot_telemetry.labels.json` (`{malicious_frames, attacker_ip, forged_link, ttp,
+benign_frames_summary}`). The verifier validates that each label file parses, carries the required
+schema, and references only real frames — the bridge from a pcap to a detector. The
+`build/pcap_features.py` helper (`to_frames` / `to_flows`) emits those same per-frame features on
+demand.
 
 ### B. DNP3 data-link CRC audit — 63/63 valid
 
@@ -144,6 +178,31 @@ No other discrepancies were found between the documentation and the captures.
 
 ---
 
+## Where a real property check would add value
+
+This pass is honest about its boundary (see the callout at the top). The checks are reproducible
+assertions plus one `∀`-frame CRC property; they are **not** model checking. Three places a genuine
+property-based or model-checked proof would materially strengthen the kit, in priority order:
+
+1. **The twin's CIE "even-if" safety invariant.** `lab/twin/plant-sim/plant_sim.py` models
+   hardwired-float / weir / motor-protection backstops whose whole purpose is to guarantee
+   `spill == 0` **even under full DNP3 + MQTT write access**. That is a true safety property. It
+   should be *proven by execution*: drive the sim with adversarial coil forcing and assert
+   `spill > 0` in vulnerable mode and `spill == 0` in hardened mode. Today it is asserted in prose.
+2. **The detector invariants.** The MP detector keys on invariants — *a DNP3 link source address
+   sourced from more than one IP*, and *anonymous-CONNECT + write to a `command` topic*. These are
+   stated as properties in the `.labels.json` ground truth and are ideal targets for
+   Hypothesis-style property testing (generate address permutations; assert the invariant holds and
+   a naïve source-IP / block-`#` rule does not).
+3. **Application-layer parse acceptance.** The CRC audit proves data-link validity; it does **not**
+   prove CISA's ICSNPP DNP3 dissector accepts the synthetic application objects (CROB group 12
+   var 1, etc.). A `zeek -Cr` pass asserting expected `dnp3.log` fields would close that gap.
+
+The property check added this pass (random-subset CRC `∀`) is a first, small step in this
+direction; items 1–3 are tracked for the twin verification bundle.
+
+---
+
 ## Part 5 — How to reproduce
 
 ```bash
@@ -161,4 +220,5 @@ cd mp && cp solution/answers.solution.json submission/answers.json \
 #   (then restore the blanks, or just `git checkout` them)
 ```
 
-*Verification harness: `build/verify_all.py`. Last run: 18/18 checks passed, 63/63 DNP3 CRCs valid.*
+*Verification harness: `build/verify_all.py`. Last run: 21/21 checks passed, 63/63 DNP3 CRCs valid.
+Toolchain pinned in `requirements-lock.txt`.*

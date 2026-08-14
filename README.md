@@ -20,6 +20,24 @@ control, and then reproduce and harden the whole thing in a runnable Docker lab.
 Everything was produced and verified with **tshark/Wireshark** and **CISA's ICSNPP** Zeek parsers —
 every frame number, field value, and DNP3 CRC in the documentation matches the shipped captures.
 
+## Just the pcaps (90 seconds)
+
+New here, or just want the original thing — *documented DNP3 & MQTT sample captures to open and
+read*? You do not need Docker, the Codespace, or the 7-level path for that.
+
+1. Open a documented teaching capture in Wireshark, or point `tshark` at it:
+   ```bash
+   wireshark pcaps/dnp3_substation.pcap          # or: pcaps/mqtt_iot_telemetry.pcap
+   tshark -r pcaps/dnp3_substation.pcap -q -z conv,tcp     # who is talking, on what ports
+   ```
+2. Read **[`pcaps/README.md`](pcaps/README.md)** — a one-line-per-file manifest (what each capture is,
+   frame count, TCP port, role addresses, TEACHING vs GRADED-UNSEEN vs REAL) with a copy-paste
+   30-second tshark tour that walks you straight to the planted anomaly in each file.
+
+That is the whole original use case in one step: open a clean, documented sample pcap and see the
+protocol on the wire. Everything below (modules, lab, curriculum, twin) builds outward from these
+same files.
+
 > **Revision 3** adds a **one-click, 7-level Learning Path** (`curriculum/`, auto-opens in the
 > Codespace) that ends in a **university-style Machine Problem** (`mp/`), a verified list of **government &
 > university** capture sources (`EXTERNAL_CAPTURES.md`), and a reproducible **formal-verification**
@@ -74,20 +92,30 @@ Prefer print or an LMS? Every module also ships as **PDF**, **Word (.docx)**, an
 
 ## What's inside
 
+> **`build/` vs `source/`.** The working tree edits everything under **`build/`** (the content
+> modules and builder scripts); when the kit is assembled for release those same scripts are
+> **mirrored to `source/`** in the shipped copy — so `build/verify_all.py` in this repo and
+> `source/verify_all.py` in a shipped kit are the same file. Edit `build/`; read `source/` only in a
+> packaged kit.
+
 | Path | Contents |
 |---|---|
 | `.devcontainer/` | **GitHub Codespaces** build: Dockerfile + noVNC desktop (Wireshark GUI) + docker-in-docker + auto-served Learning Path. See `.devcontainer/README.md`. |
 | `curriculum/` | The **interactive Learning Path** — `index.html` (7 levels, progress-tracked) + `LEVEL_0..6.md`. The Codespace front door. |
 | `CURRICULUM.md` | The whole leveled path as a single Markdown walkthrough. |
 | `mp/` | The **Machine Problem** (Level 6): handout, two evidence captures, answer template, self-check autograder (`grade.py`), rubric, and instructor solution. |
-| `pcaps/` | Two teaching captures **plus two unseen assessment captures** (`dnp3_assessment.pcap`, `mqtt_assessment.pcap`). |
+| `pcaps/` | Two teaching captures **plus two unseen assessment captures** (`dnp3_assessment.pcap`, `mqtt_assessment.pcap`) and one real government-origin trace — all indexed in **`pcaps/README.md`** (the sample-capture manifest; start here for "just the pcaps"). |
 | `modules/` | DNP3 & MQTT modules in **HTML** (interactive), **PDF**, **DOCX**, and **MD**. |
+| `projects/` | The **forward→reverse** project track: `STARTER_AI_PROMPTS.md` (build a wire-valid app, then take it apart), `REAL_WORLD_CONNECTIONS.md` (web-verified incident→source→ATT&CK index), `ARTIFACT_RUBRIC.md` (persona-validated bundle rubric). See `projects/README.md`. |
+| `verification/` | **Platform-generated evidence** that the captures and lab behave as documented — the reproducible `verify_all` pass, per-pcap tshark decodes, and a live-lab capture. A worked exemplar of a Mastery-level artifact bundle. See `verification/README.md`. |
+| `lab/detect/` | **Runnable invariant detectors** (Python + `tshark`) for the durable detections the modules describe in prose — plus a red-team evasion exercise (`RED_TEAM_EVASION.md`). Ship the detections you teach, then evade them. |
 | `EXTERNAL_CAPTURES.md` | Verified **government & university** DNP3/MQTT capture sources (CISA, UOWM, Genoa, Abertay) with provenance & licensing. |
 | `FORMAL_VERIFICATION.md` | The reproducible verification record (18/18 checks, 63/63 DNP3 CRCs, autograder) + `build/verify_all.py`. |
 | `lab/` | Docker Compose lab (flat + `docker-compose.segmented.yml`): Mosquitto broker, Python DNP3 outstation/master, MQTT pub/sub + attacker + pump-controller, tcpdump capture, and Zeek + CISA ICSNPP. Plus `run-local.sh` / `open-wireshark.sh` for the Codespaces GUI path. See `lab/README.md`. |
 | `lab/worksheets/` | Student worksheet + instructor answer key (MD / DOCX / PDF). |
 | `lab/zeek_reference_output/` | Real `dnp3_*.log` and `mqtt_*.log` produced from the captures. |
-| `source/` | The scripts that build the whole kit from one content source, so instructors can extend it. |
+| `build/` | The content modules and scripts that build the whole kit from one content source, so instructors can extend it (mirrored to `source/` in a shipped kit — see the note above). |
+| `INSTRUCTORS.md` | **Co-instructor onboarding** — how to grade the Machine Problem without leaking the shipped key (build the address-shifted hidden variant), how the rubrics fit together, the run/verify commands, and honest time-on-task. |
 
 ## Each module covers
 
@@ -96,6 +124,25 @@ types) · a frame-by-frame walkthrough tied to exact frame numbers · security r
 mapped to a real incident, a MITRE ATT&CK for ICS technique, and a control such as DNP3 Secure
 Authentication, TLS, ACLs, or segmentation) · a hands-on lab with exercises and answer keys · O\*NET
 personas and career pathways · full references.
+
+## The objective/skill map (what each level makes you able to do)
+
+The 7-level path is a single reverse-engineering progression — surface to fields to attack to
+detection. Each level has one **observable** objective: something you can demonstrably *do* at the
+end, not just read about. Times are honest per-level estimates (from `curriculum/`).
+
+| Level | Observable objective — you can… | Approx. time |
+|---|---|---|
+| **0 · Orientation** | See live `dnp3` and `mqtt` traffic move in Wireshark/tshark and confirm the environment is up. | ~10 min |
+| **1 · Who is talking?** | Name every host, its ports, the hub, and the odd host out — from conversation/endpoint statistics alone, without opening a packet. | ~25 min |
+| **2 · What kind of messages?** | Enumerate the message types / DNP3 function codes for both protocols and point to the control messages — the surface fully mapped. | ~25 min |
+| **3 · Inside the packet** | Extract any field by name; read a DNP3 control down to trip-vs-close; distinguish an **IP source** from a **DNP3 link address**; read MQTT credentials/topic/QoS/retain. | ~40 min |
+| **4 · Find the attack** | Locate every planted anomaly by field evidence and state the weakness **and** a control for each. | ~35 min |
+| **5 · Catch it automatically** | Write an **invariant-based** detection that resists spoofing, and turn packets into `dnp3_*`/`mqtt_*` logs with Zeek + CISA ICSNPP. | ~40 min |
+| **6 · Machine Problem** | Apply Levels 1–5 to **unseen** captures using *different* attacks: score 90+ on the autograder (100 pts) and meet the incident-report mastery gates. | ~120 min |
+
+Beyond the path: the **`projects/`** forward→reverse track and the **`lab/twin/`** wet-well digital
+twin reuse these same Level 3–5 field-analysis skills on traffic and physics you build yourself.
 
 ## The captures at a glance
 

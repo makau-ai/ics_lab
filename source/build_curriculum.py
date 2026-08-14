@@ -437,6 +437,9 @@ TWIN_PANEL = r"""
 def build_hub():
     cards = "".join(level_html(lv) for lv in LEVELS) + TWIN_PANEL
     total = len(LEVELS)
+    # The Machine Problem is the ignite target — find it by flag, not by position, so an
+    # advanced level appended after it (e.g. Level 7) doesn't steal the capstone glow.
+    mp_level = next((lv["n"] for lv in LEVELS if lv.get("is_mp")), total - 1)
 
     nav = ""
     for lv in LEVELS:
@@ -465,6 +468,7 @@ def build_hub():
     page = page.replace("__CARDS__", cards)
     page = page.replace("__NAV__", nav)
     page = page.replace("__TOTAL__", str(total))
+    page = page.replace("__MP_LEVEL__", str(mp_level))
     page = page.replace("__COLDOPEN__", e(COLDOPEN))
     page = page.replace("__GLOSSARY_JSON__", glossary_json)
     page = page.replace("__CASEFILE_JSON__", casefile_json)
@@ -1092,7 +1096,8 @@ html[data-theme="light"] .kind-gui{color:#1d4ed8}html[data-theme="light"] .kind-
       the terminal (a <span class="inlinekind">Terminal</span> block copies with one click) or follow the
       <span class="inlinekind">In&nbsp;Wireshark</span> steps on the noVNC desktop. Predict each output before you
       reveal it, tick <b>Done</b>, and watch the sky warm from night toward first light. Your progress is saved in
-      this browser; the last station is a graded-style capstone.</p>
+      this browser; the seven-station descent ends in a graded-style capstone (Level&nbsp;6), and an advanced
+      <b>Level&nbsp;7</b> then carries those exact skills onto a living digital-twin plant.</p>
       <div class="pathline">
         <span class="pl">tooling</span><span class="arr">&rarr;</span>
         <span class="pl">endpoints</span><span class="arr">&rarr;</span>
@@ -1100,7 +1105,8 @@ html[data-theme="light"] .kind-gui{color:#1d4ed8}html[data-theme="light"] .kind-
         <span class="pl">inside the packet</span><span class="arr">&rarr;</span>
         <span class="pl">find the attack</span><span class="arr">&rarr;</span>
         <span class="pl">detection</span><span class="arr">&rarr;</span>
-        <span class="pl">Machine Problem</span>
+        <span class="pl">Machine Problem</span><span class="arr">&rarr;</span>
+        <span class="pl" style="color:var(--ok)">the living plant</span>
       </div>
     </div>
 
@@ -1224,9 +1230,10 @@ var CASEFILE = __CASEFILE_JSON__;
     var spine = document.querySelector(".spinefill"); if(spine) spine.style.height = pct+"%";
     var hero = document.getElementById("hero"); if(hero) hero.style.setProperty("--dawn", (pct/100).toFixed(3));
 
-    // capstone ignite when 0..5 all done (one-time celebratory flag; still class-applied each load)
-    var baseDone = true; for(var i=0;i<TOTAL-1;i++){ if(!done.has(i)){ baseDone=false; break; } }
-    var mp = document.getElementById("level-"+(TOTAL-1));
+    // capstone ignite when every pre-MP level is done (one-time celebratory flag; still class-applied each load)
+    var MPLEVEL = __MP_LEVEL__;
+    var baseDone = true; for(var i=0;i<MPLEVEL;i++){ if(!done.has(i)){ baseDone=false; break; } }
+    var mp = document.getElementById("level-"+MPLEVEL);
     if(mp){
       if(baseDone){
         var wasIgnited=false; try{ wasIgnited = localStorage.getItem(IGNITEKEY)==="1"; }catch(e){}

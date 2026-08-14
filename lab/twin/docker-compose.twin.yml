@@ -45,6 +45,11 @@ services:
   openplc:                         # soft-PLC -- Modbus client (to sim) + server (502) + web UI (container 8080, host 8088)
     build: ./openplc
     <<: *capnet
+    # %MW12 REMOTE_CMD is a MOMENTARY per-pump command (0=auto,1=START P1,2=START P2,
+    # 3=STOP P1,4=STOP P2,5=STOP ALL); the ST latches it on a rising edge and writes
+    # %MW12 back to 0 (auto-revert). The DNP3 gateway encodes the same map from CROB
+    # index 0->P1 / 1->P2 and CLOSE/TRIP. naive obeys unconditionally (CWE-306);
+    # hardened gates STOPs behind the W1 stop-permissive interlock.
     environment:
       PLC_PROGRAM: naive_wetwell.st   # hardened.yml -> hardened_wetwell.st
     volumes:

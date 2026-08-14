@@ -20,6 +20,15 @@ CO_HLA = 2         # %QX100.2  High-Level-Alarm lamp (DNP3 BI + MQTT alarm feed)
 # Holding registers (read/write words) -- setpoints live in the PLC, mirrored here
 HR_LEAD_START = 10  # %MW10  LEAD_START setpoint (DNP3 g41 / MQTT target)
 HR_STOP = 11        # %MW11  STOP setpoint
+HR_REMOTE_CMD = 12  # %MW12  supervisory momentary command (per-pump, auto-reverts to 0)
+
+# ---- %MW12 REMOTE_CMD contract (shared by hardened/naive ST + DNP3 gateway) ----
+#   0 = no command / auto      1 = START P1     2 = START P2
+#   3 = STOP P1                4 = STOP P2      5 = STOP ALL
+# The ST latches the code on a rising edge, applies it, then writes %MW12 back to
+# 0 (auto-revert) so a single command can never pin the loop out of automatic.
+REMOTE_NONE, REMOTE_START_P1, REMOTE_START_P2 = 0, 1, 2
+REMOTE_STOP_P1, REMOTE_STOP_P2, REMOTE_STOP_ALL = 3, 4, 5
 
 # ---- simulation timing ----
 TICK_S = 0.5                    # 500 ms scan, matches the ST loop
@@ -45,11 +54,28 @@ HLA = 90.0                      # high-level alarm
 FLOAT_TRIP_PCT = 95.0          # LSHH-102 hardwired high-high float
 WEIR_PCT = 98.0                # emergency overflow weir lip
 
+# ---- hardened setpoint clamp band (authoritative copy is hardened_wetwell.st) ----
+# SP_MAX is held STRICTLY BELOW LAG_START so an in-band setpoint write can never
+# reorder the sequence (lead must always start before lag). 85 % > 80 % was the
+# inversion the electrical review flagged; 78 % restores lead-before-lag.
+SP_MIN = 40.0
+SP_MAX = 78.0
+
 # ---- protection thresholds ----
 MIN_FLOW_GPM = 400.0           # below this with a pump commanded = dead-head/underload
-HI_PSI = 55.0                  # above this = closed valve / dead-head
-PSI_BASE = 8.0                 # static discharge head when idle
-PSI_PER_GPM = 0.0150           # psi rise per gpm of real flow
+FAULT_DEBOUNCE = 5             # consecutive scans of underload before a pump-fault latches
+HI_PSI = 55.0                  # above this = closed valve / dead-head (trip threshold)
+
+# ---- PIT-105 discharge-pressure model: DOWNWARD centrifugal H-Q curve ----
+# A real submersible sewage pump rides a head-flow curve whose head is HIGHEST
+# near shutoff (~zero flow) and FALLS as flow rises, bounded below by the static +
+# friction head of the force main. psi = SHUTOFF_HEAD - PSI_PER_GPM*q_out, floored
+# at STATIC_HEAD; a dead-head (closed valve / dry) sits above shutoff.
+SHUTOFF_HEAD = 62.0            # psi at ~zero flow (top of the H-Q curve)
+STATIC_HEAD = 18.0            # force-main static + friction head (curve floor)
+DEADHEAD_MARGIN = 4.0        # extra psi past shutoff when a pump dead-heads
+PSI_IDLE = 8.0               # discharge pressure with all pumps off (static column)
+PSI_PER_GPM = 0.0150          # DOWNWARD slope: head falls this much per gpm of flow
 
 # ---- weir bounded-release model ----
 WEIR_RELEASE_GPM = 1800.0      # equalization-basin relief once over the weir lip

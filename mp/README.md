@@ -58,8 +58,9 @@ headlessly with `tshark -r captures/dnp3_assessment.pcap -Y dnp3`.
 | `submission/answers.json` | **your** Part-1 answers | **yes — you fill this** |
 | `detector.py` | **your** Part-2 detector (a stub is provided) | **yes — you implement this** |
 | `report.md` | **your** Part-3 incident report (a template is provided) | **yes — you write this** |
-| `grade.py` | the autograder (self-check; ships with the key for learning) | do not modify |
+| `grade.py` | the autograder (loads its key from `instructor/`; self-check in this repo) | do not modify |
 | `rubric.md` | how the written report is scored | reference |
+| `instructor/` | **INSTRUCTOR-ONLY** — answer key, reference solution, ground-truth `*.labels.json` | do not open (proctored) |
 
 ## 6. The problem
 
@@ -100,12 +101,18 @@ frame, in the form:
 ALERT frame=<n> reason=<short reason>
 ```
 
-The autograder runs your detector on **both** captures and checks that you flag the malicious frame in
-each (DNP3 and MQTT — 15 pts each). **Detect by invariant, not by hard-coding** frame numbers or IPs:
-a DNP3 link address that appears from more than one source IP is impersonation; an MQTT client that
-connected with no username and then published a **retained** message to a command topic is a
-persistent unauthorized command. A detector that only works by printing `frame=26` literally earns no
-credit on the hidden re-run (instructor variant with different addresses).
+The autograder runs your detector on **both** captures and scores each on **precision AND recall**
+against a ground-truth label set (15 pts per capture, F1-weighted). Full marks require flagging the
+malicious frame(s) **and only those**. **Detect by invariant, not by hard-coding** frame numbers or
+IPs: a DNP3 link address that appears from more than one source IP is impersonation; an MQTT client
+that connected with no username and then published a **retained** message to a command topic is a
+persistent unauthorized command.
+
+**A spray-everything detector fails.** Flagging every frame gives recall 1.0 but precision ≈ 0.03, so
+F1 ≈ 0.06 and you earn ~1/15 per capture — not credit. Likewise a detector that only prints `frame=26`
+literally earns nothing on the hidden re-run (instructor variant with different addresses). On a
+failed check the grader emits an **actionable hint**: which frames you *missed* (invariant too narrow)
+or *false-positived* on (invariant too broad), plus the exact `tshark` filter to re-run.
 
 ### Part 3 — Incident report (10 pts format, + rubric)
 
@@ -128,9 +135,18 @@ succeeds. Document it in `report.md` under "Remediation."
 cd mp && python3 grade.py
 ```
 
-It prints PASS/FAIL per item and a score out of 100 (Part 1 = 60, Part 2 = 30, Part 3 format = 10).
-Iterate until green. `grade.py` ships with the answer key so you can self-check while learning; a
-proctored version uses a hidden key and a different capture.
+It prints PASS/FAIL per item (with hints on failures) and a score out of 100 (Part 1 = 60, Part 2 =
+30 on precision/recall, Part 3 format = 10). Iterate until green.
+
+**Where the key lives (self-check vs. proctored).** `grade.py` does **not** contain the answers.
+It loads the Part-1 key from `instructor/answer_key.json` and the Part-2 detector ground truth from
+`instructor/*.labels.json`. In this public teaching repo those files are present (clearly labelled
+`INSTRUCTOR-ONLY`), so self-check works while you learn. If `instructor/` is stripped, `grade.py`
+falls back to **self-check mode** — it validates format, runs your detector, checks the `ALERT
+frame=<n>` output shape and prints hints, but cannot score correctness without a key. For a real
+**graded/proctored** run, an instructor builds an address-shifted hidden variant and points the
+grader at a hidden key: `MP_KEY_DIR=~/mp_hidden python3 grade.py <answers.json>`. Full recipe in
+[`instructor/PROCTORING.md`](instructor/PROCTORING.md).
 
 ## 8. What to submit
 
@@ -141,8 +157,8 @@ proctored version uses a hidden key and a different capture.
 | Component | Pts |
 |---|---|
 | Part 1 — manual triage (15 exact-match items × 4) | 60 |
-| Part 2 — detector flags the DNP3 attack | 15 |
-| Part 2 — detector flags the MQTT attack | 15 |
+| Part 2 — DNP3 detector precision × recall (F1 × 15) | 15 |
+| Part 2 — MQTT detector precision × recall (F1 × 15) | 15 |
 | Part 3 — valid `answers.json` + `report.md` present | 10 |
 | **Autograded total** | **100** |
 | Written report content (see `rubric.md`, 12 pts) | instructor-weighted |

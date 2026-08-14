@@ -1,8 +1,16 @@
 # Instructor Solution & Notes (do NOT distribute to students)
 
-> Delete this `solution/` directory before handing the MP out for a graded (proctored) run, and
-> replace `grade.py` with a hidden-key version pointed at a freshly generated capture. For self-paced
-> learning, leaving `grade.py`'s key in place is fine — it lets students self-check.
+> **This file lives under `mp/instructor/` — INSTRUCTOR-ONLY.** The whole `mp/instructor/`
+> directory (answer key, reference answers, reference detector, ground-truth `*.labels.json`, and
+> this solution write-up) is proctored material. For a **graded / proctored** run, delete
+> `mp/instructor/` from the student hand-out and build an address-shifted hidden variant — see
+> `mp/instructor/PROCTORING.md`. For self-paced learning in this public teaching repo, leaving
+> `mp/instructor/` in place is fine: it lets `grade.py` self-check the student's work.
+>
+> `grade.py` now loads its answer key from `mp/instructor/answer_key.json` and its detector
+> ground truth from `mp/instructor/*.labels.json` (no answers are hard-coded in `grade.py`
+> anymore). The legacy `mp/solution/` path is a thin backward-compatibility symlink into this
+> directory (kept so `build/verify_all.py` and `FORMAL_VERIFICATION.md` keep resolving).
 
 ## Answer key
 See `answers.solution.json` (this scores 60/60 on Part 1). Summary:

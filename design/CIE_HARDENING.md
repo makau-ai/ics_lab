@@ -108,9 +108,11 @@ Resilience · anchored to #1 (this is the shortest path to HCE-1).
   95% **regardless of `%QX` coils, DNP3, or MQTT.** Even if authentication is 100% bypassed, HCE-1 is
   bounded. *(Category: Physical Logic Mechanism / Fail-Safe Default.)*
 - `[ENG]` **Design out the MQTT command path entirely (simplification, CIE #4).** In the hardened
-  build the `pump-controller` actuator is **removed / made read-only** and the `plant/tank1/command`
-  topic carries no authority — MQTT is observe-only (this is the C2 data-diode intent, `DIGITAL_TWIN
-  §4.2`). A path that does not exist needs no authentication.
+  build the `pump-controller` **subscriber** is **removed / made read-only** and the
+  `plant/tank1/command` topic carries no authority — MQTT is observe-only. This is the *real*, honest
+  one-way control (application-layer removal of the acting subscriber), as opposed to the C2 firewall,
+  which is only stateful egress filtering and does **not** block broker-originated downward delivery
+  (W2/W3, corrected). A subscriber that does not act needs no authentication.
 - `[SEC]` **DNP3 Secure Authentication v5**, aggressive-mode HMAC on the control function codes
   (SELECT/OPERATE/DIRECT_OPERATE, g41 write, COLD_RESTART): the outstation executes a control only if
   the frame carries a valid HMAC over the pre-shared/session key. `[SEC]` **MQTT** `allow_anonymous
@@ -152,19 +154,31 @@ Simplification · #11 Engineering Information Control.
 contribution is to ensure that *capturing cleartext yields no reusable authority*, so the plaintext
 teaching mode stays safe by design:
 
-- `[ENG]` **Anti-replay by construction.** A captured control frame must be inert on re-injection.
-  SAv5's challenge/response carries a monotonic **Challenge Sequence Number (CSQ)**; combined with the
-  **SELECT arm-timeout latch (W1)**, a sniffed OPERATE is useless without a fresh, matching, authentic
-  SELECT. This is an engineered property (freshness), not just an encrypted pipe — it holds even if the
-  pipe is deliberately left plaintext for ICSNPP visibility.
+- `[ENG]` **Anti-replay by construction (implemented, not just intended).** A captured control frame
+  must be inert on re-injection. The SAv5 stand-in now folds a monotonic **Challenge Sequence Number
+  (CSQ)** into the HMAC input (`ac||func||core||CSQ`), and the gateway **rejects any control whose CSQ
+  is not strictly greater than the last accepted CSQ for that DNP3 association** (`dnp3/gateway.py`
+  `sav5_verify`); the CSQ is authenticated by the tag, so it cannot be bumped without the key. Combined
+  with the **SELECT arm-timeout latch (W1)**, a sniffed OPERATE — and even a captured **SELECT+OPERATE
+  pair replayed verbatim** — is refused for freshness (regression-tested headlessly by
+  `lab/twin/test_sav5.py`). This is an engineered property (freshness), not just an encrypted pipe — it
+  holds even if the pipe is deliberately left plaintext for ICSNPP visibility. *(Earlier drafts claimed
+  this control while the code shipped a static HMAC with no CSQ; that gap is now closed.)*
 - `[ENG]` **Confine the cleartext to a monitored zone (CIE #5).** Plaintext DNP3 exists *only* on
   `cell_net`; the zones-and-conduits boundary (`zone-fw`, W3) means an eavesdropper needs a cell
   foothold before there is anything to sniff. Cleartext is not a global exposure, it is a
   zone-local one behind a monitored conduit.
-- `[ENG]` **One-way telemetry egress (data-diode intent) on C2.** The historian/enterprise side reads
-  values but the segment is engineered so those captured values cannot be turned into a downward command
-  (`DIGITAL_TWIN §4.2` C2 "command/setpoint down is denied by design"). *(Category: One-Way
-  Enforcement.)*
+- `[SEC]` **Stateful egress filtering on C2 — NOT a data-diode (honest scoping + residual risk).**
+  Earlier drafts called C2 a one-way "data-diode" whose firewall rule blocks downward MQTT commands.
+  That is false: `zone-fw` only permits the cell/control→broker session on 1883, and because the cell
+  MQTT **subscriber** initiates that session **up**, the `ct state established,related` rule then accepts
+  the broker's downward PUBLISH fan-out (including an injected command) back down the same socket — a
+  stateful L3/L4 firewall cannot make publish/subscribe one-way. **Residual risk:** broker-originated
+  downward delivery is unblocked at the firewall. The genuinely engineered one-way control is
+  *application-layer* — remove/observe-only the cell subscriber (W1), split telemetry and command
+  brokers, or use a true unidirectional gateway. Treat this as an **assumption-audit**: students inject a
+  command from the broker/DMZ side and empirically confirm whether it reaches the cell subscriber before
+  trusting the label.
 - `[SEC]` **DNP3-over-TLS / SAv5** and **MQTT 8883 mTLS** (uncomment the `mosquitto.secure.conf`
   8883 listener + certs). `[SEC]` stop shipping hardcoded creds — secrets management + rotation (this is
   also CWE-1393/798, §3 below).
@@ -198,10 +212,15 @@ Design Simplification · #6 Active Defense.
   **C1** `scada-master ⇄ dnp3-gw` on tcp/20000 **only**; **C2** telemetry up; **C3** `eng-ws → openplc`.
   The adversary in the DMZ/enterprise has **no conduit into `cell_net`** — the DNP3/MQTT packet is
   dropped at `zone-fw` before the app ever sees it. Authorization is a property of the network topology.
-- `[ENG]` **Data-diode / one-way concept on C2.** Telemetry flows up; **command and setpoint *down*
-  from the cloud/broker are denied at the conduit** — so even a fully authenticated broker client cannot
-  push actuation into the cell. The one-way rule is the engineered control; the ACL is the backup.
-  *(Category: One-Way Enforcement.)*
+- `[SEC]` **Stateful egress filtering on C2 (corrected — NOT a data-diode).** C2 was originally sold as
+  a one-way "data-diode" where command/setpoint *down* is denied at the conduit. It is not: `zone-fw`
+  is a stateful L3/L4 firewall permitting the cell→broker session, and the broker's downward PUBLISH
+  fan-out rides the subscriber's own established socket back into the cell (accepted by
+  `ct state established,related`). **Residual risk:** a broker-originated downward command reaches a cell
+  subscriber. Real one-way enforcement is application-layer (remove the subscriber, split
+  telemetry/command brokers, or a true unidirectional gateway); the ACL narrows *who* may publish but
+  does not restore directionality. This is a deliberate **assumption-audit** lesson — verify the claim
+  empirically, do not trust the label.
 - `[ENG/SEC]` **DNP3 master allow-list** at the conduit (bind the one master IP ⇄ outstation pair) and
   a **DNP3 link-address allow-list** in the outstation — a second source address is dropped, not
   answered.
@@ -220,10 +239,12 @@ Design Simplification · #6 Active Defense.
 - **After** `[NOW→BUILD]`: `docker-compose.segmented.yml` already shows the attack **die at the
   conduit** — the DMZ attacker (`dnp3-attacker-dmz`) is dropped by inter-network isolation while the
   cell-adjacent one succeeds (the segmentation lesson today). The twin `[BUILD]` upgrades this to
-  explicit `zone-fw` nftables with the `CONDUIT-DROP` tripwire and the C2 one-way rule, and swaps in
-  `mosquitto.secure.conf` + `acl` so that **even from a granted cell foothold** the `#` subscribe and the
-  command publish are refused by the ACL. Students see: same `attacker.py`, three outcomes — dropped at
-  the conduit (structure), refused by the ACL (authorization), inert on C2 (one-way).
+  explicit `zone-fw` nftables with the `CONDUIT-DROP` tripwire and C2 stateful egress filtering, and
+  swaps in `mosquitto.secure.conf` + `acl` so that **even from a granted cell foothold** the `#`
+  subscribe and the command publish are refused by the ACL. Students see: same `attacker.py`, three
+  outcomes — dropped at the conduit (structure), refused by the ACL (authorization), and — the
+  assumption-audit — a broker-originated downward PUBLISH that the stateful firewall does **not** stop
+  (residual risk), motivating the application-layer one-way redesign.
 
 ---
 
@@ -345,8 +366,11 @@ Planned Resilience (the "even-if" test) · #1 Consequence-Focused.
   attack can align. *(Categories: Redundant Design, Passive Physical Dynamics.)*
 - `[ENG]` **Comms-loss safe state (fail-operational, CIE #10).** On loss of master/broker the PLC
   holds last-safe setpoints and keeps pumping locally — an explicit "even-if" guarantee.
-- `[SEC]` **g41 write behind SAv5 + the conduit; MQTT `setpoint`-down denied on C2** (data diode) so
-  the register cannot be written from the cloud at all.
+- `[SEC]` **g41 write behind SAv5 (CSQ-fresh) + the conduit.** DNP3 setpoint writes require a valid,
+  non-replayable SAv5 tag; the MQTT `setpoint` path is closed by *removing the acting subscriber*
+  (application-layer), **not** by the C2 firewall — C2 is stateful egress filtering that does not stop
+  broker-originated downward delivery (corrected, see W2/W3). The clamp + float below are what bound the
+  consequence regardless.
 
 **Twin demonstrates both — this is the CIE "even-if" acceptance test (DB-1, `DIGITAL_TWIN §7.3`).**
 
@@ -380,11 +404,11 @@ Planned Resilience (the "even-if" test) · #1 Consequence-Focused.
 | # | Weakness (CWE) | CIE principle(s) | `[ENG]` engineered control (leads) | `[SEC]` cyber complement | Before / After in the twin |
 |---|---|---|---|---|---|
 | W1 | 306 Missing Auth for Critical Fn | #2,#5,#10,#1 | SELECT-before-OPERATE arm-latch in logic; refuse DIRECT_OPERATE; stop-while-rising interlock; **hardwired float**; drop MQTT command path | DNP3 **SAv5** HMAC; MQTT `allow_anonymous false`+passwd | `outstation.py`/`pump-controller.py` obey `[NOW]` → `--enforce-select`+ST interlock+`secure.conf` `[BUILD]`; spill 0 |
-| W2 | 319/311 Cleartext / No Encryption | #3,#2,#4,#11 | anti-replay by SAv5 CSQ + SELECT arm-timeout; confine cleartext to `cell_net`; one-way C2 egress | DNP3-over-TLS/SAv5; **MQTT 8883 mTLS**; kill hardcoded creds | plaintext parse `[NOW]` → 8883 mTLS + replay-rejected `[BUILD]` |
-| W3 | 284 No Authorization (+1364) | #3,#5,#4,#6 | **zones-and-conduits deny-by-default**; **data-diode C2**; DNP3 master/link allow-list; CONDUIT-DROP tripwire | MQTT **`acl`** least privilege; broker auth | flat `[NOW]` → `segmented.yml` `[NOW]` → `zone-fw`+`acl` `[BUILD]` |
+| W2 | 319/311 Cleartext / No Encryption | #3,#2,#4,#11 | **anti-replay by SAv5 CSQ (implemented, gateway rejects non-increasing CSQ)** + SELECT arm-timeout; confine cleartext to `cell_net` | DNP3-over-TLS/SAv5; **MQTT 8883 mTLS**; kill hardcoded creds | plaintext parse `[NOW]` → 8883 mTLS + CSQ-replay-rejected `[BUILD]` |
+| W3 | 284 No Authorization (+1364) | #3,#5,#4,#6 | **zones-and-conduits deny-by-default**; **C2 stateful egress filtering (NOT a diode — residual downward-delivery risk)**; DNP3 master/link allow-list; CONDUIT-DROP tripwire | MQTT **`acl`** least privilege; broker auth; remove acting subscriber (app-layer one-way) | flat `[NOW]` → `segmented.yml` `[NOW]` → `zone-fw`+`acl` `[BUILD]` |
 | W4 | 290 Spoofing (link addr / authenticity) | #3,#2,#6,#10 | safety decision reads **local sensor + float**, never the wire; commanded-vs-reported tripwire; master allow-list | DNP3 **SAv5** (key-possession) | `--src-addr 100 --attack` trusted `[NOW]` → SAv5 rejects + plant unmoved `[BUILD]` |
 | W5 | 349/807 Extraneous / unvalidated data | #3,#2,#4,#6 | **object/range allow-list at gateway**; EU range clamps + quality flags; disable unused FCs | bounded schema-checked parser; SAv5 authenticity | naive walker merges `[NOW]` → allow-list rejects + clamp `[BUILD]` |
-| W6 | 693/807 Single software interlock | #2,#5,#10,#1 | **hardwired HH float**; **setpoint clamp in ladder**; motor-protection + weir; comms-loss safe state | g41 behind SAv5+conduit; setpoint-down denied on C2 | `--attack` LEAD_START>100%→SSO `[NOW/BUILD]` → clamp+float→spill 0 `[BUILD]` |
+| W6 | 693/807 Single software interlock | #2,#5,#10,#1 | **hardwired HH float**; **setpoint clamp in ladder**; motor-protection + weir; comms-loss safe state | g41 behind CSQ-fresh SAv5+conduit; MQTT setpoint closed by removing the acting subscriber (C2 firewall does not block downward delivery) | `--attack` LEAD_START>100%→SSO `[NOW/BUILD]` → clamp+float→spill 0 `[BUILD]` |
 
 ---
 
@@ -393,7 +417,7 @@ Planned Resilience (the "even-if" test) · #1 Consequence-Focused.
 | Hierarchy tier (`research_cie.md §3 #2`) | Controls in this design | Holds when the network is fully owned? |
 |---|---|---|
 | **Eliminate / Substitute** | remove MQTT command path; hardwired float makes overflow physically self-correcting | **Yes** |
-| **Engineered (hardwired / analog / deterministic logic)** | float, setpoint clamp, stop-interlock, SELECT arm-latch, object allow-list, motor-protection relay, weir, one-way C2, local-sensor safety decision | **Yes** (non-digital + logic that the write can't reach) |
+| **Engineered (hardwired / analog / deterministic logic)** | float, setpoint clamp, stop-interlock, SELECT arm-latch, SAv5 CSQ freshness, object allow-list, motor-protection relay, weir, removal of the acting MQTT subscriber (app-layer one-way), local-sensor safety decision | **Yes** (non-digital + logic that the write can't reach) |
 | **Administrative** | procurement bans on hardcoded creds/undisclosed features; CIE gate in Definition of Done | partial |
 | **Add-on cybersecurity (last)** | DNP3 SAv5, MQTT mTLS/ACL, zone-fw allow-lists, bounded parser, Zeek/ICSNPP tripwires | No — assumes it *will* be bypassed |
 
@@ -412,7 +436,8 @@ attack against each:
    mTLS). Re-run `attacker.py`; watch CONNECT/`#`/publish flip from accepted to refused.
 2. **Segmentation** `[NOW→BUILD]` — `docker-compose.yml` (flat) → `docker-compose.segmented.yml`
    (2-zone conduit, already shows "attack dies at the conduit") → `docker-compose.twin.yml` with the
-   explicit `zone-fw` nftables + `CONDUIT-DROP` tripwire and the one-way C2 rule.
+   explicit `zone-fw` nftables + `CONDUIT-DROP` tripwire and C2 stateful egress filtering (an
+   assumption-audit target, not a true data-diode — see W2/W3).
 3. **DNP3 gateway** `[BUILD]` — an `--enforce-select` / `--allowlist` / `--sav5` hardened mode on
    `dnp3-gw` vs the current obey-on-request `outstation.py`. Same `master.py --attack` / `--src-addr`
    scripts run against both.

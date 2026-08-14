@@ -42,14 +42,93 @@ STORM_AT = float(os.environ.get("STORM_AT", "600"))    # sim seconds; <0 disable
 MODBUS_PORT = int(os.environ.get("MODBUS_PORT", "502"))
 
 
-def inflow(t):
+def inflow(t, diurnal=None, storm_at=None):
     """Uncontrolled sewage inflow at sim-time t (seconds), gpm."""
+    if diurnal is None:
+        diurnal = DIURNAL
+    if storm_at is None:
+        storm_at = STORM_AT
     q = C.Q_IN_BASE
-    if DIURNAL:
+    if diurnal:
         q += C.Q_IN_DIURNAL_AMP * math.sin(2.0 * math.pi * t / C.DIURNAL_PERIOD_S)
-    if STORM_AT >= 0 and STORM_AT <= t < STORM_AT + C.STORM_DURATION_S:
+    if storm_at >= 0 and storm_at <= t < storm_at + C.STORM_DURATION_S:
         q += C.STORM_GPM
     return max(0.0, q)
+
+
+def pump_psi(q_out, n_run, deadhead):
+    """PIT-105 discharge pressure on a DOWNWARD centrifugal H-Q curve.
+
+    Head is highest near shutoff and falls as flow rises (floored at the force-
+    main static/friction head); a dead-head (closed valve / dry) sits above
+    shutoff; with every pump off only the static column remains.
+    """
+    if deadhead:
+        return C.SHUTOFF_HEAD + C.DEADHEAD_MARGIN
+    if n_run <= 0:
+        return C.PSI_IDLE
+    return max(C.STATIC_HEAD, C.SHUTOFF_HEAD - C.PSI_PER_GPM * q_out)
+
+
+def step(level, spill, sim_t, p1_cmd, p2_cmd,
+         float_enabled=None, weir_enabled=None, motor_prot_enabled=None,
+         diurnal=None, storm_at=None):
+    """One 500 ms wet-well physics tick.
+
+    Pure function of its arguments (no globals mutated, no I/O) so the headless
+    test can drive the SAME integrator the live server runs. Returns the new
+    (level, spill) plus the derived transmitter signals FIT-104 / PIT-105 and the
+    float/dry-run discretes. The engineered backstops (float / weir / motor
+    protection) are parameters, matching the CIE "even-if" layer in the sim.
+    """
+    if float_enabled is None:
+        float_enabled = FLOAT_ENABLED
+    if weir_enabled is None:
+        weir_enabled = WEIR_ENABLED
+    if motor_prot_enabled is None:
+        motor_prot_enabled = MOTOR_PROT_ENABLED
+
+    # --- motor protection: refuse to run a pump dry (underload trip) ---
+    dry = level <= C.LOWCUT
+    p1_run = bool(p1_cmd) and not (motor_prot_enabled and dry)
+    p2_run = bool(p2_cmd) and not (motor_prot_enabled and dry)
+    n_cmd = int(p1_run) + int(p2_run)
+
+    # --- HARDWIRED high-high float (LSHH-102): the CIE analog backstop ---
+    horn = False
+    n_run = n_cmd
+    if float_enabled and level >= C.FLOAT_TRIP_PCT:
+        n_run = max(n_cmd, 1)   # force the standby pump on, coils be damned
+        horn = True
+
+    # --- hydraulics ---
+    q_in = inflow(sim_t, diurnal=diurnal, storm_at=storm_at)
+    q_out = n_run * C.PUMP_GPM * C.PUMP_EFF
+    q_weir = C.WEIR_RELEASE_GPM if (weir_enabled and level >= C.WEIR_PCT) else 0.0
+
+    dgal = (q_in - q_out - q_weir) * C.TICK_S / 60.0
+    cur_gal = level / 100.0 * C.WETWELL_GALLONS_FULL + dgal
+    spill_delta = 0.0
+    if cur_gal > C.WETWELL_GALLONS_FULL:            # overflow -> SSO
+        spill_delta = cur_gal - C.WETWELL_GALLONS_FULL
+        cur_gal = C.WETWELL_GALLONS_FULL
+    elif cur_gal < 0.0:
+        cur_gal = 0.0
+    new_level = cur_gal / C.WETWELL_GALLONS_FULL * 100.0
+
+    # --- derived transmitter signals ---
+    flow = q_out                                    # FIT-104 sees real moved flow
+    # dead-head: a pump is commanded but no flow moved -> pressure spikes
+    deadhead = (bool(p1_cmd) or bool(p2_cmd)) and q_out < C.MIN_FLOW_GPM
+    psi = pump_psi(q_out, n_run, deadhead)
+
+    return {
+        "level": new_level, "spill": spill + spill_delta, "spill_delta": spill_delta,
+        "flow": flow, "psi": psi, "q_in": q_in, "q_out": q_out,
+        "p1_run": p1_run, "p2_run": p2_run, "n_run": n_run,
+        "deadhead": deadhead, "horn": horn,
+        "lshh": new_level >= C.FLOAT_TRIP_PCT, "lsl": new_level > C.LOWCUT,
+    }
 
 
 def main():
@@ -74,57 +153,32 @@ def main():
         p1_cmd = store.get_coil(C.CO_P1)
         p2_cmd = store.get_coil(C.CO_P2)
 
-        # --- motor protection: refuse to run a pump dry (underload trip) ---
-        dry = level <= C.LOWCUT
-        p1_run = p1_cmd and not (MOTOR_PROT_ENABLED and dry)
-        p2_run = p2_cmd and not (MOTOR_PROT_ENABLED and dry)
-        n_cmd = int(p1_run) + int(p2_run)
-
-        # --- HARDWIRED high-high float (LSHH-102): the CIE analog backstop ---
-        horn = False
-        n_run = n_cmd
-        if FLOAT_ENABLED and level >= C.FLOAT_TRIP_PCT:
-            n_run = max(n_cmd, 1)   # force the standby pump on, coils be damned
-            horn = True
-
-        # --- hydraulics ---
-        q_in = inflow(sim_t)
-        q_out = n_run * C.PUMP_GPM * C.PUMP_EFF
-        q_weir = C.WEIR_RELEASE_GPM if (WEIR_ENABLED and level >= C.WEIR_PCT) else 0.0
-
-        dgal = (q_in - q_out - q_weir) * C.TICK_S / 60.0
-        cur_gal = level / 100.0 * C.WETWELL_GALLONS_FULL + dgal
-        if cur_gal > C.WETWELL_GALLONS_FULL:            # overflow -> SSO
-            spill += cur_gal - C.WETWELL_GALLONS_FULL
-            cur_gal = C.WETWELL_GALLONS_FULL
-        elif cur_gal < 0.0:
-            cur_gal = 0.0
-        level = cur_gal / C.WETWELL_GALLONS_FULL * 100.0
-
-        # --- derived transmitter signals ---
-        flow = q_out                                    # FIT-104 sees real moved flow
-        # dead-head: a pump is commanded but no flow moved -> pressure spikes
-        deadhead = (p1_cmd or p2_cmd) and q_out < C.MIN_FLOW_GPM
-        psi = (C.HI_PSI + 8.0) if deadhead else (C.PSI_BASE + C.PSI_PER_GPM * q_out)
+        # --- one physics tick (the same integrator the headless test drives) ---
+        r = step(level, spill, sim_t, p1_cmd, p2_cmd,
+                 float_enabled=FLOAT_ENABLED, weir_enabled=WEIR_ENABLED,
+                 motor_prot_enabled=MOTOR_PROT_ENABLED)
+        level = r["level"]
+        spill = r["spill"]
 
         # --- publish the server image back for OpenPLC to read ---
         store.set_input_register(C.IR_LEVEL, int(round(level * 100)))   # 0..10000
-        store.set_input_register(C.IR_FLOW, int(round(flow)))
-        store.set_input_register(C.IR_PSI, int(round(psi)))
-        store.set_discrete_input(C.DI_LSHH, level >= C.FLOAT_TRIP_PCT)
-        store.set_discrete_input(C.DI_LSL, level > C.LOWCUT)
+        store.set_input_register(C.IR_FLOW, int(round(r["flow"])))
+        store.set_input_register(C.IR_PSI, int(round(r["psi"])))
+        store.set_discrete_input(C.DI_LSHH, r["lshh"])
+        store.set_discrete_input(C.DI_LSL, r["lsl"])
 
         if tick % 2 == 0:   # ~1 Hz scoreboard line
             flags = []
-            if horn:
+            if r["horn"]:
                 flags.append("FLOAT-HORN")
-            if deadhead:
+            if r["deadhead"]:
                 flags.append("DEAD-HEAD")
             if level >= 100.0:
                 flags.append("*** SPILLING ***")
             print(f"[plant-sim] t={sim_t:6.1f}s level={level:5.1f}% "
-                  f"Qin={q_in:5.0f} Qout={q_out:5.0f} P1={int(p1_run)} P2={int(p2_run)} "
-                  f"spill={spill:7.1f}gal {' '.join(flags)}", flush=True)
+                  f"Qin={r['q_in']:5.0f} Qout={r['q_out']:5.0f} "
+                  f"P1={int(r['p1_run'])} P2={int(r['p2_run'])} "
+                  f"psi={r['psi']:4.0f} spill={spill:7.1f}gal {' '.join(flags)}", flush=True)
 
         tick += 1
         sim_t += C.TICK_S

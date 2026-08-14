@@ -1,0 +1,10 @@
+{
+  "_comment": "INSTRUCTOR-ONLY ground truth for the Part-2 detector precision/recall grader. Contains the answer (malicious_frames), so it lives under mp/instructor/ and must be stripped before a proctored hand-out. Regenerate with tshark when you build an address-shifted variant (see PROCTORING.md).",
+  "capture": "mqtt_assessment.pcap",
+  "protocol": "mqtt",
+  "malicious_frames": [39, 57],
+  "attacker_ip": "10.40.0.66",
+  "forged_link": null,
+  "ttp": "T0855",
+  "notes": "Frame 39 is the rogue's anonymous CONNECT (mqtt.msgtype==1, no mqtt.username, accepted with CONNACK 0 in frame 41). Frame 57 is the persistent injection: a RETAINED PUBLISH (mqtt.retain==True) to command topic plant/line1/command from that same anonymous client (T0855 Unauthorized Command Message). The retained deliveries the broker (10.40.0.10) pushes to the rogue in frames 47/49/51 are the harvest but originate from the broker, so they are NOT attacker-action frames and must NOT be flagged. A correct invariant detector flags exactly frames 39 and 57."
+}

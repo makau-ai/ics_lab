@@ -67,11 +67,23 @@ def decode_response(user):
             break
 
 
+_SAV5_CSQ = 0  # monotonic challenge sequence number (anti-replay freshness)
+
+
 def _ctrl_objects(ac, func, objects):
-    """Attach the SAv5 aggressive-mode HMAC tag over (ac,func,objects) if enabled."""
+    """Attach the SAv5 aggressive-mode HMAC tag over (ac,func,objects) if enabled.
+
+    Matches the gateway's sav5_seal layout: core || CSQ(4, big-endian) || tag,
+    where the tag authenticates (ac||func||core||CSQ). The CSQ increases with
+    every control so the HARDEN+SAV5 gateway accepts it as fresh; a replay of an
+    identical frame carries a stale CSQ and is rejected (see dnp3/gateway.py
+    sav5_verify + lab/twin/test_sav5.py)."""
     if USE_SAV5:
-        tag = d.sav5_tag(bytes([ac, func]) + objects)
-        return objects + tag
+        global _SAV5_CSQ
+        _SAV5_CSQ += 1
+        csq_bytes = struct.pack(">I", _SAV5_CSQ & 0xFFFFFFFF)
+        tag = d.sav5_tag(bytes([ac, func]) + bytes(objects) + csq_bytes)
+        return bytes(objects) + csq_bytes + tag
     return objects
 
 

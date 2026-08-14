@@ -17,7 +17,11 @@ Two behaviours, switched by env HARDEN (and SAV5):
   HARDEN=1  SELECT arm-latch (OPERATE only within 2 s of a matching SELECT on
             the same association); DIRECT_OPERATE (0x05/0x06) refused for
             consequential points; object/range + link-address allow-list.
-  SAV5=1    additionally require a valid SAv5 aggressive-mode HMAC on control FCs.
+  SAV5=1    additionally require a valid SAv5 aggressive-mode HMAC on control FCs,
+            with a monotonic Challenge Sequence Number (CSQ) folded into the HMAC
+            input so a captured control frame is REJECTED on replay (freshness /
+            anti-replay). A control is accepted only if its CSQ is strictly greater
+            than the last accepted CSQ for that DNP3 association (session).
 
 Usage:
   python gateway.py --modbus-host openplc --listen 0.0.0.0:20000 --outstn-addr 10
@@ -25,6 +29,7 @@ Usage:
 import argparse
 import os
 import socket
+import struct
 import threading
 import time
 
@@ -44,7 +49,11 @@ MB_IR_LEVEL, MB_IR_FLOW, MB_IR_PSI = 100, 101, 102          # %IW100..102
 MB_DI_LSHH, MB_DI_LSL = _BITBASE + 0, _BITBASE + 1          # %IX100.0/.1
 MB_CO_P1, MB_CO_P2, MB_CO_HLA = _BITBASE + 0, _BITBASE + 1, _BITBASE + 2  # %QX100.0..2
 MB_HR_LEAD_START, MB_HR_STOP = 10, 11            # setpoints %MW10/11 (g41 write target)
-MB_HR_REMOTE_CMD = 12                            # %MW12 supervisory: 0=auto,1=run,2=stop-all
+# %MW12 REMOTE_CMD -- SHARED CONTRACT with the OpenPLC ST decode. Per-pump momentary
+# command codes: 0=no command (auto); 1=START P1, 2=START P2, 3=STOP P1, 4=STOP P2,
+# 5=STOP ALL. The ST latches the code on a rising edge, applies it, then writes %MW12
+# back to 0 (auto-revert) so one command cannot pin the loop out of automatic.
+MB_HR_REMOTE_CMD = 12
 
 HARDEN = os.environ.get("HARDEN", "0").strip() in ("1", "true", "yes", "on")
 SAV5 = os.environ.get("SAV5", "0").strip() in ("1", "true", "yes", "on")
@@ -97,15 +106,74 @@ def build_poll_response():
             + d.obj_analog_output_status(ao))
 
 
-def _sav5_ok(ac, func, objs, core_len):
-    """In SAV5 mode, verify the trailing HMAC over (ac,func,core objects)."""
+# ---- SAv5 aggressive-mode stand-in WITH freshness (anti-replay) ------------
+# Wire layout of a SAv5-sealed control object block:
+#     core-objects || CSQ (4 bytes, big-endian) || HMAC tag (SAV5_TAG_LEN)
+# The 32-bit Challenge Sequence Number (CSQ) is folded into the HMAC input
+# (ac||func||core||CSQ) so it is authenticated -- an attacker cannot replay a
+# captured frame with a bumped CSQ without also forging the tag. The gateway
+# accepts a control only if its CSQ is STRICTLY GREATER than the last accepted
+# CSQ for that association (session). This is what makes the documented
+# anti-replay control real: a captured hardened SELECT+OPERATE pair replays
+# verbatim (same CSQ) and is rejected for freshness.
+SAV5_CSQ_LEN = 4
+
+
+def sav5_seal(ac, func, core, csq):
+    """ENCODE side: wrap core control objects with a CSQ + HMAC tag.
+
+    Returns core || CSQ(4, big-endian) || tag. The tag authenticates the CSQ,
+    so freshness cannot be tampered without breaking the HMAC. This is the
+    encoder the SAv5-aware master (and the unit test) uses to build a control
+    the HARDEN+SAV5 gateway will accept.
+    """
+    csq_bytes = struct.pack(">I", csq & 0xFFFFFFFF)
+    tag = d.sav5_tag(bytes([ac, func]) + bytes(core) + csq_bytes)
+    return bytes(core) + csq_bytes + tag
+
+
+def sav5_verify(ac, func, objs, core_len, last_csq):
+    """VERIFY side. Returns (ok, reason, csq).
+
+    ok is True when SAV5 is disabled, or the trailing tag authenticates
+    (ac||func||core||CSQ) AND the CSQ is strictly greater than last_csq
+    (None means "no control accepted yet on this session"). Otherwise ok is
+    False with reason in {short-frame, bad-hmac, stale-csq}.
+    """
     if not SAV5:
-        return True
-    if len(objs) < core_len + d.SAV5_TAG_LEN:
-        return False
+        return True, "sav5-off", None
+    need = core_len + SAV5_CSQ_LEN + d.SAV5_TAG_LEN
+    if len(objs) < need:
+        return False, "short-frame", None
     core = bytes(objs[:core_len])
-    tag = bytes(objs[core_len:core_len + d.SAV5_TAG_LEN])
-    return d.sav5_check(bytes([ac, func]) + core, tag)
+    csq_bytes = bytes(objs[core_len:core_len + SAV5_CSQ_LEN])
+    tag = bytes(objs[core_len + SAV5_CSQ_LEN:need])
+    if not d.sav5_check(bytes([ac, func]) + core + csq_bytes, tag):
+        return False, "bad-hmac", None
+    csq = struct.unpack(">I", csq_bytes)[0]
+    if last_csq is not None and csq <= last_csq:
+        return False, "stale-csq", csq          # replay / non-monotonic
+    return True, "ok", csq
+
+
+def crob_to_mw12(index, pump_on):
+    """Translate a DNP3 CROB (index, op) into the %MW12 REMOTE_CMD code.
+
+    SHARED CONTRACT (must match the OpenPLC ST decode exactly):
+      index 0 -> pump P1, index 1 -> pump P2;
+      CLOSE / LATCH_ON  -> START, TRIP / LATCH_OFF -> STOP.
+    %MW12 codes: 1=START P1, 2=START P2, 3=STOP P1, 4=STOP P2, 5=STOP ALL.
+    """
+    if pump_on:
+        return 1 if index == d.CROB_P1 else 2     # START P1 / START P2
+    return 3 if index == d.CROB_P1 else 4         # STOP  P1 / STOP  P2
+
+
+def crob_is_start(cc):
+    """CLOSE (TCC=01) or LATCH_ON (op-code 3) mean START; TRIP/LATCH_OFF mean STOP."""
+    tcc = cc & 0xC0
+    op = cc & 0x0F
+    return tcc == 0x40 or (tcc == 0x00 and op == 0x03)
 
 
 class Gateway:
@@ -134,7 +202,8 @@ class Gateway:
     def handle(self, conn, peer):
         print(f"[dnp3-gw] connection from {peer[0]}:{peer[1]} (HARDEN={int(HARDEN)} SAV5={int(SAV5)})", flush=True)
         seq = 0
-        arm = {}     # index -> (t, association) SELECT arm-latch
+        arm = {}       # index -> (t, association) SELECT arm-latch
+        sav5_csq = {}  # src (association) -> last accepted CSQ (anti-replay freshness)
         last_hla = False
         conn.settimeout(1.0)
         try:
@@ -175,11 +244,11 @@ class Gateway:
                     seq = (seq + 1) & 0x0F
 
                 elif func in (0x03, 0x04, 0x05, 0x06):   # SELECT/OPERATE/DIRECT_OPERATE CROB
-                    self._handle_crob(conn, peer, src, seq, ac, func, name, objs, arm)
+                    self._handle_crob(conn, peer, src, seq, ac, func, name, objs, arm, sav5_csq)
                     seq = (seq + 1) & 0x0F
 
                 elif func == 0x02:                       # WRITE (g41 setpoint)
-                    self._handle_setpoint(conn, src, seq, ac, func, objs)
+                    self._handle_setpoint(conn, src, seq, ac, func, objs, sav5_csq)
                     seq = (seq + 1) & 0x0F
 
                 elif func == 0x0D:                       # COLD_RESTART
@@ -203,18 +272,30 @@ class Gateway:
             conn.close()
             print(f"[dnp3-gw] {peer[0]} disconnected", flush=True)
 
-    def _handle_crob(self, conn, peer, src, seq, ac, func, name, objs, arm):
+    def _handle_crob(self, conn, peer, src, seq, ac, func, name, objs, arm, sav5_csq):
         index, cc = d.crob_index_code(objs)
         status = 0                          # 0 = success
-        # object/range allow-list
+        # ---- SAv5 authenticity + CSQ freshness (anti-replay) -------------
+        # Evaluated first so an authentic, fresh control burns its CSQ; a replay
+        # (identical CSQ) or a non-monotonic/unauthenticated frame is rejected.
+        sav5_bad = False
+        if HARDEN and SAV5:
+            ok, reason, csq = sav5_verify(ac, func, objs, 16, sav5_csq.get(src))
+            if not ok:
+                sav5_bad = True
+                print(f"[dnp3-gw] REJECT {name}: SAv5 {reason} "
+                      f"(anti-replay: CSQ must exceed last accepted for src {src})", flush=True)
+            else:
+                sav5_csq[src] = csq          # accept -> advance the session CSQ high-water mark
+                print(f"[dnp3-gw] SAv5 OK {name} CSQ={csq} (fresh > last) src {src}", flush=True)
+        # ---- object/range allow-list + arm-latch --------------------------
         if HARDEN and (index not in d.ALLOWED_OBJECTS.get((12, 1), set())):
             print(f"[dnp3-gw] REJECT CROB index {index} not in point map", flush=True)
             status = 4                       # not-supported
         elif HARDEN and func in (0x05, 0x06):
             print(f"[dnp3-gw] REJECT {name}: DIRECT_OPERATE refused for control points (HARDEN)", flush=True)
             status = 2                       # no-select / not-authorized
-        elif HARDEN and not _sav5_ok(ac, func, objs, 16):
-            print(f"[dnp3-gw] REJECT {name}: SAv5 auth missing/invalid (SAV5)", flush=True)
+        elif sav5_bad:
             status = 2
         elif func == 0x03:                   # SELECT -> arm the latch
             arm[index] = (time.time(), src)
@@ -228,10 +309,11 @@ class Gateway:
                 else:
                     arm.pop(index, None)
             if status == 0:
-                pump_on = (cc & 0xC0) == 0x40            # CLOSE=start, TRIP=stop
-                # Supervised control writes the PLC's REMOTE_CMD register (%MW12);
-                # the ST loop honors it (naive: unconditionally; hardened: interlocked).
-                remote_val = 1 if pump_on else 2         # 1=remote-run lead, 2=remote-stop-all
+                pump_on = crob_is_start(cc)              # CLOSE/LATCH_ON=start, TRIP/LATCH_OFF=stop
+                # Supervised control writes the PLC's REMOTE_CMD register (%MW12) using the
+                # SHARED CONTRACT per-pump code; the ST loop latches on rising edge, applies
+                # it, then auto-reverts %MW12 to 0. index 0 -> P1, index 1 -> P2.
+                remote_val = crob_to_mw12(index, pump_on)
                 ok = self._write_openplc("holding", MB_HR_REMOTE_CMD, remote_val)
                 authed = "" if HARDEN else "   <<< no authentication -- executed on request!"
                 print(f"[dnp3-gw] *** CONTROL {name} pump{index+1} -> "
@@ -240,18 +322,30 @@ class Gateway:
         conn.sendall(d.msg(d.CTRL_OUTSTN, src, self.addr, seq,
                            d.appctl(seq), 0x81, echo, iin=(0x00, 0x00)))
 
-    def _handle_setpoint(self, conn, src, seq, ac, func, objs):
+    def _handle_setpoint(self, conn, src, seq, ac, func, objs, sav5_csq):
         parsed = d.parse_g41_write(objs)
         if not parsed:
             conn.sendall(d.msg(d.CTRL_OUTSTN, src, self.addr, seq, d.appctl(seq), 0x81, b"", iin=(0x00, 0x00)))
             return
         index, value = parsed
         status_ok = True
+        # SAv5 authenticity + CSQ freshness first (shares the association's CSQ
+        # high-water mark with the CROB path -- one monotonic counter per session).
+        sav5_bad = False
+        if HARDEN and SAV5:
+            # g41 v1 Analog Output Block core = [41,1,0x17,1,index,<i value>,<B status>] = 10 bytes.
+            ok, reason, csq = sav5_verify(ac, func, objs, 10, sav5_csq.get(src))
+            if not ok:
+                sav5_bad = True
+                print(f"[dnp3-gw] REJECT g41 write: SAv5 {reason} "
+                      f"(anti-replay: CSQ must exceed last accepted for src {src})", flush=True)
+            else:
+                sav5_csq[src] = csq
+                print(f"[dnp3-gw] SAv5 OK g41 write CSQ={csq} (fresh > last) src {src}", flush=True)
         if HARDEN and index not in d.ALLOWED_OBJECTS.get((41, 1), set()):
             print(f"[dnp3-gw] REJECT g41 setpoint index {index} not in point map", flush=True)
             status_ok = False
-        elif HARDEN and not _sav5_ok(ac, func, objs, 11):
-            print(f"[dnp3-gw] REJECT g41 write: SAv5 auth missing/invalid (SAV5)", flush=True)
+        elif sav5_bad:
             status_ok = False
         if status_ok:
             reg = MB_HR_LEAD_START if index == d.AO_LEAD_START else MB_HR_STOP

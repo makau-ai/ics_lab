@@ -95,20 +95,24 @@ def dnp3_crc_audit(pcap_path):
 
 
 # ============================================================ A. frame counts
-print("\nA. Capture frame counts")
-CAPS = {
-    "pcaps/dnp3_substation.pcap": 33,
-    "pcaps/mqtt_iot_telemetry.pcap": 61,
-    "pcaps/dnp3_assessment.pcap": None,       # informational
-    "pcaps/mqtt_iot_telemetry.pcap ": None,
+print("\nA. Capture frame counts (EXACT — a regenerated/corrupted capture fails loudly)")
+# Ground truth verified by reading the pcaps with scapy (2026-08-14). These are HARD
+# assertions: n must equal the expected value, not merely be > 0. The previous CAPS
+# dict was dead code (never referenced) and stale (33 vs the actual 37), so Section A
+# only ever enforced n>0 — see review_3 (Data Scientist) / PANEL_REVIEW P2 item 11.
+EXPECTED_FRAMES = {
+    "dnp3_substation.pcap": 37,
+    "mqtt_iot_telemetry.pcap": 61,
+    "dnp3_assessment.pcap": 30,
+    "mqtt_assessment.pcap": 66,
 }
 counts = {}
-for rel in ["dnp3_substation.pcap", "mqtt_iot_telemetry.pcap",
-            "dnp3_assessment.pcap", "mqtt_assessment.pcap"]:
+for rel, want in EXPECTED_FRAMES.items():
     path = os.path.join(PCAPS, rel)
     n = len(rdpcap(path))
     counts[rel] = n
-    check("A", f"{rel} readable ({n} frames)", n > 0, f"{n} frames")
+    check("A", f"{rel} == {want} frames (exact)", n == want,
+          f"{n} frames" if n == want else f"got {n}, expected {want}")
 
 # self-test the CRC routine on the standard check vector
 check("A", "CRC-16/DNP self-test check('123456789')==0xEA82",
@@ -126,6 +130,56 @@ for rel in ["dnp3_substation.pcap", "dnp3_assessment.pcap"]:
 check("B", f"ALL DNP3 CRCs valid ({crc_ok}/{crc_total})", crc_ok == crc_total and crc_total > 0,
       f"{crc_ok}/{crc_total}")
 
+
+# property-based assertion (not a fixed-value one): over random subsets of the DNP3 frames,
+# EVERY recomputed data-link CRC (header + each data block) must equal the CRC stored on the
+# wire. This is a genuine invariant check — "∀ frame f in capture: recompute(f)==stored(f)" —
+# exercised against random samples rather than asserting a single literal total.
+import random
+
+
+def dnp3_crc_property(pcap_path, trials=250, seed=1815):
+    rnd = random.Random(seed)
+    frames = []
+    for p in rdpcap(pcap_path):
+        if Raw not in p:
+            continue
+        pl = bytes(p[Raw].load)
+        if len(pl) >= 10 and pl[0] == 0x05 and pl[1] == 0x64:
+            frames.append(pl)
+    if not frames:
+        return False, 0
+    checked = 0
+    for _ in range(trials):
+        pl = rnd.choice(frames)
+        # header CRC
+        if crc_dnp(pl[0:8]) != int.from_bytes(pl[8:10], "little"):
+            return False, checked
+        checked += 1
+        # every data-block CRC in the sampled frame
+        udl = max(0, pl[2] - 5)
+        idx, remaining = 10, udl
+        while remaining > 0 and idx + 2 <= len(pl):
+            blk = min(16, remaining)
+            if idx + blk + 2 > len(pl):
+                break
+            if crc_dnp(pl[idx:idx + blk]) != int.from_bytes(pl[idx + blk:idx + blk + 2], "little"):
+                return False, checked
+            checked += 1
+            idx += blk + 2
+            remaining -= blk
+    return True, checked
+
+
+prop_ok = True
+prop_checked = 0
+for rel in ["dnp3_substation.pcap", "dnp3_assessment.pcap"]:
+    ok, nch = dnp3_crc_property(os.path.join(PCAPS, rel))
+    prop_ok = prop_ok and ok
+    prop_checked += nch
+check("B", f"PROPERTY: ∀ random DNP3 frame, recomputed CRC == stored CRC ({prop_checked} samples)",
+      prop_ok, f"{prop_checked} CRC recomputations, 0 mismatches" if prop_ok else "MISMATCH found")
+
 # ============================================================ C. documented frames exist
 print("\nC. Documented frames exist in their capture")
 for mod in (DNP3, MQTT):
@@ -135,6 +189,25 @@ for mod in (DNP3, MQTT):
     bad = [n for n in doc if n < 1 or n > total]
     check("C", f'{mod["id"]}: {len(doc)} documented frames within 1..{total}', not bad,
           f'out-of-range={bad}' if bad else f'{len(doc)} frames ok')
+
+# machine-readable ground-truth label files parse, carry the required schema, and every
+# labelled malicious frame is a real frame in its capture (bridge from pcap -> detector).
+LABEL_SCHEMA = ("capture", "protocol", "malicious_frames", "attacker_ip",
+                "forged_link", "ttp", "benign_frames_summary")
+for rel, labelname in [("dnp3_substation.pcap", "dnp3_substation.labels.json"),
+                       ("mqtt_iot_telemetry.pcap", "mqtt_iot_telemetry.labels.json")]:
+    lp = os.path.join(PCAPS, labelname)
+    total = len(rdpcap(os.path.join(PCAPS, rel)))
+    try:
+        lab = json.load(open(lp))
+        mf = lab["malicious_frames"]
+        schema_ok = all(k in lab for k in LABEL_SCHEMA)
+        in_range = bool(mf) and all(isinstance(n, int) and 1 <= n <= total for n in mf)
+        check("C", f"{labelname}: schema ok, {len(mf)} malicious frames within 1..{total}",
+              schema_ok and in_range,
+              "ok" if schema_ok and in_range else f"schema_ok={schema_ok} frames={mf}")
+    except Exception as e:  # noqa: BLE001
+        check("C", f"{labelname}: parses & validates", False, f"{type(e).__name__}: {e}")
 
 # ============================================================ D. curriculum outputs
 print("\nD. Curriculum commands reproduce their documented 'expect' values")

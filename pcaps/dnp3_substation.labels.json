@@ -1,0 +1,72 @@
+{
+  "capture": "dnp3_substation.pcap",
+  "protocol": "DNP3",
+  "description": "Machine-readable ground truth for the DNP3 teaching capture. A control-center master (IP 10.20.0.5, DNP3 data-link address 100) polls and controls a substation outstation (IP 10.20.0.20, DNP3 address 10). After a routine poll/response session and a supervised breaker close, a rogue host at 10.20.0.66 opens its own TCP session and issues control + restart commands while forging the master's DNP3 link address (100). Frame counts and CRCs are asserted by build/verify_all.py.",
+  "frame_count": 37,
+  "dnp3_app_frame_count": 14,
+  "attacker_ip": "10.20.0.66",
+  "malicious_frames": [27, 31],
+  "malicious_frame_detail": [
+    {
+      "frame": 27,
+      "ip_src": "10.20.0.66",
+      "dnp3_src": 100,
+      "dnp3_dst": 10,
+      "dnp3_func": 5,
+      "func_name": "DIRECT_OPERATE",
+      "meaning": "Rogue DIRECT_OPERATE (CROB) trips the breaker with no preceding SELECT and no authentication; outstation accepts it because it trusts the 16-bit link address."
+    },
+    {
+      "frame": 31,
+      "ip_src": "10.20.0.66",
+      "dnp3_src": 100,
+      "dnp3_dst": 10,
+      "dnp3_func": 13,
+      "func_name": "COLD_RESTART",
+      "meaning": "Rogue COLD_RESTART reboots the outstation, denying operators visibility of the site during recovery."
+    }
+  ],
+  "forged_link": {
+    "layer": "DNP3 data-link source address",
+    "field": "dnp3.src",
+    "forged_value": 100,
+    "true_owner": "control-center master at IP 10.20.0.5 (legitimate DNP3 address 100)",
+    "observed_ip_src": "10.20.0.66",
+    "detection_invariant": "A single DNP3 link source address (100) is sourced from more than one IP: the real master (10.20.0.5) and the rogue host (10.20.0.66). Alert when dnp3.src is observed from an unexpected ip.src on control frames.",
+    "why_undetectable_in_protocol": "Base DNP3 (IEEE 1815-2012 without SAv5) provides no cryptographic proof of identity; the outstation cannot distinguish a forged link address from the genuine master."
+  },
+  "ttp": {
+    "framework": "MITRE ATT&CK for ICS",
+    "techniques": [
+      {
+        "id": "T0855",
+        "name": "Unauthorized Command Message",
+        "frames": [27],
+        "note": "Rogue DIRECT_OPERATE (func 0x05) issues a breaker trip with no authentication or SELECT step."
+      },
+      {
+        "id": "T0814",
+        "name": "Denial of Service",
+        "frames": [31],
+        "note": "COLD_RESTART (func 0x0D) reboots the outstation, denying operator visibility."
+      }
+    ],
+    "mechanism": "DNP3 data-link source-address spoofing (impersonating the master toward the outstation).",
+    "cwe": [
+      "CWE-290 Authentication Bypass by Spoofing",
+      "CWE-306 Missing Authentication for Critical Function",
+      "CWE-319 Cleartext Transmission of Sensitive Information"
+    ],
+    "auth_classification": "Authentication failure (spoofed identity accepted), leading to an unauthorized control action."
+  },
+  "benign_frames_summary": {
+    "actors": {
+      "master": {"ip": "10.20.0.5", "dnp3_addr": 100, "role": "control-center SCADA master"},
+      "outstation": {"ip": "10.20.0.20", "dnp3_addr": 10, "role": "substation outstation"}
+    },
+    "dnp3_app_frames": [4, 6, 8, 10, 12, 14, 16, 18, 20, 22],
+    "attacker_induced_responses": [29, 33],
+    "description": "Frames 4/6 and 8/10 are legitimate READ polls (func 1) and RESPONSEs (func 129) from master to outstation. Frames 12/14 are an UNSOLICITED_RESPONSE (func 130) event report and the master's CONFIRM (func 0). Frames 16/18 and 20/22 are a supervised breaker close: SELECT (func 3) then OPERATE (func 4), each with a RESPONSE. Frames 29 and 33 are the outstation's RESPONSEs to the rogue host — benign-origin device replies induced by the attacker (not attacks themselves).",
+    "note": "Non-DNP3 frames are TCP handshake/ACK packets. Only the 14 frames with a DNP3 application layer (start bytes 0x05 0x64) carry protocol semantics."
+  }
+}
