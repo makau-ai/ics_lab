@@ -1,0 +1,28 @@
+# SAMPLE pcap: pcaps/mqtt_iot_telemetry.pcap (documented MQTT teaching capture)
+## endpoints (ip)
+================================================================================
+IPv4 Endpoints
+Filter:<No Filter>
+                       |  Packets  | |  Bytes  | | Tx Packets | | Tx Bytes | | Rx Packets | | Rx Bytes |
+10.10.20.10                   61          4115         28            1834          33            2281   
+10.10.20.30                   22          1502         12             732          10             770   
+10.10.20.7                    22          1502         12             952          10             550   
+10.10.20.66                   17          1111          9             597           8             514   
+================================================================================
+
+## MQTT control-packet histogram
+      3 1
+      3 2
+      8 3
+      2 4
+      2 8
+      2 9
+      1 12
+      1 13
+      1 14
+
+## anonymous CONNECT (no username)
+38	mqtt-explorer-x
+## wildcard SUBSCRIBE
+8	plant/+/telemetry
+42	#

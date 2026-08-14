@@ -1,0 +1,5 @@
+# Injected MQTT command — decoded from live_lab.pcap (topic plant/tank1/command)
+# This is the unauthorized actuator command an anonymous client published; the
+# pump-controller subscriber acted on it (see run log in README §3).
+
+payload: {"actuator":"pump1","cmd":"START","valve":"open"}

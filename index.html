@@ -159,12 +159,23 @@ main{max-width:1080px;margin:0 auto;padding:6px 18px 70px}
       <p style="margin-top:12px">Launch it from the Codespace terminal — the loopback lab pauses, the Learning Path stays on :8080:</p>
       <div style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:color-mix(in srgb,var(--accent) 12%,var(--bg2));border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:.9rem;color:var(--ink);overflow-x:auto">
         <span style="color:var(--faint)">$</span> bash lab/twin/launch-twin.sh<br>
-        <span style="color:var(--faint)">$</span> bash lab/twin/launch-twin.sh <span style="color:var(--ghost)">--attack</span>&nbsp;&nbsp;&nbsp;<span style="color:var(--faint)"># watch the spill climb</span><br>
+        <span style="color:var(--faint)">$</span> bash lab/twin/launch-twin.sh <span style="color:var(--ghost)">--attack</span>&nbsp;&nbsp;&nbsp;<span style="color:var(--faint)"># adversary foothold → run the injection, spill climbs</span><br>
         <span style="color:var(--faint)">$</span> bash lab/twin/launch-twin.sh <span style="color:var(--ok)">--hardened</span>&nbsp;<span style="color:var(--faint)"># same attack, refused — spill stays 0</span>
       </div>
       <p style="margin-top:8px;font-size:.85rem;color:var(--faint)">Objective: keep the Sanitary‑Sewer‑Overflow <strong style="color:var(--mut)">spill counter at 0</strong> under full DNP3 + MQTT write access. Doors once it boots: OpenPLC <code>:8088</code> · HMI <code>:1881</code> · Wireshark <code>:3000</code>.</p>
       <div class="fmts">Read: <a href="lab/twin/README.md">Twin guide</a><a href="design/DIGITAL_TWIN_ARCHITECTURE.md">Architecture</a><a href="design/WEAKNESS_ANALYSIS.md">CWE‑1358 weaknesses</a><a href="design/CIE_HARDENING.md">CIE hardening</a></div>
     </div>
+  </div>
+
+  <div class="eyebrow">Go further — build, investigate, get graded</div>
+  <div class="plain">
+    <ul>
+      <li><b>Forward→reverse projects</b>: build your own ICS/OT/IoT app, then take it apart on the wire — <a href="projects/STARTER_AI_PROMPTS.md">starter AI prompts</a> and <a href="projects/README.md">the loop</a>.</li>
+      <li><b>Real‑world connections</b>: each topic mapped to a real incident, a primary source, and a MITRE ATT&amp;CK for ICS technique — <a href="projects/REAL_WORLD_CONNECTIONS.md">the investigation index</a>.</li>
+      <li><b>Grading</b>: the persona‑validated <a href="projects/ARTIFACT_RUBRIC.md">artifact rubric</a> for your forward→reverse bundle and the twin capstone.</li>
+      <li><b>Proof it works</b>: <a href="verification/README.md">formal‑verification evidence</a> — a live‑captured pcap, tshark evidence, and the 18/18 reproducible pass.</li>
+      <li><b>Sample captures</b>: the <a href="pcaps/README.md">DNP3 &amp; MQTT pcap manifest</a> — open one in Wireshark in 30 seconds.</li>
+    </ul>
   </div>
 </main>
 <div class="foot">Self‑contained · dark‑first with a light twin · built and verified with tshark/Wireshark and CISA's ICSNPP. See <a href="README.md">README.md</a>, <a href="CURRICULUM.md">CURRICULUM.md</a>, and <a href="FORMAL_VERIFICATION.md">FORMAL_VERIFICATION.md</a>.</div>

@@ -1,0 +1,38 @@
+
+A. Capture frame counts
+  [PASS] dnp3_substation.pcap readable (37 frames)  — 37 frames
+  [PASS] mqtt_iot_telemetry.pcap readable (61 frames)  — 61 frames
+  [PASS] dnp3_assessment.pcap readable (30 frames)  — 30 frames
+  [PASS] mqtt_assessment.pcap readable (66 frames)  — 66 frames
+  [PASS] CRC-16/DNP self-test check('123456789')==0xEA82  — 0xea82
+
+B. DNP3 data-link CRC audit (recomputed over raw bytes)
+  [PASS] dnp3_substation.pcap: 38/38 CRCs valid across 14 DNP3 frames  — 38/38
+  [PASS] dnp3_assessment.pcap: 25/25 CRCs valid across 9 DNP3 frames  — 25/25
+  [PASS] ALL DNP3 CRCs valid (63/63)  — 63/63
+
+C. Documented frames exist in their capture
+  [PASS] dnp3: 15 documented frames within 1..37  — 15 frames ok
+  [PASS] mqtt: 17 documented frames within 1..61  — 17 frames ok
+
+D. Curriculum commands reproduce their documented 'expect' values
+  [PASS] MQTT broker 10.10.20.10 present & 61 pkts
+  [PASS] MQTT msgtype counts (3/3/8/2/2/2/1/1/1)  — {'1': 3, '2': 3, '8': 2, '9': 2, '3': 8, '4': 2, '12': 1, '13': 1, '14': 1}
+  [PASS] DNP3 func counts (READx2,SEL,OP,DOP,CR,RESPx6,UNSOL,CONF)  — {'1': 2, '129': 6, '130': 1, '0': 1, '3': 1, '4': 1, '5': 1, '13': 1}
+  [PASS] L3 filter 'in {3,4,5}' → frames 16,20,27  — ['16', '20', '27']
+  [PASS] L4 anonymous CONNECT → frame 38 (mqtt-explorer-x)  — 38	mqtt-explorer-x
+  [PASS] L4 rogue DOP+COLD_RESTART from 10.20.0.66 (link forged 100)  — 27	10.20.0.66	100 | 31	10.20.0.66	100
+
+E. MP autograder
+  [PASS] blank student copy scores 10/100 (Part-3 format only)  — TOTAL:              10 / 100
+  [PASS] solution scores 100/100 (Mastery)  — TOTAL:             100 / 100
+
+============================================================
+  Section A: 5/5
+  Section B: 3/3
+  Section C: 2/2
+  Section D: 6/6
+  Section E: 2/2
+  TOTAL: 18/18 checks passed
+============================================================
+VERIFY_JSON {"passed": 18, "total": 18, "crc_ok": 63, "crc_total": 63, "counts": {"dnp3_substation.pcap": 37, "mqtt_iot_telemetry.pcap": 61, "dnp3_assessment.pcap": 30, "mqtt_assessment.pcap": 66}, "by_section": {"A": [5, 5], "B": [3, 3], "C": [2, 2], "D": [6, 6], "E": [2, 2]}}
