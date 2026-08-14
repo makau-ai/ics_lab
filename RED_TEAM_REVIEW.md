@@ -117,10 +117,10 @@ the command topic, so impact is notional.
 precedes it" framing immediately; then, as a roadmap, add enumeration / L2-positioning / SBO-state /
 SA-downgrade / fuzz exercises and a real MQTT enumeration tool with a subscriber that acts on commands.
 
-### 9. The recommended encryption blinds the recommended sensor — never acknowledged. *(SOC: MAJOR · Architect: MINOR)*
+### 9. The recommended encryption takes the recommended sensor dark — never acknowledged. *(SOC: MAJOR · Architect: MINOR)*
 The kit's headline fixes (DNP3 over TLS/VPN; MQTT on 8883) make ICSNPP/Zeek go **dark** — Zeek emits no
 `mqtt_*.log` on 8883, and a DNP3 TLS tunnel is opaque to ICSNPP. The TLS exercise frames "payloads now
-unreadable" purely as a win. Precision the kit also misses: **DNP3-SA (a MAC) does *not* blind ICSNPP**
+unreadable" purely as a win. Precision the kit also misses: **DNP3-SA (a MAC) does *not* take ICSNPP dark**
 — only transport encryption does. Monitoring **tap/SPAN placement** is never taught (the sniffers are
 host-based on the asset itself).
 
@@ -155,12 +155,12 @@ re-scope the operator/repairer to "context."
 **A. Fix now (factual/consistency errors in a shipped artifact; ~quick).**
 Frame count 63 → 61 everywhere · Q9 authN/authZ reframe + frame 54 → 52 · NERC-CIP distribution scope ·
 Aurora "protocol equivalent" correction · SBO "safety not security" + drop the disable-DIRECT-OPERATE
-mitigation · add the "detection can be spoofed / TLS blinds the sensor" caveats · add a separate
+mitigation · add the "detection can be spoofed / TLS takes the sensor dark" caveats · add a separate
 `dnp3-attacker` container IP so the live lab stops contradicting the taught detection.
 
 **B. High-value enhancements, on-scope (moderate effort).**
 A short "detection under adversarial + operational reality" unit (invariant-based, multi-master,
-encryption-blinds-sensor, tap placement) · a **segmentation** lab network + harden-and-retest exercise ·
+encryption-darkens-sensor, tap placement) · a **segmentation** lab network + harden-and-retest exercise ·
 an "OT reality check" box (OPEN≠CLOSE, safeguards, collapsed-topology disclaimer) · accessibility fixes ·
 an **unseen** assessment capture + rubric + mastery bar · a noisy haystack pcap.
 

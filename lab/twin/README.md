@@ -164,7 +164,7 @@ Wet-well level control (deadband, duty/standby, HLA, dry-run/dead-head interlock
 `plant-sim` integrating inflow − pump outflow with a **spill** (SSO) counter and
 the analog backstops (hardwired float, weir, motor protection).
 
-**Modbus image (plant-sim slave ↔ OpenPLC master):** `%IW100` level (0–10000) ·
+**Modbus image (plant-sim server ↔ OpenPLC client):** `%IW100` level (0–10000) ·
 `%IW101` flow · `%IW102` psi · `%IX100.0` LSHH float · `%IX100.1` LSL · `%QX100.0/.1`
 P-1/P-2 · `%QX100.2` HLA · `%MW10` LEAD_START · `%MW11` STOP · `%MW12` REMOTE_CMD.
 
@@ -176,7 +176,7 @@ P-1/P-2 · `%QX100.2` HLA · `%MW10` LEAD_START · `%MW11` STOP · `%MW12` REMOT
 ## 7. Live bring-up caveats (verify in the Codespace)
 
 1. **OpenPLC seeding is the one manual step.** Headless ST load is UI-driven and
-   version-specific. On first boot: web UI at `:8080` (default `openplc`/`openplc`)
+   version-specific. On first boot: web UI at `http://localhost:8088` (default `openplc`/`openplc`)
    → **Slave Devices** add `wetwell-plant-sim` (values in `openplc/slave_devices.seed`)
    → **Programs** upload+compile the selected `st/*.st` → **Settings** enable Modbus,
    disable the DNP3 + EtherNet/IP servers. `openplc/load-program.sh` automates this

@@ -224,7 +224,7 @@ LEVELS = [
         ],
         "steps": [
             {"kind": "cmd", "text": "# a first-cut DNP3 rule: controls not from the master IP\ntshark -r pcaps/dnp3_substation.pcap -Y \"dnp3.al.func in {3,4,5,13} && ip.src != 10.20.0.5\" -T fields -e frame.number -e ip.src -e dnp3.al.func",
-             "expect": "catches the rogue trip & restart HERE — but only because the attacker kept his real IP."},
+             "expect": "catches the rogue trip & restart HERE — but only because the attacker kept its real IP."},
             {"kind": "cmd", "text": "# turn packets into readable logs with Zeek + CISA ICSNPP\ndocker compose -f lab/docker-compose.yml --profile tools run --rm zeek run-zeek /kit/pcaps/dnp3_substation.pcap\ncat lab/zeek_reference_output/dnp3/dnp3_control.log | grep -i direct",
              "expect": "a DIRECT_OPERATE / Trip / Success line whose source host is 10.20.0.66 — your best single alert."},
             {"kind": "cmd", "text": "# MQTT detections: anonymous connect, and a '#' subscribe\ntshark -r pcaps/mqtt_iot_telemetry.pcap -Y \"mqtt.msgtype==1 && !mqtt.username\" -T fields -e frame.number\ntshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.msgtype==8 && mqtt.topic==\"#\"' -T fields -e frame.number",

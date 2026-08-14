@@ -71,8 +71,8 @@ has zero JS errors and was keyboard/AT-tested; both Docker compose files pass `d
   reality* section: key on the invariant {link address ↔ expected source/session ↔ known-master **set** ↔
   SELECT-before-OPERATE}; noted the forged link address isn't in ICSNPP logs by default, and that a smarter
   attacker who spoofs the master IP defeats a source-IP rule.
-- **Added "encryption blinds your sensor"**: TLS/8883 makes the Zeek/ICSNPP sensor go dark; DNP3-SA is a MAC and
-  does **not** blind it — only transport encryption does. Plus tap/SPAN-placement guidance.
+- **Added "encryption takes your sensor dark"**: TLS/8883 makes the Zeek/ICSNPP sensor go dark; DNP3-SA is a MAC and
+  does **not** take it dark — only transport encryption does. Plus tap/SPAN-placement guidance.
 - **Fixed the broken MQTT anonymous-connect detection**: the "empty will fields" discriminator both misses and
   false-positives (the authenticated HMI also has empty will fields); detect from broker auth telemetry instead.
 

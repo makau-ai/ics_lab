@@ -22,7 +22,7 @@ x-cap-net: &capnet
 
 services:
   # ========================= L0/L1 PROCESS CELL (cell_net) =========================
-  plant-sim:                       # wet-well physics -- Modbus SLAVE (the plant)
+  plant-sim:                       # wet-well physics -- Modbus server (the plant)
     build: ./plant-sim
     <<: *capnet
     environment:
@@ -42,7 +42,7 @@ services:
       cell_net:
         ipv4_address: 172.30.10.10
 
-  openplc:                         # soft-PLC -- Modbus master (to sim) + server (502) + web (8080)
+  openplc:                         # soft-PLC -- Modbus client (to sim) + server (502) + web UI (container 8080, host 8088)
     build: ./openplc
     <<: *capnet
     environment:
@@ -52,7 +52,7 @@ services:
       - ./openplc/st:/seed/st:ro
       - ./openplc/slave_devices.seed:/seed/slave_devices.seed:ro
     ports:
-      - "8080:8080"
+      - "8088:8080"                 # host 8088 -> OpenPLC web UI (8080 stays the First Light Learning Path)
     depends_on:
       - plant-sim
     restart: on-failure

@@ -137,6 +137,35 @@ main{max-width:1080px;margin:0 auto;padding:6px 18px 70px}
       <li>The <b>Machine Problem</b> (Level 6) lives in <code>mp/</code> with a self‑check autograder.</li>
     </ul>
   </div>
+
+  <div class="eyebrow">Advanced tier — the digital twin</div>
+  <div class="grid">
+    <div class="card hero-card">
+      <span class="edge" style="background:linear-gradient(180deg,var(--ok),var(--ghost))"></span>
+      <span class="badge" style="background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok);border:1px solid color-mix(in srgb,var(--ok) 34%,transparent)">★ Digital twin · multi‑container</span>
+      <h3>The wastewater lift station — a living plant, not a loopback</h3>
+      <p>When you’ve descended the seven levels, step into the real thing: a closed‑loop <strong>OpenPLC</strong>
+      controller driving a simulated wet‑well, fronted by a <strong>DNP3</strong> outstation and an <strong>MQTT</strong>
+      telemetry path, across <strong>five segmented IEC‑62443 zones</strong> with an nftables conduit firewall — yet every
+      packet still shows up in Wireshark. Grounded in INL CyOTE incident patterns, MITRE <strong>CWE‑1358</strong> (ICS)
+      weakness categories, and <strong>Cyber‑Informed Engineering</strong>.</p>
+      <div class="arc">
+        <span class="pl">5 zones</span><span class="ar">→</span>
+        <span class="pl">OpenPLC logic</span><span class="ar">→</span>
+        <span class="pl">DNP3 + MQTT on the wire</span><span class="ar">→</span>
+        <span class="pl" style="color:var(--ghost)">inject the attack</span><span class="ar">→</span>
+        <span class="pl" style="color:var(--ok)">harden it out</span>
+      </div>
+      <p style="margin-top:12px">Launch it from the Codespace terminal — the loopback lab pauses, the Learning Path stays on :8080:</p>
+      <div style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:color-mix(in srgb,var(--accent) 12%,var(--bg2));border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:.9rem;color:var(--ink);overflow-x:auto">
+        <span style="color:var(--faint)">$</span> bash lab/twin/launch-twin.sh<br>
+        <span style="color:var(--faint)">$</span> bash lab/twin/launch-twin.sh <span style="color:var(--ghost)">--attack</span>&nbsp;&nbsp;&nbsp;<span style="color:var(--faint)"># watch the spill climb</span><br>
+        <span style="color:var(--faint)">$</span> bash lab/twin/launch-twin.sh <span style="color:var(--ok)">--hardened</span>&nbsp;<span style="color:var(--faint)"># same attack, refused — spill stays 0</span>
+      </div>
+      <p style="margin-top:8px;font-size:.85rem;color:var(--faint)">Objective: keep the Sanitary‑Sewer‑Overflow <strong style="color:var(--mut)">spill counter at 0</strong> under full DNP3 + MQTT write access. Doors once it boots: OpenPLC <code>:8088</code> · HMI <code>:1881</code> · Wireshark <code>:3000</code>.</p>
+      <div class="fmts">Read: <a href="lab/twin/README.md">Twin guide</a><a href="design/DIGITAL_TWIN_ARCHITECTURE.md">Architecture</a><a href="design/WEAKNESS_ANALYSIS.md">CWE‑1358 weaknesses</a><a href="design/CIE_HARDENING.md">CIE hardening</a></div>
+    </div>
+  </div>
 </main>
 <div class="foot">Self‑contained · dark‑first with a light twin · built and verified with tshark/Wireshark and CISA's ICSNPP. See <a href="README.md">README.md</a>, <a href="CURRICULUM.md">CURRICULUM.md</a>, and <a href="FORMAL_VERIFICATION.md">FORMAL_VERIFICATION.md</a>.</div>
 </body></html>

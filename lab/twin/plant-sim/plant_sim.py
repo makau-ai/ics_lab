@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-plant_sim.py -- the wet-well lift-station physics, as a Modbus/TCP slave.
+plant_sim.py -- the wet-well lift-station physics, as a Modbus/TCP server.
 
 This is the ONE genuinely net-new process container. It integrates the tank
 model from DIGITAL_TWIN_ARCHITECTURE.md 1.3 every 500 ms and exposes the I/O as
-a Modbus slave that OpenPLC (the Modbus master / "slave devices" remote I/O)
+a Modbus server that OpenPLC (the Modbus client / "slave devices" remote I/O)
 polls. OpenPLC runs the control logic; this file is only the plant.
 
   Q_in   = diurnal(t) + storm(t)                     # uncontrolled inflow, gpm
@@ -107,7 +107,7 @@ def main():
         deadhead = (p1_cmd or p2_cmd) and q_out < C.MIN_FLOW_GPM
         psi = (C.HI_PSI + 8.0) if deadhead else (C.PSI_BASE + C.PSI_PER_GPM * q_out)
 
-        # --- publish the slave image back for OpenPLC to read ---
+        # --- publish the server image back for OpenPLC to read ---
         store.set_input_register(C.IR_LEVEL, int(round(level * 100)))   # 0..10000
         store.set_input_register(C.IR_FLOW, int(round(flow)))
         store.set_input_register(C.IR_PSI, int(round(psi)))

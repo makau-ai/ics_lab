@@ -27,8 +27,11 @@ cat <<'EOF'
       mp/README.md            the capstone Machine Problem (Level 6)
       modules/*.html          the DNP3 & MQTT frame-explorer reference modules
 
-  🧩  ADVANCED (multi-container + IEC 62443 zones, via docker-in-docker):
-      docker compose -f lab/docker-compose.segmented.yml up -d --build
+  🧩  ADVANCED — THE DIGITAL TWIN (multi-container plant · 5 IEC-62443 zones · OpenPLC):
+      bash lab/twin/launch-twin.sh              a real OpenPLC-controlled wet-well spoken to
+                                                over DNP3 + MQTT; watch packets cross conduits
+      bash lab/twin/launch-twin.sh --hardened   design the weaknesses out, re-run the attack
+      Doors: OpenPLC :8088 · HMI :1881 · Wireshark :3000   (Learning Path stays on :8080)
 ════════════════════════════════════════════════════════════════════════════
 EOF
 

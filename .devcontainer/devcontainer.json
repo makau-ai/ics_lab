@@ -11,12 +11,15 @@
     "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   },
 
-  "forwardPorts": [8080, 6080, 1883, 20000],
+  "forwardPorts": [8080, 6080, 1883, 20000, 8088, 1881, 3000],
   "portsAttributes": {
     "8080": { "label": "▶ Learning Path — START HERE", "onAutoForward": "openPreview" },
     "6080": { "label": "noVNC Desktop (Wireshark)", "onAutoForward": "notify" },
     "1883": { "label": "MQTT broker", "onAutoForward": "silent" },
-    "20000": { "label": "DNP3 outstation", "onAutoForward": "silent" }
+    "20000": { "label": "DNP3 outstation", "onAutoForward": "silent" },
+    "8088": { "label": "Digital Twin — OpenPLC control logic", "onAutoForward": "silent" },
+    "1881": { "label": "Digital Twin — FUXA HMI", "onAutoForward": "silent" },
+    "3000": { "label": "Digital Twin — Wireshark (live)", "onAutoForward": "silent" }
   },
 
   "postCreateCommand": "bash .devcontainer/postcreate.sh",

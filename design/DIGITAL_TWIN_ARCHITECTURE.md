@@ -95,8 +95,8 @@ even if DNP3+MQTT are fully owned.
 ### 1.3 How the physics is made real — `plant-sim` ↔ OpenPLC
 
 `plant-sim` is a small Python container (same pattern as `lab/mqtt/*.py`) that integrates the tank and
-exposes I/O as a **Modbus/TCP slave**; **OpenPLC is the Modbus master** that polls it (OpenPLC v3
-"slave devices" remote-I/O feature). This is the GRFICSv3 pattern — logic in the PLC, physics in a sim,
+exposes I/O as a **Modbus/TCP server**; **OpenPLC is the Modbus client** that polls it (OpenPLC v3
+"slave devices" remote-I/O feature — OpenPLC's term for remote-I/O client mappings). This is the GRFICSv3 pattern — logic in the PLC, physics in a sim,
 a real fieldbus between them.
 
 ```
@@ -155,7 +155,7 @@ flowchart TB
     ENGWS["eng-ws<br/>OpenPLC Editor + tools"]
   end
   subgraph CELL["L0–L1 Process Cell · cell_net 172.30.10.0/24"]
-    SIM["plant-sim<br/>wet-well physics (Modbus slave)"]
+    SIM["plant-sim<br/>wet-well physics (Modbus server)"]
     PLC["openplc<br/>soft-PLC · ST loop · 8080/502"]
     GW["dnp3-gw<br/>DNP3 outstation addr 10 · 20000"]
     IIOT["iiot-gw<br/>MQTT publisher"]
@@ -226,8 +226,8 @@ Networks reference the zones defined in §4. "Image" cites the upstream from `re
 
 | # | Container | Purdue / role | Image | Network(s) | Why it exists |
 |---|---|---|---|---|---|
-| 1 | **plant-sim** | L0 field I/O — wet-well **physics** | `python:3.11-slim` (build, new; mirrors `lab/mqtt`) | `cell_net` | Makes the process real: integrates level from inflow−outflow, drives floats/weir, counts the SSO spill. Modbus **slave** to the PLC. |
-| 2 | **openplc** | L1 **soft-PLC** — the control logic | build `thiagoralves/OpenPLC_v3` (`research_arch.md §1`) | `cell_net` | Runs the IEC-61131-3 **ST** wet-well loop; Modbus **master** to plant-sim; Modbus **server 502** for the gateway/HMI; web UI **8080**. |
+| 1 | **plant-sim** | L0 field I/O — wet-well **physics** | `python:3.11-slim` (build, new; mirrors `lab/mqtt`) | `cell_net` | Makes the process real: integrates level from inflow−outflow, drives floats/weir, counts the SSO spill. Modbus **server** to the PLC. |
+| 2 | **openplc** | L1 **soft-PLC** — the control logic | build `thiagoralves/OpenPLC_v3` (`research_arch.md §1`) | `cell_net` | Runs the IEC-61131-3 **ST** wet-well loop; Modbus **client** to plant-sim; Modbus **server 502** for the gateway/HMI; web UI **8080** (published on host 8088). |
 | 3 | **dnp3-gw** | L1 **DNP3 outstation gateway** fronting the PLC | build `./dnp3` (kit `outstation.py`, remapped) or `dnp3-python` | `cell_net` (+netns tap) | Protocol-converter RTU: polls the PLC over Modbus, presents **DNP3 outstation addr 10 on TCP/20000** to the SCADA master. The "gateway fronting the PLC." |
 | 4 | **iiot-gw** | L2 **IIoT/MQTT edge gateway** — telemetry | build `./mqtt` (kit `publisher.py`, remapped) | `cell_net` | Reads plant state, **PUBLISHes** `plant/tank1/telemetry|status` to the broker — the condition-monitoring/observe path (rides *alongside* DNP3). |
 | 5 | **pump-controller** | L1/L2 **MQTT-obeying actuator** | build `./mqtt` (kit `pump-controller.py`) | `cell_net` | The "trusting subscriber" that executes `plant/tank1/command` — makes the insecure **cloud-command** path physically consequential (teaching surface; CIE says this should be read-only). |
@@ -324,8 +324,8 @@ or enterprise probing `cell_net:20000` shows up as a dropped-flow log the moment
 ## 5. End-to-end data flows
 
 ### F1 — Autonomous control loop (L0↔L1, Modbus)
-`plant-sim` integrates the wet well → publishes `%IW100..102` + float discretes (Modbus slave) →
-`openplc` (Modbus master) reads them, runs the §1.2 ST deadband loop, writes pump coils `%QX100.0/.1`
+`plant-sim` integrates the wet well → publishes `%IW100..102` + float discretes (Modbus server) →
+`openplc` (Modbus client) reads them, runs the §1.2 ST deadband loop, writes pump coils `%QX100.0/.1`
 and HLA `%QX100.2` → `plant-sim` reads the coils, applies pump outflow, re-integrates. **This loop runs
 continuously and independently** — the well pumps down even if every upstream zone is dead
 (fail-operational, `research_scenario.md §3`).
@@ -508,7 +508,7 @@ Profiles: default = core twin; `--profile twin-full` adds historian/eng-ws/jump-
 `--profile attack` adds the adversary + granted foothold; `--profile capture` adds the sniff sidecars;
 `--profile tools` adds zeek.
 
-**Bring-up order** (depends_on): `plant-sim` → `openplc` (load ST, enable Modbus master + DNP3/Modbus
+**Bring-up order** (depends_on): `plant-sim` → `openplc` (load ST, enable Modbus client + DNP3/Modbus
 servers) → `dnp3-gw`, `iiot-gw` → `mqtt-broker`, `zone-fw` (apply nftables) → `scada-master`, `hmi`,
 `historian` → capture plane → (on demand) `eng-ws`, `jump-host`, `adversary`.
 

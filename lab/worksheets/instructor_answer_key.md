@@ -35,7 +35,7 @@ Work these exercises with the two teaching captures open in Wireshark (`dnp3_sub
 
 **Question.** Which single log line is your best alert for the attack, and what field makes it detectable?
 
-**Answer.** The dnp3_control.log line 'DIRECT_OPERATE … Trip … Success' whose source_h is 10.20.0.66. But note that works here only because the attacker kept his real IP while forging the DNP3 link address; a smarter attacker who also spoofs the master's IP (or hijacks its TCP session) defeats a source-IP rule. The durable detection keys on an invariant — a control with no preceding SELECT, from an unexpected session, or off the master's baseline cadence (see 'Detection under adversarial and operational reality').
+**Answer.** The dnp3_control.log line 'DIRECT_OPERATE … Trip … Success' whose source_h is 10.20.0.66. But note that works here only because the attacker kept its real IP while forging the DNP3 link address; a smarter attacker who also spoofs the master's IP (or hijacks its TCP session) defeats a source-IP rule. The durable detection keys on an invariant — a control with no preceding SELECT, from an unexpected session, or off the master's baseline cadence (see 'Detection under adversarial and operational reality').
 
 ### Q4. Design the control
 

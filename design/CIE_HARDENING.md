@@ -267,7 +267,7 @@ Defense · #10 Planned Resilience.
   no state change**); the conduit allow-list drops the rogue IP; and — critically — with the ST loop
   reading the *local* sensor + float, running the spoofed-telemetry attack still leaves the well pumping
   down (**spill = 0**), while the commanded-vs-reported monitor lights the tripwire. Students see that
-  spoofing can blind the *view* but cannot move the *plant*.
+  spoofing can deny the *view* but cannot move the *plant*.
 
 ---
 

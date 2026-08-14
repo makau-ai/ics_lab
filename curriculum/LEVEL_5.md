@@ -22,7 +22,7 @@ A detection is only as good as its evasion resistance. The obvious DNP3 rule —
 # a first-cut DNP3 rule: controls not from the master IP
 tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5,13} && ip.src != 10.20.0.5" -T fields -e frame.number -e ip.src -e dnp3.al.func
 ```
-> **Expected:** catches the rogue trip & restart HERE — but only because the attacker kept his real IP.
+> **Expected:** catches the rogue trip & restart HERE — but only because the attacker kept its real IP.
 
 ```bash
 # turn packets into readable logs with Zeek + CISA ICSNPP

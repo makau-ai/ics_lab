@@ -178,11 +178,11 @@ to get there.
 
 ### Two things detection can't do for free
 
-- **Encryption blinds the sensor.** Once you tunnel DNP3 over TLS/VPN or move MQTT
+- **Encryption takes the sensor dark.** Once you tunnel DNP3 over TLS/VPN or move MQTT
   to 8883, the Zeek/ICSNPP network sensor goes dark (no `mqtt_*.log` on 8883; a
   DNP3-in-TLS tunnel is opaque). Detection then lives in broker auth logs,
   RTU/endpoint syslog, and flow/JA3 metadata. Note DNP3-SA (a MAC) does **not**
-  blind ICSNPP — only transport encryption does.
+  take ICSNPP dark — only transport encryption does.
 - **Tap placement matters.** The sensor only sees what its tap sees. Put it on a
   SPAN/mirror at the OT/DMZ conduit the master crosses. An attacker injecting into
   the *local* RTU never crosses a control-center SPAN, and serial-tail DNP3 is

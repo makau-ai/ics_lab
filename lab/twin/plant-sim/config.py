@@ -5,7 +5,7 @@ Mirrors DIGITAL_TWIN_ARCHITECTURE.md 1.3 (the L0-L1 image) exactly. All the
 numbers a student would tune live here so plant_sim.py stays about the physics.
 """
 
-# ---- Modbus address map (plant-sim is the SLAVE; OpenPLC is the master) ----
+# ---- Modbus address map (plant-sim is the SERVER; OpenPLC is the client) ----
 # Input registers (read-only words, sim -> PLC)
 IR_LEVEL = 100     # %IW100  LT-101 wet-well level, 0..10000 = 0..100.00 %
 IR_FLOW = 101      # %IW101  FIT-104 force-main flow, gpm

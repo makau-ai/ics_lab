@@ -61,6 +61,7 @@ GLOSSARY = {
     "QoS": "Quality of Service — the MQTT delivery guarantee: 0 (at most once), 1 (at least once), or 2 (exactly once).",
     "retain": "The MQTT retain flag — the broker keeps the last retained message on a topic and hands it to every new subscriber.",
     "outstation": "The DNP3 field device (RTU / IED) that answers a master — it holds the points and executes the controls.",
+    "master": "The DNP3 controlling station (SCADA / control center) that polls outstations and issues controls. 'Master' and 'outstation' are the IEEE 1815 (DNP3) role names, retained here for technical accuracy — DNP3 never uses 'slave'.",
     "unsolicited response": "A DNP3 response (function 130) the outstation sends on its own, without being polled — report-by-exception.",
     "link address": "The 16-bit DNP3 data-link source / destination address — a number inside the frame, not the IP address, and trivial to forge.",
     "function code": "The DNP3 application-layer verb: READ (1), SELECT (3), OPERATE (4), DIRECT_OPERATE (5), COLD_RESTART (13), RESPONSE (129).",
@@ -394,8 +395,46 @@ def level_html(lv):
     )
 
 
+TWIN_PANEL = r"""
+<section class="jump" style="margin-top:26px;border-color:color-mix(in srgb,var(--ok) 30%,var(--line))" aria-label="Advanced tier: the digital twin">
+  <h3 style="color:var(--ok);letter-spacing:.08em">&#9733; Beyond the descent &mdash; the digital twin</h3>
+  <p style="color:var(--mut);margin:.2em 0 .7em;font-size:var(--step-0);line-height:1.55">
+    The seven levels train the <em>eye</em> on a clean loopback capture. The <strong>digital twin</strong> is where you
+    prove it on a living plant: a closed-loop <strong>OpenPLC</strong> controller driving a simulated wet-well, fronted by
+    a <strong>DNP3</strong> outstation and an <strong>MQTT</strong> telemetry path, across <strong>five segmented
+    IEC-62443 zones</strong> with an nftables conduit firewall &mdash; and every packet still readable in Wireshark.
+    Grounded in INL CyOTE incident patterns, MITRE <strong>CWE-1358</strong> ICS weaknesses, and
+    <strong>Cyber-Informed Engineering</strong>.
+  </p>
+  <div class="pathline" style="margin:.2em 0 .8em">
+    <span class="pl">5 zones</span><span class="arr">&rarr;</span>
+    <span class="pl">OpenPLC logic</span><span class="arr">&rarr;</span>
+    <span class="pl">DNP3 + MQTT on the wire</span><span class="arr">&rarr;</span>
+    <span class="pl" style="color:var(--ghost)">inject the attack</span><span class="arr">&rarr;</span>
+    <span class="pl" style="color:var(--ok)">harden it out</span>
+  </div>
+  <div style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--card-2);border:1px solid var(--line);border-radius:10px;padding:11px 14px;font-size:.88rem;color:var(--ink);overflow-x:auto;margin:.2em 0 .7em">
+    <span style="color:var(--faint)">$</span> bash lab/twin/launch-twin.sh<br>
+    <span style="color:var(--faint)">$</span> bash lab/twin/launch-twin.sh <span style="color:var(--ghost)">--attack</span>&nbsp;&nbsp;&nbsp;<span style="color:var(--faint)"># watch the spill climb</span><br>
+    <span style="color:var(--faint)">$</span> bash lab/twin/launch-twin.sh <span style="color:var(--ok)">--hardened</span>&nbsp;<span style="color:var(--faint)"># same attack, refused</span>
+  </div>
+  <p style="color:var(--faint);font-size:var(--step--1);margin:.2em 0 .7em">
+    Objective: hold the Sanitary-Sewer-Overflow <strong style="color:var(--mut)">spill counter at 0</strong> under full
+    DNP3 + MQTT write access. Doors once it boots: OpenPLC <code>:8088</code> &middot; HMI <code>:1881</code> &middot;
+    Wireshark <code>:3000</code> (the Learning Path stays on <code>:8080</code>).
+  </p>
+  <div class="links">
+    <a href="../lab/twin/README.md">Twin guide</a>
+    <a href="../design/DIGITAL_TWIN_ARCHITECTURE.md">Architecture</a>
+    <a href="../design/WEAKNESS_ANALYSIS.md">CWE-1358 weaknesses</a>
+    <a href="../design/CIE_HARDENING.md">CIE hardening</a>
+  </div>
+</section>
+"""
+
+
 def build_hub():
-    cards = "".join(level_html(lv) for lv in LEVELS)
+    cards = "".join(level_html(lv) for lv in LEVELS) + TWIN_PANEL
     total = len(LEVELS)
 
     nav = ""

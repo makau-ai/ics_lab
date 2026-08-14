@@ -40,7 +40,7 @@ Everything lands under `lab/` next to the two existing compose files (which stay
 lab/
   docker-compose.twin.yml          # NEW — base twin = the VULNERABLE variant (§3,§4)
   docker-compose.hardened.yml      # NEW — override that flips ALL controls on at once (§8)
-  plant-sim/                       # NEW — wet-well physics, Modbus slave
+  plant-sim/                       # NEW — wet-well physics, Modbus server
     Dockerfile  requirements.txt  plant_sim.py  config.py
   zone-fw/                         # NEW — nftables router-firewall (the conduit)
     Dockerfile  conduits.nft  entrypoint.sh
@@ -48,7 +48,7 @@ lab/
     Dockerfile                     # FROM thiagoralves/OpenPLC_v3
     st/naive_wetwell.st            # §6 naive loop
     st/hardened_wetwell.st         # §6 hardened loop
-    slave_devices.seed             # plant-sim as remote-I/O (Modbus master config)
+    slave_devices.seed             # plant-sim as remote-I/O (Modbus client config)
     load-program.sh                # seeds st_files + selects program via OpenPLC API
   dnp3/                            # EXTEND existing — add gateway + Modbus source + g41/unsol
     outstation.py -> reused by dnp3-gw (remapped);  master.py -> reused by scada-master
@@ -84,7 +84,7 @@ Ports are container-internal unless a host publish is noted. IPs are the static 
 
 | # | Service | Image (pin) | Build ctx | Zone / IP | Ports | Reuse origin |
 |---|---|---|---|---|---|---|
-| 1 | `plant-sim` | `python:3.11-slim` | `./plant-sim` | cell 172.30.10.10 | 502(mb-slave) | NEW (mirrors `lab/mqtt` Dockerfile) |
+| 1 | `plant-sim` | `python:3.11-slim` | `./plant-sim` | cell 172.30.10.10 | 502(mb-server) | NEW (mirrors `lab/mqtt` Dockerfile) |
 | 2 | `openplc` | build `thiagoralves/OpenPLC_v3` | `./openplc` | cell 172.30.10.11 | 8080 web, 502 mb-server | upstream OpenPLC_v3 |
 | 3 | `dnp3-gw` | `python:3.11-slim` | `./dnp3` | cell 172.30.10.12 | 20000 | `lab/dnp3/outstation.py` remapped + Modbus client |
 | 4 | `iiot-gw` | `python:3.11-slim` | `./mqtt` | cell 172.30.10.13 | — | `lab/mqtt/publisher.py` remapped |
@@ -106,7 +106,7 @@ Ports are container-internal unless a host publish is noted. IPs are the static 
 
 **Key build decision — OpenPLC's own DNP3 is disabled; `dnp3-gw` provides DNP3.** OpenPLC v3 can serve
 DNP3 itself, but that path is opendnp3 (opaque on the wire). To preserve the kit's **readable,
-ICSNPP-parseable** DNP3 teaching contract, OpenPLC runs **Modbus-server (502) + Modbus-master (remote
+ICSNPP-parseable** DNP3 teaching contract, OpenPLC runs **Modbus-server (502) + Modbus-client (remote
 I/O) only**; the readable `dnp3-gw` (kit `dnp3lib.py`) polls OpenPLC over Modbus and fronts DNP3/20000.
 OpenPLC's EtherNet/IP and DNP3 servers are toggled OFF in Settings/seed.
 
@@ -337,11 +337,11 @@ from `attacker_net` → the adversary is dropped at the boundary until the scena
 
 ### 6.1 I/O wiring — how the PLC sees the plant
 
-OpenPLC runs **two Modbus roles at once**: (a) **Modbus master / "Slave Devices" remote-I/O** polling
+OpenPLC runs **two Modbus roles at once**: (a) **Modbus client / "Slave Devices" remote-I/O** polling
 `plant-sim` (mapped to the `DIGITAL_TWIN §1.3` addresses), and (b) **Modbus TCP server on 502** exposing
 the same `%I/%Q/%MW` image to `dnp3-gw`, `iiot-gw`, and `hmi`. Configure via `slave_devices.seed`
 (`plant-sim` at 172.30.10.10:502) loaded by `load-program.sh` (seeds the DB / `mbconfig`, enables the
-Modbus master, selects `PLC_PROGRAM`, disables the DNP3 + ENIP servers). Point map = `DIGITAL_TWIN §1.3`:
+Modbus client, selects `PLC_PROGRAM`, disables the DNP3 + ENIP servers). Point map = `DIGITAL_TWIN §1.3`:
 
 ```
 %IW100 LT-101 level(0-10000)  %IW101 FIT-104 flow  %IW102 PIT-105 psi
@@ -378,7 +378,7 @@ Adds, per `CIE_HARDENING` W1/W5/W6 (all in-ladder, so a register write cannot re
 - **EU range + quality (W5):** clamp `level/flow/psi` to transmitter span; on out-of-range set
   `PV_QUALITY := BAD` and fall back to last-good / local sensor before any decision (kills CWE-807).
 - **Local-sensor safety decision (W4):** protective logic reads `%IW100`/`%IX100.0` (the wired
-  transmitter + float), **never** a DNP3/MQTT-reported value — spoofed telemetry can blind the view but
+  transmitter + float), **never** a DNP3/MQTT-reported value — spoofed telemetry can deny the view but
   cannot move the plant.
 - **Comms-loss safe state (W6/CIE #10):** explicit last-safe-setpoint hold on master/broker loss.
 
@@ -392,7 +392,7 @@ Adds, per `CIE_HARDENING` W1/W5/W6 (all in-ladder, so a register write cannot re
 
 ### 7.1 `plant-sim/plant_sim.py` (NEW)
 
-`python:3.11-slim` + `pymodbus` **Modbus TCP slave (server)** on 502 that OpenPLC polls. Per 500 ms tick,
+`python:3.11-slim` + `pymodbus` **Modbus TCP server** on 502 that OpenPLC polls. Per 500 ms tick,
 integrate the `DIGITAL_TWIN §1.3` model: `Q_in = diurnal(t)+storm(t)`, `Q_out = (P1+P2)*1500*eff`,
 `level += (Q_in-Q_out)*dt/AREA` clamped 0..100 %; derive FIT-104/PIT-105; drive float discretes; and the
 **SSO spill counter** `if level>=100: spill += (Q_in-Q_out)*dt`. Reads coils (`%QX`) from OpenPLC's writes,
@@ -503,8 +503,8 @@ passes. Order chosen so the **physical loop is real before any network/attack wo
 networks (§4.1) and named volumes; pin every upstream image tag/digest; add profiles. *Gate:* `docker
 compose config` validates; empty services build.
 
-**Phase 1 — Physics + PLC core loop (the heart).** Build `plant-sim` (Modbus slave + integrator + spill)
-and `openplc` (seed `slave_devices.seed`, load `naive_wetwell.st`, enable Modbus master + 502 server,
+**Phase 1 — Physics + PLC core loop (the heart).** Build `plant-sim` (Modbus server + integrator + spill)
+and `openplc` (seed `slave_devices.seed`, load `naive_wetwell.st`, enable Modbus client + 502 server,
 disable DNP3/ENIP). Run cell-only, flat, no firewall. *Gate:* level oscillates within the deadband, pumps
 cycle, `spill==0` under normal diurnal inflow; a storm pulse drives level up and the loop pumps it down.
 

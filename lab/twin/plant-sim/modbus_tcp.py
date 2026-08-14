@@ -5,13 +5,13 @@ Pure Python standard library (no pymodbus), same philosophy as the kit's
 dnp3lib.py: small enough to read, real enough to capture. Implements the MBAP
 header + the function codes the twin actually uses, on both sides:
 
-  * ModbusServer  -- used by plant-sim (the wet-well physics is the Modbus slave
-                     that OpenPLC's "slave devices" master polls).
+  * ModbusServer  -- used by plant-sim (the wet-well physics is the Modbus server
+                     that OpenPLC's "slave devices" client polls).
   * ModbusClient  -- used by dnp3-gw and iiot-gw (they poll OpenPLC:502 for the
                      live process image).
 
 Wire format is standard Modbus/TCP, so it interoperates with OpenPLC's own
-Modbus master/server and is fully parseable in Wireshark (display filter: mbtcp).
+Modbus client/server and is fully parseable in Wireshark (display filter: mbtcp).
 
 Supported function codes:
   0x01 Read Coils            0x02 Read Discrete Inputs
@@ -100,7 +100,7 @@ class ModbusServer:
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.bind((self.host, self.port))
         self._sock.listen(8)
-        print(f"[modbus] slave listening on {self.host}:{self.port}", flush=True)
+        print(f"[modbus] server listening on {self.host}:{self.port}", flush=True)
         while True:
             conn, peer = self._sock.accept()
             threading.Thread(target=self._handle, args=(conn, peer), daemon=True).start()

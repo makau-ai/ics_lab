@@ -318,7 +318,7 @@ The outstation obeys the rogue command and returns Success. The breaker is now o
 
 **Why it matters.** The outstation politely reports success to the attacker. In CISA's ICSNPP dnp3_control.log this appears as a DIRECT_OPERATE / Trip / Success line from source 10.20.0.66 — a detection you can build on.
 
-**CRITICAL.** Detection nuance: the obvious rule — alarm when a control's source IP isn't the master — fires here only because the attacker kept his real IP (10.20.0.66) while forging just the DNP3 link address. A smarter attacker spoofs the master's IP or hijacks its TCP session and evades it. See 'Detection under adversarial and operational reality' below for the invariant-based rule that survives.
+**CRITICAL.** Detection nuance: the obvious rule — alarm when a control's source IP isn't the master — fires here only because the attacker kept its real IP (10.20.0.66) while forging just the DNP3 link address. A smarter attacker spoofs the master's IP or hijacks its TCP session and evades it. See 'Detection under adversarial and operational reality' below for the invariant-based rule that survives.
 
 **Wireshark filter:** `dnp3.al.func==129 && ip.dst==10.20.0.66`
 
@@ -332,7 +332,7 @@ The rogue host follows up with a COLD RESTART — commanding the outstation to f
 | Source IP | 10.20.0.66 |
 | App function | COLD RESTART (0x0D) |
 
-**Why it matters.** A restart is a denial-of-availability weapon in OT: while the RTU reboots, operators are blind and cannot control the site. No credentials were needed.
+**Why it matters.** A restart is a denial-of-availability weapon in OT: while the RTU reboots, operators lose visibility and cannot control the site. No credentials were needed.
 
 **CRITICAL.** Denial of Service against a control device — MITRE ATT&CK for ICS T0814. Function-code filtering at an OT firewall (block COLD RESTART from anything but the master) and DNP3-SA both mitigate this.
 
@@ -384,7 +384,7 @@ The outstation acknowledges the restart. Its Internal Indications now show the D
 ### D4 · Availability attacks via control functions  
 *Severity: HIGH, frames 31, 33*
 
-- **Risk.** COLD RESTART (and its warm variant) will reboot an outstation on command, blinding operators to the site during recovery (frames 31–33). Combined with spoofing, it is a remote denial-of-control.
+- **Risk.** COLD RESTART (and its warm variant) will reboot an outstation on command, denying operators visibility of the site during recovery (frames 31–33). Combined with spoofing, it is a remote denial-of-control.
 - **Real-world.** Loss of view/loss of control is a recurring objective in grid intrusions; the 2015 Ukraine attackers also bricked serial-to-Ethernet converters to prolong the outage.
 - **Technique.** MITRE ATT&CK for ICS T0814 (Denial of Service)
 - **Control.** Block administrative function codes (COLD/WARM RESTART) from all sources except the master at an OT firewall; require DNP3-SA for critical functions; monitor for unexpected Device Restart IIN flags.
@@ -399,7 +399,7 @@ The outstation acknowledges the restart. Its Internal Indications now show the D
 
 ### Detection under adversarial and operational reality
 
-The module's headline rule — *alarm on any control whose source is not the sanctioned master IP* — survives this capture only by luck. It keys on `source_h`, an IP field in dnp3_control.log. But the attacker in frame 27 forged only the 16-bit DNP3 **link** address (writing the master's 100) and left his real IP (10.20.0.66) untouched — so source_h still reads 10.20.0.66 and the alert happens to fire.
+The module's headline rule — *alarm on any control whose source is not the sanctioned master IP* — survives this capture only by luck. It keys on `source_h`, an IP field in dnp3_control.log. But the attacker in frame 27 forged only the 16-bit DNP3 **link** address (writing the master's 100) and left its real IP (10.20.0.66) untouched — so source_h still reads 10.20.0.66 and the alert happens to fire.
 
 Note what the sensor cannot see: the forged link address appears in **no** default ICSNPP log (dnp3.log carries fc_request/fc_reply/iin; dnp3_control.log carries only source/destination IPs). To key on the field the attacker actually forged, you must first extend the parser to emit it.
 
@@ -407,9 +407,9 @@ Worse, a competent adversary spoofs the master's **IP** — free from an on-segm
 
 Durable detection keys on an **invariant** the attacker cannot cheaply satisfy — bind {DNP3 link address ↔ expected source IP/TCP session ↔ known-master allow-set ↔ SELECT-before-OPERATE}. Alarm on OPERATE with no matching in-window SELECT, brand-new sessions to :20000, or off-baseline function codes/timing — correlated in a SIEM with maintenance-window suppression and asset-inventory enrichment, not a lone packet rule.
 
-### When you encrypt, you blind your network sensor
+### When you encrypt, your network sensor goes dark
 
-The confidentiality controls (DNP3 D2; MQTT M1/M2) close the exposure gap but move the detection boundary. Once transport is encrypted — DNP3 over TLS/VPN, MQTT on 8883 — the ICSNPP/Zeek sensor goes **dark**: Zeek emits no mqtt_*.log on 8883 (only ssl.log), and a DNP3-in-TLS tunnel is opaque to ICSNPP. Detection must then move to broker auth logs, RTU/endpoint syslog, flow/JA3 metadata, or a controlled decryption/inspection point. Draw the line precisely: DNP3 Secure Authentication (SAv5) is a MAC — authenticity and integrity only — so it does **not** blind ICSNPP; only the transport-encryption controls do.
+The confidentiality controls (DNP3 D2; MQTT M1/M2) close the exposure gap but move the detection boundary. Once transport is encrypted — DNP3 over TLS/VPN, MQTT on 8883 — the ICSNPP/Zeek sensor goes **dark**: Zeek emits no mqtt_*.log on 8883 (only ssl.log), and a DNP3-in-TLS tunnel is opaque to ICSNPP. Detection must then move to broker auth logs, RTU/endpoint syslog, flow/JA3 metadata, or a controlled decryption/inspection point. Draw the line precisely: DNP3 Secure Authentication (SAv5) is a MAC — authenticity and integrity only — so it does **not** take ICSNPP dark; only the transport-encryption controls do.
 
 **Sensor placement.** Detection only works if the tap sees the traffic. Site the sensor on a mirror/SPAN or TAP at the OT/DMZ conduit the control-center master traverses. An attacker on the substation LAN injecting into the **local** RTU never crosses a control-center SPAN, and serial-tail DNP3 (RS-232/485 into the RTU) is invisible to any network sensor.
 
@@ -454,7 +454,7 @@ The Docker lab ships a small Python DNP3 outstation and master so you can genera
 
 **Question.** Which single log line is your best alert for the attack, and what field makes it detectable?
 
-**Answer.** The dnp3_control.log line 'DIRECT_OPERATE … Trip … Success' whose source_h is 10.20.0.66. But note that works here only because the attacker kept his real IP while forging the DNP3 link address; a smarter attacker who also spoofs the master's IP (or hijacks its TCP session) defeats a source-IP rule. The durable detection keys on an invariant — a control with no preceding SELECT, from an unexpected session, or off the master's baseline cadence (see 'Detection under adversarial and operational reality').
+**Answer.** The dnp3_control.log line 'DIRECT_OPERATE … Trip … Success' whose source_h is 10.20.0.66. But note that works here only because the attacker kept its real IP while forging the DNP3 link address; a smarter attacker who also spoofs the master's IP (or hijacks its TCP session) defeats a source-IP rule. The durable detection keys on an invariant — a control with no preceding SELECT, from an unexpected session, or off the master's baseline cadence (see 'Detection under adversarial and operational reality').
 
 ### Exercise 4. Design the control
 

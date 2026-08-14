@@ -160,7 +160,7 @@ unseen), and a crafted object stream can desync or crash the lightweight stack. 
 `dnp3_objects.log` rows whose `object_type`/`object_count`/`range_low`–`range_high` do **not** match the
 published point map; unsolicited/extraneous objects; `mqtt_publish.log` `level_pct` that contradicts the
 physical model. **ATT&CK-ICS:** T0856 Spoof Reporting, T0832 Manipulation of View, T0829 Loss of View.
-**Control:** strict object/range whitelisting at the FEP, cross-checking reported vs. commanded state,
+**Control:** strict object/range allow-listing at the FEP, cross-checking reported vs. commanded state,
 and rejecting extraneous objects.
 
 ---
@@ -214,7 +214,7 @@ by construction; the analog backstop is why the consequence stays bounded.
 | CWE-319 / CWE-311 (cleartext) | DNP3-over-TLS / SAv5; MQTT **8883 mTLS** | `mosquitto.secure.conf` L15–24 (uncomment) |
 | CWE-284 (no authz) | MQTT **`acl`** least-privilege; DNP3 master allow-list | `lab/mosquitto/acl` · conduit C1 |
 | CWE-290 (spoofable identity) | **SAv5** proves key-holding sender; conduit binds the master⇄gw pair only | `DIGITAL_TWIN §4.2` C1 |
-| CWE-349 / CWE-807 (untrusted data) | Object/range whitelisting; **commanded-vs-reported** cross-check at the FEP/historian | `DIGITAL_TWIN §5`, §8 |
+| CWE-349 / CWE-807 (untrusted data) | Object/range allow-listing; **commanded-vs-reported** cross-check at the FEP/historian | `DIGITAL_TWIN §5`, §8 |
 | CWE-693 / CWE-807 (single software interlock) | **Hardwired HH float LSHH-102** (PLC-independent) + weir + motor-protection relay | `DIGITAL_TWIN §1.3`, §7.3 |
 | CWE-1364 (zone boundary) | **IEC 62443-3-2 zones + `zone-fw` deny-by-default** conduit firewall | `docker-compose.segmented.yml` / twin `zone-fw` |
 
