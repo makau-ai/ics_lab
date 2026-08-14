@@ -89,10 +89,10 @@ Machine Problem, is rehearsing).
 ## Citation & licensing reminder
 
 If you use a university dataset in coursework or a paper, **cite it** (DOI or the paper) as the
-authors ask. For redistribution inside a shared kit, only the BSD-3-licensed
-BSD-3-licensed **CISA** trace are unambiguously safe to rebundle with attribution; the others are
-free to *download and analyze* but should be **linked, not copied**, unless their record states
-otherwise. This kit therefore links to them rather than shipping their files.
+authors ask. For redistribution inside a shared kit, only the BSD-3-licensed **CISA** DNP3 trace is
+unambiguously safe to rebundle with attribution — which is why this kit ships it in `pcaps/real/`
+(with its license and `NOTICE.md`). The others are free to *download and analyze* but should be
+**linked, not copied** (use `lab/fetch_real_captures.sh`), unless their record states otherwise.
 
 ---
 

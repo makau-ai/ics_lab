@@ -1,0 +1,22 @@
+# ============================================================================
+#  Topic access-control list (control M4)
+#  Referenced by mosquitto.secure.conf. Scopes each identity to the minimum
+#  topics it needs -- so a wildcard '#' subscription or a stray command
+#  publish is denied even for an authenticated client.
+# ============================================================================
+
+# The HMI dashboard may only READ telemetry.
+user hmi_operator
+topic read plant/+/telemetry
+
+# The field sensor may only WRITE its own telemetry and status.
+user sensor_svc
+topic write plant/tank1/telemetry
+topic write plant/tank1/status
+
+# A dedicated controller (if you add one) would be the ONLY writer of commands:
+# user plant_controller
+# topic write plant/+/command
+
+# Anyone not listed gets nothing. No rule grants '#', so full-broker
+# eavesdropping is impossible even with valid credentials.

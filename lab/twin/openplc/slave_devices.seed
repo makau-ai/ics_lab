@@ -1,0 +1,34 @@
+# ============================================================================
+#  slave_devices.seed -- plant-sim as OpenPLC remote I/O (Modbus master config)
+#
+#  OpenPLC's "Slave Devices" feature makes OpenPLC a Modbus MASTER that polls a
+#  remote Modbus slave (here, plant-sim) and maps its registers into the PLC
+#  process image. OpenPLC assigns located addresses to the FIRST slave device
+#  starting at offset 100 -- which is exactly why the ST uses %IW100 / %IX100.0 /
+#  %QX100.0 (see DIGITAL_TWIN 1.3). Add this device in the OpenPLC web UI
+#  (Slave Devices -> Add new device) with the values below, or let
+#  load-program.sh insert it into openplc.db.
+# ============================================================================
+name        = wetwell-plant-sim
+protocol    = TCP
+ip_address  = 172.30.10.10
+ip_port     = 502
+slave_id    = 1
+
+# --- register map: plant-sim modbus object  ->  OpenPLC located address ---
+# Discrete Inputs (read):   DI 0 -> %IX100.0 (LSHH-102),  DI 1 -> %IX100.1 (LSL-103)
+discrete_inputs_start = 0
+discrete_inputs_size  = 2
+
+# Input Registers (read):   IR 100 -> %IW100 (level), IR 101 -> %IW101 (flow), IR 102 -> %IW102 (psi)
+input_registers_start = 100
+input_registers_size  = 3
+
+# Coils (write):            coil 0 -> %QX100.0 (P-1), coil 1 -> %QX100.1 (P-2), coil 2 -> %QX100.2 (HLA)
+coils_start = 0
+coils_size  = 3
+
+# NOTE: the writable setpoints %MW10 (LEAD_START), %MW11 (STOP) and the
+# supervisory command %MW12 (REMOTE_CMD) are PLC *memory* registers, NOT part of
+# this slave device. They are written by dnp3-gw / MQTT via OpenPLC's own Modbus
+# server (holding registers) and read by the ST program.

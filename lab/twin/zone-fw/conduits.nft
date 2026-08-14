@@ -1,0 +1,44 @@
+#!/usr/sbin/nft -f
+# ============================================================================
+#  conduits.nft -- IEC 62443-3-2 zones-and-conduits ruleset for zone-fw.
+#
+#  zone-fw is multi-homed (a .1 leg in every zone) and is the default route for
+#  every container, so ALL inter-zone traffic is routed here and hits this
+#  forward chain. Policy is DENY-BY-DEFAULT; each conduit is an explicit allow.
+#  Anything else is logged ("CONDUIT-DROP ") and dropped -- the Active-Defense
+#  tripwire (CIE #6) that feeds Zeek/Suricata.
+#
+#  Pinned to the DIGITAL_TWIN 4.2 point map. Reloadable: flushes first.
+# ============================================================================
+flush ruleset
+
+table inet conduits {
+    chain forward {
+        type filter hook forward priority 0; policy drop;   # deny-by-default
+
+        ct state established,related accept                 # return traffic
+        ct state invalid drop
+
+        # -- C1  DNP3 control conduit: ONLY scada-master <-> dnp3-gw, only :20000
+        ip saddr 172.30.20.20 ip daddr 172.30.10.12 tcp dport 20000 accept
+        ip saddr 172.30.10.12 ip daddr 172.30.20.20 tcp sport 20000 accept
+
+        # -- C2  MQTT telemetry conduit: cell/control -> broker, UP ONLY
+        #        (data-diode intent: command/setpoint DOWN has no rule = denied)
+        ip saddr 172.30.10.0/24 ip daddr 172.30.30.30 tcp dport { 1883, 8883 } accept
+        ip saddr 172.30.20.0/24 ip daddr 172.30.30.30 tcp dport { 1883, 8883 } accept
+
+        # -- C3  engineering conduit: control -> openplc {web 8080, modbus 502}
+        ip saddr 172.30.20.0/24 ip daddr 172.30.10.11 tcp dport { 8080, 502 } accept
+
+        # -- C4  enterprise visibility: ent -> DMZ only (broker + edgeshark), no cell
+        ip saddr 172.30.40.0/24 ip daddr 172.30.30.0/24 tcp dport { 1883, 5001 } accept
+
+        # -- Red team: attacker_net (172.30.66.0/24) has NO conduit -> falls through
+        #    to the drop below. The scenario-granted cell foothold lives ON cell_net,
+        #    so it is L2-adjacent to the RTU and never traverses this chain.
+
+        # -- everything else: log + drop (the CONDUIT-DROP tripwire)
+        log prefix "CONDUIT-DROP " level warn counter drop
+    }
+}

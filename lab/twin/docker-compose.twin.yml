@@ -1,0 +1,373 @@
+name: ics-twin-liftstation
+
+# ===========================================================================
+#  Wastewater Lift-Station Digital Twin -- BASE compose (the VULNERABLE variant)
+#
+#  5 IEC-62443 zones, one Docker bridge each, all routed through zone-fw
+#  (nftables deny-by-default). Boots the "before" twin: naive ST loop, float OFF,
+#  DNP3 gateway obey-on-request, insecure MQTT broker, MQTT command path live.
+#
+#  Flip EVERYTHING hardened with the thin override:
+#    docker compose -f docker-compose.twin.yml -f docker-compose.hardened.yml up -d
+#
+#  Profiles:  (default up = core twin)
+#    capture    = sniff-* sidecars + noVNC Wireshark
+#    tools      = zeek + ICSNPP
+#    attack     = adversary + granted cell foothold
+#    twin-full  = historian-influx + eng-ws + jump-host + edgeshark
+# ===========================================================================
+
+x-cap-net: &capnet
+  cap_add: [NET_ADMIN, NET_RAW]
+
+services:
+  # ========================= L0/L1 PROCESS CELL (cell_net) =========================
+  plant-sim:                       # wet-well physics -- Modbus SLAVE (the plant)
+    build: ./plant-sim
+    <<: *capnet
+    environment:
+      ZONE_GW: 172.30.10.1
+      FLOAT_ENABLED: "false"       # VULNERABLE default; hardened.yml sets true
+      WEIR_ENABLED: "true"
+      MOTOR_PROT_ENABLED: "true"
+      DIURNAL: "1"
+      STORM_AT: "600"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('127.0.0.1',502),2)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: on-failure
+    networks:
+      cell_net:
+        ipv4_address: 172.30.10.10
+
+  openplc:                         # soft-PLC -- Modbus master (to sim) + server (502) + web (8080)
+    build: ./openplc
+    <<: *capnet
+    environment:
+      PLC_PROGRAM: naive_wetwell.st   # hardened.yml -> hardened_wetwell.st
+    volumes:
+      - openplc_st:/opt/openplc/webserver/st_files
+      - ./openplc/st:/seed/st:ro
+      - ./openplc/slave_devices.seed:/seed/slave_devices.seed:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      - plant-sim
+    restart: on-failure
+    networks:
+      cell_net:
+        ipv4_address: 172.30.10.11
+
+  dnp3-gw:                         # DNP3 outstation gateway (addr 10) fronting the PLC
+    build: ./dnp3
+    <<: *capnet
+    command: python gateway.py --modbus-host openplc --listen 0.0.0.0:20000 --outstn-addr 10
+    environment:
+      ZONE_GW: 172.30.10.1
+      HARDEN: "0"                  # hardened.yml -> 1 (arm-latch, no DIRECT_OPERATE, allow-list)
+      SAV5: "0"                    # hardened.yml -> 1 (SAv5 aggressive-mode HMAC)
+      MODBUS_HOST: openplc
+      PLC_MAP: "sim"               # see README OpenPLC bring-up caveat; "openplc" once map confirmed
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; socket.create_connection(('127.0.0.1',20000),2)\""]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    depends_on:
+      - openplc
+    restart: on-failure
+    networks:
+      cell_net:
+        ipv4_address: 172.30.10.12
+
+  iiot-gw:                         # IIoT/MQTT edge gateway -- reads OpenPLC Modbus, publishes telemetry
+    build: ./mqtt
+    <<: *capnet
+    command: python publisher.py
+    environment:
+      ZONE_GW: 172.30.10.1
+      BROKER: 172.30.30.30
+      PORT: "1883"
+      MQTT_USER: sensor_svc
+      MQTT_PASS: s3ns0r-pw
+      MODBUS_HOST: openplc
+      PLC_MAP: "sim"
+    depends_on:
+      - openplc
+    restart: on-failure
+    networks:
+      cell_net:
+        ipv4_address: 172.30.10.13
+
+  pump-controller:                 # trusting MQTT actuator (the insecure cloud-command surface)
+    build: ./mqtt
+    <<: *capnet
+    command: python pump-controller.py
+    environment:
+      ZONE_GW: 172.30.10.1
+      BROKER: 172.30.30.30
+      PORT: "1883"
+    depends_on:
+      - iiot-gw
+    restart: on-failure
+    networks:
+      cell_net:
+        ipv4_address: 172.30.10.14
+    # hardened.yml sets deploy.replicas 0 -> MQTT command path designed out (CIE #4)
+
+  # ========================= L3 CONTROL CENTER (control_net) =========================
+  scada-master:                    # DNP3 master / FEP -- continuous integrity poll
+    build: ./dnp3
+    <<: *capnet
+    command: python master.py --host 172.30.10.12 --poll-loop 5
+    environment:
+      ZONE_GW: 172.30.20.1
+    depends_on:
+      - dnp3-gw
+    restart: on-failure
+    networks:
+      control_net:
+        ipv4_address: 172.30.20.20
+
+  hmi:                             # FUXA web SCADA/HMI (Modbus to PLC + MQTT to broker)
+    image: frangoteam/fuxa:latest
+    volumes:
+      - fuxa_appdata:/usr/src/app/FUXA/server/_appdata
+    ports:
+      - "1881:1881"
+    depends_on:
+      - openplc
+    restart: on-failure
+    networks:
+      control_net:
+        ipv4_address: 172.30.20.21
+
+  historian:                       # lightweight python historian + commanded-vs-reported tripwire
+    build: ./mqtt
+    <<: *capnet
+    command: python subscriber.py --historian
+    environment:
+      ZONE_GW: 172.30.20.1
+      BROKER: 172.30.30.30
+      PORT: "1883"
+      MQTT_USER: hmi_operator
+      MQTT_PASS: Plant!ntel2024
+      TOPIC: plant/tank1/#
+    depends_on:
+      - iiot-gw
+    restart: on-failure
+    networks:
+      control_net:
+        ipv4_address: 172.30.20.22
+
+  eng-ws:                          # engineering workstation (twin-full) -- programs OpenPLC
+    image: nicolaka/netshoot:latest
+    <<: *capnet
+    command: sh -c "ip route replace default via 172.30.20.1 || true; sleep infinity"
+    profiles: ["twin-full"]
+    networks:
+      control_net:
+        ipv4_address: 172.30.20.23
+
+  # ========================= L3.5 OT-DMZ (dmz_net) =========================
+  mqtt-broker:                     # eclipse-mosquitto -- the toggle surface (insecure <-> secure)
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./mosquitto/mosquitto.insecure.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - ./mosquitto/acl:/mosquitto/config/acl:ro
+      - ./mosquitto/certs:/mosquitto/config/certs:ro
+    ports:
+      - "1883:1883"
+    restart: on-failure
+    networks:
+      dmz_net:
+        ipv4_address: 172.30.30.30
+
+  # ========================= CONDUIT FIREWALL / ROUTER =========================
+  zone-fw:                         # nftables deny-by-default router, multi-homed to every zone
+    build: ./zone-fw
+    <<: *capnet
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    volumes:
+      - ./zone-fw/conduits.nft:/etc/nftables/conduits.nft:ro
+    restart: on-failure
+    networks:
+      cell_net:
+        ipv4_address: 172.30.10.1
+      control_net:
+        ipv4_address: 172.30.20.1
+      dmz_net:
+        ipv4_address: 172.30.30.1
+      ent_net:
+        ipv4_address: 172.30.40.1
+      attacker_net:
+        ipv4_address: 172.30.66.1
+
+  # ---- route-injectors for the UPSTREAM images (kit python services bake this
+  #      into their own entrypoint; these 3 handle the images we don't control) ----
+  route-openplc:
+    image: nicolaka/netshoot:latest
+    network_mode: "service:openplc"
+    cap_add: [NET_ADMIN]
+    command: sh -c "ip route replace default via 172.30.10.1 || true; sleep infinity"
+    depends_on: [openplc, zone-fw]
+    restart: on-failure
+
+  route-broker:
+    image: nicolaka/netshoot:latest
+    network_mode: "service:mqtt-broker"
+    cap_add: [NET_ADMIN]
+    command: sh -c "ip route replace default via 172.30.30.1 || true; sleep infinity"
+    depends_on: [mqtt-broker, zone-fw]
+    restart: on-failure
+
+  route-hmi:
+    image: nicolaka/netshoot:latest
+    network_mode: "service:hmi"
+    cap_add: [NET_ADMIN]
+    command: sh -c "ip route replace default via 172.30.20.1 || true; sleep infinity"
+    depends_on: [hmi, zone-fw]
+    restart: on-failure
+
+  # ========================= L4 ENTERPRISE / RED TEAM (profiles) =========================
+  jump-host:                       # IT foothold (twin-full)
+    image: nicolaka/netshoot:latest
+    <<: *capnet
+    command: sh -c "ip route replace default via 172.30.40.1 || true; sleep infinity"
+    profiles: ["twin-full"]
+    networks:
+      ent_net:
+        ipv4_address: 172.30.40.40
+
+  adversary:                       # red team on attacker_net -> DROPPED at the conduit
+    build: ./dnp3
+    <<: *capnet
+    command: sh -c "ip route replace default via 172.30.66.1 || true; sleep infinity"
+    profiles: ["attack"]
+    networks:
+      attacker_net:
+        ipv4_address: 172.30.66.66
+
+  adversary-mqtt:                  # red team (MQTT) on attacker_net -> DROPPED at the conduit
+    build: ./mqtt
+    <<: *capnet
+    command: sh -c "ip route replace default via 172.30.66.1 || true; sleep infinity"
+    profiles: ["attack"]
+    networks:
+      attacker_net:
+        ipv4_address: 172.30.66.67
+
+  adversary-foothold:              # SCENARIO-GRANTED cell foothold -> the attack SUCCEEDS
+    build: ./dnp3
+    <<: *capnet
+    command: sh -c "ip route replace default via 172.30.10.1 || true; sleep infinity"
+    profiles: ["attack"]
+    networks:
+      cell_net:
+        ipv4_address: 172.30.10.66
+
+  # ========================= ANALYSIS + CAPTURE (profiles) =========================
+  zeek:                            # Zeek + CISA ICSNPP (tools)
+    build: ./zeek
+    volumes:
+      - ..:/kit
+      - ./captures:/caps
+    command: sleep infinity
+    profiles: ["tools"]
+    networks:
+      dmz_net:
+        ipv4_address: 172.30.30.31
+
+  sniff-dnp3:                      # per-host tap at the RTU (capture)
+    image: nicolaka/netshoot:latest
+    network_mode: "service:dnp3-gw"
+    cap_add: [NET_ADMIN, NET_RAW]
+    command: tcpdump -i any -U -w /caps/dnp3_live.pcap "tcp port 20000"
+    volumes:
+      - ./captures:/caps
+    profiles: ["capture"]
+
+  sniff-mqtt:                      # per-host tap at the broker (capture)
+    image: nicolaka/netshoot:latest
+    network_mode: "service:mqtt-broker"
+    cap_add: [NET_ADMIN, NET_RAW]
+    command: tcpdump -i any -U -w /caps/mqtt_live.pcap "tcp port 1883 or tcp port 8883"
+    volumes:
+      - ./captures:/caps
+    profiles: ["capture"]
+
+  sniff-conduit:                   # whole-zone SPAN-like tap at zone-fw (capture)
+    image: nicolaka/netshoot:latest
+    network_mode: "service:zone-fw"
+    cap_add: [NET_ADMIN, NET_RAW]
+    command: tcpdump -i any -U -w /caps/conduit_live.pcap "tcp port 20000 or tcp port 1883 or tcp port 8883"
+    volumes:
+      - ./captures:/caps
+    profiles: ["capture"]
+
+  wireshark:                       # noVNC Wireshark GUI on 3000/3001 -- opens the live pcaps
+    image: lscr.io/linuxserver/wireshark:latest
+    cap_add: [NET_ADMIN]
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+    volumes:
+      - ./captures:/captures
+    profiles: ["capture"]
+    networks:
+      dmz_net:
+        ipv4_address: 172.30.30.33
+
+  edgeshark:                       # live click-to-Wireshark (twin-full; see README for host-netns)
+    image: ghcr.io/siemens/edgeshark:latest
+    ports:
+      - "5001:5001"
+    profiles: ["twin-full"]
+    networks:
+      dmz_net:
+        ipv4_address: 172.30.30.32
+
+  historian-influx:                # optional InfluxDB historian (twin-full)
+    image: influxdb:1.8
+    volumes:
+      - influx_data:/var/lib/influxdb
+    profiles: ["twin-full"]
+    networks:
+      control_net:
+        ipv4_address: 172.30.20.24
+
+networks:
+  cell_net:                        # L0-L1 process cell
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.10.0/24
+  control_net:                     # L3 control center
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.20.0/24
+  dmz_net:                         # L3.5 OT-DMZ
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.30.0/24
+  ent_net:                         # L4 enterprise
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.40.0/24
+  attacker_net:                    # red team
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.66.0/24
+
+volumes:
+  openplc_st: {}
+  fuxa_appdata: {}
+  influx_data: {}

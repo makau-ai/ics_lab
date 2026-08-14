@@ -1,0 +1,2 @@
+# plant-sim uses only the Python standard library (see modbus_tcp.py).
+# No third-party packages are required or installed.

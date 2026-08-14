@@ -1,113 +1,304 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
+<html lang="en" data-proto="dnp3"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DNP3 — Distributed Network Protocol 3</title>
+<meta name="color-scheme" content="dark light">
+<title>DNP3 Module — First Light</title>
 <style>
-:root{--accent:#b45309;--accent2:#7c2d12;--ink:#1e293b;--mut:#475569;--line:#e2e8f0;--bg:#f1f5f9;--card:#fff;}
+/* ============================ FIRST LIGHT — module token system ============================ */
+:root{
+  color-scheme:dark;
+  --bg:#0a0e1a; --bg-raise:#111725; --card:#131a2b; --card-2:#1a2336;
+  --line:#232e49; --line-soft:#1b2440;
+  --ink:#e8edf7; --mut:#9aa7bd; --faint:#64748b;
+  --link:#a5b4fc; --accent-glow:#818cf8;
+  --dnp3:#f59e0b; --dnp3-deep:#b45309; --mqtt:#2dd4bf; --mqtt-deep:#0f766e;
+  --ghost:#f87171; --ghost-deep:#dc2626; --ok:#34d399; --ok-deep:#16a34a;
+  /* semantic severity — light-on-dark tints */
+  --sev-ok:#aab6cc; --sev-ok-bg:rgba(148,163,184,.16); --sev-ok-bd:rgba(148,163,184,.32);
+  --sev-note:#7dd3fc; --sev-note-bg:rgba(56,189,248,.15); --sev-note-bd:rgba(56,189,248,.38);
+  --sev-caution:#fcd34d; --sev-caution-bg:rgba(245,158,11,.16); --sev-caution-bd:rgba(245,158,11,.42);
+  --sev-crit:#fca5a5; --sev-crit-bg:rgba(248,113,113,.16); --sev-crit-bd:rgba(248,113,113,.42);
+  /* fluid modular type scale (~1.22) */
+  --step--1:clamp(.78rem,.75rem + .18vw,.86rem);
+  --step-0:clamp(.95rem,.9rem + .25vw,1.05rem);
+  --step-1:clamp(1.06rem,1rem + .35vw,1.2rem);
+  --step-2:clamp(1.2rem,1.1rem + .6vw,1.45rem);
+  --step-3:clamp(1.4rem,1.25rem + .9vw,1.8rem);
+  --step-4:clamp(1.7rem,1.4rem + 1.4vw,2.25rem);
+  --step-6:clamp(1.95rem,1.4rem + 2.6vw,3rem);
+  --spring:cubic-bezier(.34,1.56,.64,1);
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+html[data-theme="light"]{
+  color-scheme:light;
+  --bg:#f1f5f9; --bg-raise:#e9eef5; --card:#ffffff; --card-2:#f8fafc;
+  --line:#e2e8f0; --line-soft:#eef2f7;
+  --ink:#1e293b; --mut:#475569; --faint:#94a3b8;
+  --link:#4f46e5; --accent-glow:#6366f1;
+  --dnp3:#b45309; --dnp3-deep:#92400e; --mqtt:#0f766e; --mqtt-deep:#0d5c56;
+  --ghost:#dc2626; --ghost-deep:#b91c1c; --ok:#16a34a; --ok-deep:#15803d;
+  --sev-ok:#475569; --sev-ok-bg:#f1f5f9; --sev-ok-bd:#cbd5e1;
+  --sev-note:#0369a1; --sev-note-bg:#e0f2fe; --sev-note-bd:#7dd3fc;
+  --sev-caution:#9a3412; --sev-caution-bg:#ffedd5; --sev-caution-bd:#fdba74;
+  --sev-crit:#b91c1c; --sev-crit-bg:#fee2e2; --sev-crit-bd:#fca5a5;
+}
+@media(prefers-color-scheme:light){
+  :root:not([data-theme]){
+    color-scheme:light;
+    --bg:#f1f5f9; --bg-raise:#e9eef5; --card:#ffffff; --card-2:#f8fafc;
+    --line:#e2e8f0; --line-soft:#eef2f7;
+    --ink:#1e293b; --mut:#475569; --faint:#94a3b8;
+    --link:#4f46e5; --accent-glow:#6366f1;
+    --dnp3:#b45309; --dnp3-deep:#92400e; --mqtt:#0f766e; --mqtt-deep:#0d5c56;
+    --ghost:#dc2626; --ghost-deep:#b91c1c; --ok:#16a34a; --ok-deep:#15803d;
+    --sev-ok:#475569; --sev-ok-bg:#f1f5f9; --sev-ok-bd:#cbd5e1;
+    --sev-note:#0369a1; --sev-note-bg:#e0f2fe; --sev-note-bd:#7dd3fc;
+    --sev-caution:#9a3412; --sev-caution-bg:#ffedd5; --sev-caution-bd:#fdba74;
+    --sev-crit:#b91c1c; --sev-crit-bg:#fee2e2; --sev-crit-bd:#fca5a5;
+  }
+}
+/* protocol accent — theme-aware (rides the --dnp3 / --mqtt twins); bright variant is for the always-dark hero */
+html[data-proto="dnp3"]{--accent:var(--dnp3); --accent2:var(--dnp3-deep); --accent-bright:#fbbf24;
+  --glow:rgba(245,158,11,.12); --flgrad:linear-gradient(100deg,#fcd34d,#fb923c 55%,#f472b6)}
+html[data-proto="mqtt"]{--accent:var(--mqtt); --accent2:var(--mqtt-deep); --accent-bright:#5eead4;
+  --glow:rgba(45,212,191,.12); --flgrad:linear-gradient(100deg,#5eead4,#2dd4bf 50%,#38bdf8)}
+
 *{box-sizing:border-box}
+[hidden]{display:none !important}
+html{scroll-behavior:smooth}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-color:var(--ink);background:var(--bg);line-height:1.55;font-size:15.5px}
-a{color:var(--accent)}
-header{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:26px 22px 18px}
-header .kick{font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.9}
-header h1{margin:.15em 0 .1em;font-size:26px}
-header .sub{opacity:.95;margin:0 0 12px}
-header .meta{display:flex;flex-wrap:wrap;gap:8px}
-header .chip{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);
-padding:3px 10px;border-radius:20px;font-size:12.5px}
-nav{position:sticky;top:0;z-index:20;background:#0f172a;display:flex;flex-wrap:wrap;gap:2px;padding:0 8px}
-nav button{background:none;border:0;color:#cbd5e1;padding:12px 13px;font-size:13.5px;cursor:pointer;
-border-bottom:3px solid transparent;font-weight:600}
-nav button:hover{color:#fff}
-nav button.on{color:#fff;border-bottom-color:var(--accent)}
-main{max-width:1080px;margin:0 auto;padding:22px 18px 60px}
-section{display:none;animation:f .2s ease}
-section.on{display:block}
-@keyframes f{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
-h2{font-size:21px;border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:8px}
-h4{margin:.9em 0 .35em;font-size:15.5px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0;
-box-shadow:0 1px 2px rgba(15,23,42,.04)}
+  color:var(--ink);background:var(--bg);line-height:1.6;font-size:var(--step-0);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(72% 55% at 50% 0%,var(--glow),transparent 70%)}
+a{color:var(--link);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--accent-glow);outline-offset:2px;border-radius:4px}
+.lens{width:1em;height:1em;display:inline-block;vertical-align:-.15em;flex:0 0 auto}
+h2{font-size:var(--step-3);letter-spacing:-.01em;margin:.6em 0 .5em;display:flex;align-items:center;gap:.55em;line-height:1.2}
+h2::before{content:"";width:18px;height:3px;border-radius:3px;flex:0 0 auto;
+  background:linear-gradient(90deg,var(--accent),var(--accent2))}
+h3{font-size:var(--step-1);letter-spacing:-.01em}
+h4{margin:1.4em 0 .5em;font-size:var(--step--1);color:var(--mut);text-transform:uppercase;letter-spacing:.11em;font-weight:800}
+p{margin:.62em 0}
+b{color:var(--ink)}
+ul,ol{margin:.4em 0;padding-left:1.35em}
+li{margin:.3em 0}
+li::marker{color:var(--accent)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  background:color-mix(in srgb,var(--accent) 13%,transparent);color:var(--ink);
+  padding:.05em .4em;border-radius:5px;font-size:.88em;border:1px solid color-mix(in srgb,var(--accent) 24%,transparent)}
 .muted{color:var(--mut)}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0}
-.tile{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
-.tile h4{margin:.1em 0 .3em;color:var(--accent)}
-.mono,.wire,pre,code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
-code{background:#eef2ff;padding:1px 5px;border-radius:4px;font-size:.92em}
-.wire{background:#0f172a;color:#e2e8f0;padding:8px 12px;border-radius:8px;font-size:12.5px;overflow-x:auto}
-table{border-collapse:collapse;width:100%;margin:8px 0;font-size:14px}
-th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
-th{background:#f8fafc}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+
+/* ================================ HERO — the signal field ============================ */
+.hero{position:relative;overflow:hidden;isolation:isolate;color:#e8edf7;
+  padding:clamp(1.5rem,1rem + 3vw,2.8rem) clamp(1.1rem,.6rem + 2vw,2.4rem) clamp(1.3rem,1rem + 2vw,2rem)}
+.herobg{position:absolute;inset:0;z-index:0;
+  background:
+    radial-gradient(120% 92% at 84% 4%,color-mix(in srgb,var(--accent-bright) 24%,transparent),transparent 56%),
+    radial-gradient(90% 80% at 8% 0%,rgba(124,58,237,.16),transparent 55%),
+    linear-gradient(160deg,#0b1020 0%,#0a0e1a 55%,#080b14 100%)}
+#constellation{position:absolute;inset:0;width:100%;height:100%;z-index:1;display:block}
+.heroinner{position:relative;z-index:3;max-width:1100px;margin:0 auto}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:clamp(.9rem,3vw,1.7rem);flex-wrap:wrap}
+.kick{font-size:var(--step--1);letter-spacing:.2em;text-transform:uppercase;color:#aeb9d6;font-weight:700;
+  display:inline-flex;align-items:center;gap:.6em}
+.kick .klens{width:1.15em;height:1.15em;color:var(--accent-bright);opacity:.95}
+.herotools{display:flex;gap:8px;flex-shrink:0;flex-wrap:wrap}
+.htbtn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.16);color:#e8edf7;border-radius:10px;padding:7px 12px;
+  font-size:var(--step--1);cursor:pointer;font-weight:600;text-decoration:none;
+  transition:background .2s var(--ease),transform .2s var(--ease)}
+.htbtn:hover{background:rgba(255,255,255,.15);text-decoration:none}
+.htbtn:active{transform:translateY(1px)}
+.hero h1{margin:.05em 0 .3em;font-size:var(--step-6);line-height:1.06;letter-spacing:-.02em;font-weight:800;
+  max-width:24ch;text-wrap:balance;text-shadow:0 2px 26px rgba(8,11,20,.55)}
+.hero h1 .fl{background:var(--flgrad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.hero .sub{color:#c9d3e6;margin:0 0 1.15em;max-width:66ch;font-size:var(--step-1);line-height:1.55;
+  text-shadow:0 2px 22px rgba(8,11,20,.5)}
+.meta{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;font-size:var(--step--1);font-weight:600;color:#dbe4f5;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.13);border-radius:20px;padding:5px 12px}
+.chip.lead{color:#fff}
+.chip.lead::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--accent-bright);
+  box-shadow:0 0 10px var(--accent-bright)}
+
+/* ================================ NAV — tab bar ============================ */
+nav{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg-raise) 90%,transparent);
+  -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);
+  display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;padding:0 max(10px,calc((100% - 1100px)/2))}
+nav::-webkit-scrollbar{display:none}
+nav button{background:none;border:0;color:var(--mut);padding:13px 14px;font-size:var(--step--1);cursor:pointer;
+  border-bottom:2px solid transparent;font-weight:700;white-space:nowrap;font-family:inherit;transition:color .2s var(--ease)}
+nav button:hover{color:var(--ink)}
+nav button.on{color:var(--ink);border-bottom-color:var(--accent)}
+
+main{max-width:1100px;margin:0 auto;padding:clamp(1.1rem,2vw,1.7rem) clamp(1rem,2vw,1.6rem) 72px}
+section{display:none}
+section.on{display:block;animation:secin .28s var(--ease)}
+@keyframes secin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ================================ CARDS & content ============================ */
+.card{background:linear-gradient(180deg,var(--card),var(--bg-raise));border:1px solid var(--line);border-radius:16px;
+  padding:clamp(1rem,2vw,1.35rem) clamp(1.05rem,2vw,1.5rem);margin:14px 0;position:relative;overflow:hidden}
+.cardh{margin:.1em 0 .5em;color:var(--ink)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.tile{background:var(--card-2);border:1px solid var(--line);border-radius:12px;padding:12px 15px}
+.tile h4{margin:.1em 0 .35em;color:var(--accent);text-transform:none;letter-spacing:0;font-size:var(--step-0);font-weight:800}
+.layer{margin:14px 0}
+.layer h4{color:var(--accent);text-transform:none;letter-spacing:0;font-size:var(--step-0);font-weight:800}
+.wire{background:#080d18;color:#cbd5e1;padding:11px 14px;border-radius:10px;font-size:var(--step--1);overflow-x:auto;
+  border:1px solid var(--line-soft);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.5;
+  box-shadow:0 6px 22px -14px rgba(0,0,0,.7)}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:var(--step--1)}
+th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+th{background:var(--card-2);font-weight:700;color:var(--ink)}
 .ft td.mono{white-space:nowrap;color:var(--accent);font-weight:700}
-/* frame explorer */
-.explorer{display:grid;grid-template-columns:330px 1fr;gap:14px}
-.flist{max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:10px;background:#fff}
-.frow{display:flex;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}
-.frow:hover{background:#f8fafc}
-.frow.sel{background:#eef2ff;border-left:3px solid var(--accent)}
-.frow.anom{background:#fef2f2}
-.frow.anom.sel{background:#fee2e2}
-.fn{font-weight:700;color:var(--mut);min-width:26px}
-.dir{color:var(--accent2);font-weight:700}
+a.framelink{color:var(--accent);font-weight:700}
+
+/* big callouts (scope / OT reality / note) */
+.bigcallout{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;
+  padding:13px 17px;margin:13px 0}
+.bigcallout.b-scope{border-left-color:var(--ghost)}
+.bigcallout.b-reality{border-left-color:var(--accent)}
+.bigcallout.b-note{border-left-color:var(--sev-note)}
+.bigcallout .bch{margin:.1em 0 .45em;color:var(--ink);font-size:var(--step-1);text-transform:none;letter-spacing:-.01em;font-weight:800}
+
+/* security cards */
+.seccard{background:var(--card);border:1px solid var(--line);border-left-width:5px;border-radius:12px;padding:13px 17px;margin:13px 0}
+.seccard.s-info{border-left-color:var(--sev-note)}
+.seccard.s-warn,.seccard.s-high{border-left-color:var(--sev-caution)}
+.seccard.s-critical{border-left-color:var(--ghost)}
+.sech{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.sech .sectitle{font-size:var(--step-0)}
+.sevpill{font-size:10px;font-weight:800;letter-spacing:.06em;padding:3px 9px;border-radius:20px;border:1px solid;
+  color:var(--sev-ok);background:var(--sev-ok-bg);border-color:var(--sev-ok-bd)}
+.s-info .sevpill{color:var(--sev-note);background:var(--sev-note-bg);border-color:var(--sev-note-bd)}
+.s-warn .sevpill,.s-high .sevpill{color:var(--sev-caution);background:var(--sev-caution-bg);border-color:var(--sev-caution-bd)}
+.s-critical .sevpill{color:var(--sev-crit);background:var(--sev-crit-bg);border-color:var(--sev-crit-bd)}
+.secid{font-weight:800;color:var(--mut);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:var(--step--1)}
+.secmeta{font-size:var(--step--1);color:var(--mut);margin:6px 0}
+.attk{font-size:var(--step--1);color:var(--sev-caution);background:var(--sev-caution-bg);
+  border:1px solid var(--sev-caution-bd);padding:6px 11px;border-radius:8px;display:inline-block;margin:8px 0}
+
+/* lab */
+.ex{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 17px;margin:13px 0}
+.ex .exh{margin:.1em 0 .5em;color:var(--accent);text-transform:none;letter-spacing:0;font-size:var(--step-1);font-weight:800}
+.ex .q{background:var(--card-2);border:1px solid var(--line);padding:9px 12px;border-radius:9px}
+details{margin:.5em 0}
+details summary{cursor:pointer;color:var(--accent);font-weight:700}
+details[open] summary{margin-bottom:.4em}
+
+/* personas */
+.persona{display:flex;gap:13px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin:11px 0}
+.pcode{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:800;color:#0a0e1a;
+  background:linear-gradient(140deg,var(--accent-bright),var(--accent));border-radius:9px;padding:8px 11px;
+  height:fit-content;font-size:var(--step--1);white-space:nowrap}
+.pbody .ph{margin:.1em 0 .25em;text-transform:none;letter-spacing:0;font-size:var(--step-0);color:var(--ink);font-weight:800}
+.ptag{font-size:10px;font-weight:700;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent);
+  padding:2px 9px;border-radius:20px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent);
+  margin-left:6px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.pvoice{font-style:italic;color:var(--ink);margin:.25em 0 .45em}
+
+.foot{color:var(--faint);font-size:var(--step--1);border-top:1px solid var(--line);margin-top:26px;padding-top:14px}
+.foot a{color:var(--link);font-weight:600;white-space:nowrap}
+
+/* ================================ FRAME EXPLORER ============================ */
+.toolbar{display:flex;gap:15px;align-items:center;margin:12px 0 4px;font-size:var(--step--1);flex-wrap:wrap;color:var(--mut)}
+.toolbar label{display:inline-flex;align-items:center;gap:7px;cursor:pointer;color:var(--ink);font-weight:600}
+.toolbar input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px}
+.legend{display:flex;gap:13px;flex-wrap:wrap}
+.legend span{display:inline-flex;gap:6px;align-items:center}
 .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
-.fsum{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.detail{border:1px solid var(--line);border-radius:10px;background:#fff;padding:16px 18px;min-height:60vh}
+.fx-hint{color:var(--mut);font-size:var(--step--1);margin:6px 0 12px}
+.fx-hint b{color:var(--ink)}
+kbd{font:600 11px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--card-2);border:1px solid var(--line);
+  border-bottom-width:2px;border-radius:4px;padding:0 5px;color:var(--ink)}
+.explorer{display:grid;grid-template-columns:340px 1fr;gap:15px}
+.flist{max-height:74vh;overflow:auto;border:1px solid var(--line);border-radius:14px;background:var(--card);scrollbar-width:thin}
+.frow{display:flex;gap:9px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line-soft);cursor:pointer;
+  font-size:var(--step--1);border-left:3px solid transparent;transition:background .15s var(--ease)}
+.frow:last-child{border-bottom:0}
+.frow:hover{background:color-mix(in srgb,var(--accent) 8%,transparent)}
+.frow.sel{background:color-mix(in srgb,var(--accent) 15%,transparent);border-left-color:var(--accent)}
+.frow.anom{background:color-mix(in srgb,var(--ghost) 9%,transparent)}
+.frow.anom.sel{background:color-mix(in srgb,var(--ghost) 19%,transparent);border-left-color:var(--ghost)}
+.frow:focus-visible{outline:2px solid var(--accent-glow);outline-offset:-2px}
+.fn{font-weight:800;color:var(--mut);min-width:26px;font-variant-numeric:tabular-nums}
+.sevtag{font:800 10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;padding:3px 6px;
+  border-radius:5px;flex:0 0 auto;min-width:56px;text-align:center;border:1px solid}
+.sevtag.sev-norm{color:var(--sev-ok);background:var(--sev-ok-bg);border-color:var(--sev-ok-bd)}
+.sevtag.sev-note{color:var(--sev-note);background:var(--sev-note-bg);border-color:var(--sev-note-bd)}
+.sevtag.sev-caution{color:var(--sev-caution);background:var(--sev-caution-bg);border-color:var(--sev-caution-bd)}
+.sevtag.sev-crit{color:var(--sev-crit);background:var(--sev-crit-bg);border-color:var(--sev-crit-bd)}
+.fsum{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.detail{border:1px solid var(--line);border-radius:14px;background:linear-gradient(180deg,var(--card),var(--bg-raise));
+  padding:16px 19px;min-height:62vh}
 .detail h3{margin:.1em 0}
-.pathline{color:var(--mut);font-size:13px;margin-bottom:8px}
-.kv{width:100%;margin:8px 0}
+.fmeta{font-weight:400;color:var(--faint);font-size:.8em}
+.pathline{color:var(--mut);font-size:var(--step--1);margin:7px 0 10px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.kv{width:100%;margin:10px 0}
 .kv td:first-child{width:38%;color:var(--mut);font-weight:600}
-.callout{border-left:4px solid;padding:9px 12px;border-radius:6px;margin:10px 0;font-size:14px}
-.teach{background:#f0f9ff;border-color:#0ea5e9;padding:9px 12px;border-radius:6px;margin:10px 0;font-size:14px}
-.filterbar{display:flex;gap:8px;align-items:center;margin:8px 0}
-.filterbar code{flex:1}
-.copy{border:1px solid var(--line);background:#fff;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12.5px}
-.copy:hover{background:#f1f5f9}
-.hex{background:#0f172a;color:#cbd5e1;padding:10px 12px;border-radius:8px;font-size:11.8px;overflow-x:auto;white-space:pre}
-.toolbar{display:flex;gap:12px;align-items:center;margin-bottom:10px;font-size:13.5px;flex-wrap:wrap}
-.legend{display:flex;gap:12px;font-size:12px;color:var(--mut);flex-wrap:wrap}
-.legend span{display:inline-flex;gap:5px;align-items:center}
-.seccard{background:#fff;border:1px solid var(--line);border-left-width:5px;border-radius:10px;padding:12px 16px;margin:12px 0}
-.sech{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.sevpill{color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px}
-.secid{font-weight:700;color:var(--mut)}
-.secmeta{font-size:13px;color:var(--mut);margin:4px 0}
-.attk{font-size:13px;color:#7c2d12;background:#fff7ed;border:1px solid #fed7aa;padding:5px 9px;border-radius:6px;display:inline-block}
-.ex{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:12px 0}
-.ex .q{background:#f8fafc;padding:7px 10px;border-radius:6px}
-details summary{cursor:pointer;color:var(--accent);font-weight:600}
-.persona{display:flex;gap:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0}
-.pcode{font-family:ui-monospace,monospace;font-weight:700;color:#fff;background:var(--accent);border-radius:8px;
-padding:8px 10px;height:fit-content;font-size:12.5px;white-space:nowrap}
-.pbody h4{margin:.1em 0 .2em}
-.ptag{font-size:11px;background:#eef2ff;color:var(--accent);padding:2px 8px;border-radius:20px;font-weight:600}
-.pvoice{font-style:italic;color:#334155;margin:.2em 0 .4em}
-.foot{color:var(--mut);font-size:12.5px;border-top:1px solid var(--line);margin-top:26px;padding-top:12px}
-.switch{margin-left:auto}
-.xbadge{background:#dc2626;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px}
-.bigcallout{background:#fff;border:1px solid var(--line);border-left:5px solid #2563eb;border-radius:10px;padding:12px 16px;margin:12px 0}
-.bigcallout h4{margin:.1em 0 .4em}
-.sevtag{font:700 10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.04em;padding:2px 5px;border-radius:4px;flex:0 0 auto;min-width:54px;text-align:center}
-.sev-norm{color:#475569;background:#f1f5f9;border:1px solid #e2e8f0}
-.sev-note{color:#1e40af;background:#dbeafe}
-.sev-caution{color:#9a3412;background:#ffedd5}
-.sev-crit{color:#991b1b;background:#fee2e2}
-.frow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-kbd{font:600 11px ui-monospace,monospace;background:#f1f5f9;border:1px solid #cbd5e1;border-bottom-width:2px;border-radius:4px;padding:0 4px}
-@media(max-width:820px){.grid2{grid-template-columns:1fr}.explorer{grid-template-columns:1fr}}
+.teach{background:color-mix(in srgb,var(--accent) 10%,var(--card-2));border:1px solid color-mix(in srgb,var(--accent) 26%,var(--line));
+  border-left:3px solid var(--accent);padding:10px 13px;border-radius:9px;margin:11px 0;font-size:var(--step--1)}
+.teach b{color:var(--accent)}
+.fcallout{border-left:3px solid;padding:10px 13px;border-radius:9px;margin:11px 0;font-size:var(--step--1)}
+.fcallout.c-note{border-color:var(--sev-note);background:var(--sev-note-bg)}
+.fcallout.c-note b{color:var(--sev-note)}
+.fcallout.c-caution{border-color:var(--sev-caution);background:var(--sev-caution-bg)}
+.fcallout.c-caution b{color:var(--sev-caution)}
+.fcallout.c-crit{border-color:var(--sev-crit);background:var(--sev-crit-bg)}
+.fcallout.c-crit b{color:var(--sev-crit)}
+.xbadge{background:var(--ghost-deep);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:10px;letter-spacing:.04em}
+.filterbar{display:flex;gap:9px;align-items:center;margin:12px 0}
+.filterbar code{flex:1;background:#080d18;border-color:var(--line-soft);color:#93c5fd;padding:9px 12px;border-radius:8px}
+.copy{border:1px solid var(--line);background:var(--card-2);color:var(--ink);border-radius:8px;padding:7px 13px;cursor:pointer;
+  font-size:var(--step--1);font-weight:600;font-family:inherit;transition:all .2s var(--ease);flex:0 0 auto}
+.copy:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--card-2))}
+.hex{background:#080d18;color:#9fb2cd;padding:11px 13px;border-radius:10px;font-size:11.8px;overflow-x:auto;white-space:pre;
+  border:1px solid var(--line-soft);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;line-height:1.5;
+  box-shadow:0 6px 22px -14px rgba(0,0,0,.7)}
+
+/* ================================ responsive ============================ */
+@media(max-width:820px){
+  .grid2{grid-template-columns:1fr}
+  .explorer{grid-template-columns:1fr}
+  .flist{max-height:52vh}
+  .detail{min-height:auto}
+}
+
+/* ============================ reduced motion — static twins ============================ */
+@media(prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important;scroll-behavior:auto !important}
+}
 </style></head>
 <body>
-<header>
-  <div class="kick">ICS / OT Protocol Analysis Lab Kit &nbsp;·&nbsp; DNP3 Module</div>
-  <h1>DNP3 — Distributed Network Protocol 3</h1>
-  <p class="sub">Reading a substation SCADA conversation, frame by frame</p>
-  <div class="meta">
-    <span class="chip">Port TCP/20000 (also UDP/20000; some vendors use 19999 for a TLS variant)</span>
-    <span class="chip">IEEE 1815-2012 (with DNP3 Secure Authentication v5)</span>
-    <span class="chip">Capture: dnp3_substation.pcap</span>
-    <span class="chip">Protocol analysis &amp; defensive recognition — not an offensive tradecraft course. Intermediate (TCP/IP + basic Wireshark; new to ICS/OT)</span>
+<header class="hero" id="hero">
+  <div class="herobg" aria-hidden="true"></div>
+  <canvas id="constellation" aria-hidden="true"></canvas>
+  <div class="heroinner">
+    <div class="topbar">
+      <div class="kick"><span class="klens"><svg class="lens klens-svg" viewBox="0 0 26 26" fill="none" aria-hidden="true" focusable="false"><circle cx="11.5" cy="11.5" r="8.4" stroke="currentColor" stroke-width="1.4" opacity=".55"/><line x1="17.6" y1="17.6" x2="22.4" y2="22.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" opacity=".75"/><path d="M11.5 11.5 L7.4 8.2 M11.5 11.5 L15.6 8.2 M11.5 11.5 L8.6 15.4" stroke="currentColor" stroke-width="1" opacity=".45"/><circle cx="11.5" cy="11.5" r="1.9" fill="currentColor"/><circle cx="7.4" cy="8.2" r="1.25" fill="currentColor" opacity=".85"/><circle cx="15.6" cy="8.2" r="1.25" fill="currentColor" opacity=".85"/><circle cx="8.6" cy="15.4" r="1.6" fill="currentColor"/></svg></span>ICS &middot; OT Signal Field &nbsp;&middot;&nbsp; DNP3 Module</div>
+      <div class="herotools">
+        <a class="htbtn" href="../curriculum/index.html" title="Back to the First Light hub">&#9204; First Light hub</a>
+        <a class="htbtn" href="mqtt_module.html" title="Companion protocol module">MQTT module &#9205;</a>
+        <button class="htbtn" id="themebtn" type="button" aria-pressed="false" aria-label="Toggle light and dark theme">
+          <span id="theme-ic" aria-hidden="true">&#9680;</span><span id="theme-tx">Dark</span></button>
+      </div>
+    </div>
+    <h1><span class="fl">DNP3</span> &mdash; Distributed Network Protocol 3</h1>
+    <p class="sub">Reading a substation SCADA conversation, frame by frame</p>
+    <div class="meta">
+      <span class="chip lead">Amber &middot; DNP3</span>
+      <span class="chip">Port TCP/20000 (also UDP/20000; some vendors use 19999 for a TLS variant)</span>
+      <span class="chip">IEEE 1815-2012 (with DNP3 Secure Authentication v5)</span>
+      <span class="chip">Capture &middot; dnp3_substation.pcap</span>
+      <span class="chip">Protocol analysis &amp; defensive recognition — not an offensive tradecraft course. Intermediate (TCP/IP + basic Wireshark; new to ICS/OT)</span>
+    </div>
   </div>
 </header>
-<nav id="nav">
+<nav id="nav" aria-label="Module sections">
   <button class="on" data-t="overview">Overview</button>
   <button data-t="industry">Industry &amp; Use Cases</button>
   <button data-t="anatomy">Protocol Anatomy</button>
@@ -119,7 +310,7 @@ kbd{font:600 11px ui-monospace,monospace;background:#f1f5f9;border:1px solid #cb
 </nav>
 <main>
   <section class="on" id="overview">
-    <div class="bigcallout" style="border-left-color:#dc2626"><h4>Scope &amp; threat model — read this first</h4><p>This module teaches you to <b>read</b> DNP3 and <b>recognize</b> its weaknesses on the wire. It does <b>not</b> teach you to attack a substation — it deliberately hands you the one thing a real operator-of-harm must earn first: a position on the wire between master and outstation.</p><p>The real ICS kill chain (MITRE ATT&amp;CK for ICS): Initial Access → pivot into the OT network (Lateral Movement) → recon &amp; address/asset enumeration (Discovery; Network Sniffing T0842) → <b>the injection you practice here</b> (Unauthorized Command Message, T0855) → optional impact/persistence (Manipulation of Control T0831; restart DoS T0814).</p><p>The frame-27 CROB trip is the <b>last ~5%</b>. The enumeration, the L2 adjacency to the RTU, and the access that precede it are the hard 95% — and are out of scope here. See &#x27;What would make this real offense&#x27; below.</p></div><div class="bigcallout" style="border-left-color:#b45309"><h4>OT reality check — read this before frame 1</h4><p>The topology here is deliberately collapsed: master, outstation, and &#x27;rogue&#x27; host all sit on one routable subnet (10.20.0.0/24) so the injection is easy to see. Field distribution DNP3 rarely looks like this — it runs overwhelmingly over serial, leased line, licensed radio, or private cellular APNs; where carried on IP, the outstation terminates on a substation gateway reachable only from the control center&#x27;s front-end processor, behind a firewall. A peer host able to open its own TCP session to the RTU (frame 27&#x27;s premise) is therefore <b>already a segmentation failure</b>, not the normal starting condition.</p><p>Consequence is not symmetric, either. A feeder <b>trip (OPEN)</b> is the fail-safe, self-announcing, reversible direction. The genuinely dangerous act is an unsupervised <b>CLOSE</b> — onto a grounded line or working crew, into a fault, or out of synchronism — which real substations gate with hot-line/clearance tags, sync-check (25) relays, reclose-blocking, and a local/remote (43) switch that removes the breaker from SCADA during maintenance. Treat &#x27;opened a breaker&#x27; and &#x27;closed a breaker&#x27; as different risk classes.</p><p>*Lab-topology note: the flat subnet and (in the lab) Docker networks stand in for VLANs / zone firewalls; addresses are illustrative.*</p></div>
+    <div class="bigcallout b-scope"><h4 class="bch">Scope &amp; threat model — read this first</h4><p>This module teaches you to <b>read</b> DNP3 and <b>recognize</b> its weaknesses on the wire. It does <b>not</b> teach you to attack a substation — it deliberately hands you the one thing a real operator-of-harm must earn first: a position on the wire between master and outstation.</p><p>The real ICS kill chain (MITRE ATT&amp;CK for ICS): Initial Access → pivot into the OT network (Lateral Movement) → recon &amp; address/asset enumeration (Discovery; Network Sniffing T0842) → <b>the injection you practice here</b> (Unauthorized Command Message, T0855) → optional impact/persistence (Manipulation of Control T0831; restart DoS T0814).</p><p>The frame-27 CROB trip is the <b>last ~5%</b>. The enumeration, the L2 adjacency to the RTU, and the access that precede it are the hard 95% — and are out of scope here. See &#x27;What would make this real offense&#x27; below.</p></div><div class="bigcallout b-reality"><h4 class="bch">OT reality check — read this before frame 1</h4><p>The topology here is deliberately collapsed: master, outstation, and &#x27;rogue&#x27; host all sit on one routable subnet (10.20.0.0/24) so the injection is easy to see. Field distribution DNP3 rarely looks like this — it runs overwhelmingly over serial, leased line, licensed radio, or private cellular APNs; where carried on IP, the outstation terminates on a substation gateway reachable only from the control center&#x27;s front-end processor, behind a firewall. A peer host able to open its own TCP session to the RTU (frame 27&#x27;s premise) is therefore <b>already a segmentation failure</b>, not the normal starting condition.</p><p>Consequence is not symmetric, either. A feeder <b>trip (OPEN)</b> is the fail-safe, self-announcing, reversible direction. The genuinely dangerous act is an unsupervised <b>CLOSE</b> — onto a grounded line or working crew, into a fault, or out of synchronism — which real substations gate with hot-line/clearance tags, sync-check (25) relays, reclose-blocking, and a local/remote (43) switch that removes the breaker from SCADA during maintenance. Treat &#x27;opened a breaker&#x27; and &#x27;closed a breaker&#x27; as different risk classes.</p><p>*Lab-topology note: the flat subnet and (in the lab) Docker networks stand in for VLANs / zone firewalls; addresses are illustrative.*</p></div>
     <h2>What this module is</h2>
     <div class="card"><p>DNP3 is the workhorse SCADA protocol of the North American electric and water sectors. It carries the conversation between a <b>master</b> (the control-center software an operator watches) and one or more <b>outstations</b> (the RTUs and IEDs sitting in substations, pump houses, and tanks). The master polls outstations for measurements and status, outstations report changes as events, and the master sends control commands — open this breaker, start that pump.</p><p>DNP3 was designed in the early 1990s for slow, unreliable serial links, so it is compact, resilient, and layered in an unusual way (a data-link layer with its own CRCs, a tiny pseudo-transport layer, and a rich application layer of typed data objects). When utilities moved these links onto IP networks, DNP3 was simply wrapped in TCP on port 20000 — carrying along a 1990s security model: <b>no authentication, no encryption, and no authorization by default.</b> That gap is the throughline of this module.</p><p>You will analyze <code>dnp3_substation.pcap</code>, a curated 37-frame capture of a distribution substation being polled and controlled from a control center — followed by a rogue host on the same network issuing commands the outstation has no way to distinguish from the real master. Every frame number, field value, and CRC in this module was produced and verified with Wireshark/tshark and CISA&#x27;s ICSNPP DNP3 parser.</p></div>
     <h2>Learning objectives</h2>
@@ -141,13 +332,13 @@ kbd{font:600 11px ui-monospace,monospace;background:#f1f5f9;border:1px solid #cb
     <div class="toolbar">
       <label><input type="checkbox" id="anomOnly"> Show anomalies only</label>
       <span class="legend">
-        <span><span class="dot" style="background:#94a3b8"></span>normal</span>
-        <span><span class="dot" style="background:#2563eb"></span>note</span>
-        <span><span class="dot" style="background:#d97706"></span>caution</span>
-        <span><span class="dot" style="background:#dc2626"></span>critical / anomaly</span>
+        <span><span class="dot" style="background:#64748b"></span>normal</span>
+        <span><span class="dot" style="background:#38bdf8"></span>note</span>
+        <span><span class="dot" style="background:#f59e0b"></span>caution</span>
+        <span><span class="dot" style="background:#f87171"></span>critical / anomaly</span>
       </span>
     </div>
-    <p id="fx-hint" class="muted" style="margin-top:-4px;font-size:13px">Click a frame, or press <kbd>↑</kbd>/<kbd>↓</kbd> (or <kbd>Home</kbd>/<kbd>End</kbd>) to move and <kbd>Enter</kbd>/<kbd>Space</kbd> to open it. Each row carries a severity word — <b>OK</b>, <b>NOTE</b>, <b>CAUTION</b>, <b>CRIT</b> — as well as a color. Numbers match Wireshark exactly — open dnp3_substation.pcap alongside this page.</p>
+    <p id="fx-hint" class="fx-hint">Click a frame, or press <kbd>&uarr;</kbd>/<kbd>&darr;</kbd> (or <kbd>Home</kbd>/<kbd>End</kbd>) to move and <kbd>Enter</kbd>/<kbd>Space</kbd> to open it. Each row carries a severity word &mdash; <b>OK</b>, <b>NOTE</b>, <b>CAUTION</b>, <b>CRIT</b> &mdash; as well as a color. Numbers match Wireshark exactly &mdash; open dnp3_substation.pcap alongside this page.</p>
     <div class="explorer">
       <div class="flist" id="flist" role="listbox" aria-label="Capture frames — arrow keys to move, Enter or Space to open" aria-describedby="fx-hint"></div>
       <div class="detail" id="detail" role="region" aria-label="Selected frame detail" aria-live="polite" aria-atomic="true" tabindex="-1"></div>
@@ -156,35 +347,36 @@ kbd{font:600 11px ui-monospace,monospace;background:#f1f5f9;border:1px solid #cb
 
   <section id="security"><h2>Security risks &amp; controls</h2>
     <p class="muted">Each finding ties specific frames to a real-world case and a concrete control. Frame links jump to the explorer.</p>
-    <div class="seccard" style="border-left-color:#dc2626"><div class="sech"><span class="sevpill" style="background:#dc2626">CRITICAL</span><span class="secid">D1</span><b>No authentication on control commands</b></div><div class="secmeta">Seen in: <a href="#" class="framelink" data-f="16">frame&nbsp;16</a>, <a href="#" class="framelink" data-f="20">frame&nbsp;20</a>, <a href="#" class="framelink" data-f="27">frame&nbsp;27</a></div><p><b>Risk.</b> Base DNP3 accepts control commands (SELECT/OPERATE/DIRECT OPERATE) with no proof of identity. The outstation trusts a 16-bit link address that any host on-path can spoof, so a valid-looking TRIP or CLOSE can come from anywhere with network reachability (frame 27).</p><p><b>Real-world.</b> The 2015 Ukraine grid attack opened breakers by operating the utility&#x27;s own HMIs with stolen credentials; the 2007 INL Aurora test destroyed a generator by re-closing it out of synchronism (defended by sync-check relays). Both illustrate that command integrity — not data secrecy — is the crown jewel in OT, though neither was itself a DNP3 exploit.</p><p class="attk">MITRE ATT&amp;CK for ICS T0855 (Unauthorized Command Message)</p><p><b>Control.</b> Deploy DNP3 Secure Authentication (SAv5, IEEE 1815-2012): a challenge-response MAC on critical function codes proves a command came from a keyed master and was not altered. Layer on strict source allow-listing, IEC 62443 zones/conduits, and NERC CIP access controls. Note SAv5 provides authenticity and integrity, not confidentiality.</p></div><div class="seccard" style="border-left-color:#334155"><div class="sech"><span class="sevpill" style="background:#334155">HIGH</span><span class="secid">D2</span><b>No encryption — full cleartext</b></div><div class="secmeta">Seen in: <a href="#" class="framelink" data-f="6">frame&nbsp;6</a>, <a href="#" class="framelink" data-f="10">frame&nbsp;10</a>, <a href="#" class="framelink" data-f="27">frame&nbsp;27</a></div><p><b>Risk.</b> Every value, command, and address travels in the clear. An attacker who can capture traffic learns the substation&#x27;s live state, point map, and control structure with zero cryptographic effort (frames 6 and 10 are a ready-made reconnaissance feed).</p><p><b>Real-world.</b> Cleartext OT telemetry is the reconnaissance foundation that precedes targeted ICS attacks; mapping the process is a documented step in intrusions like Industroyer.</p><p class="attk">MITRE ATT&amp;CK for ICS T0842 (Network Sniffing)</p><p><b>Control.</b> Tunnel DNP3 over TLS or an IPsec/VPN conduit between substation and control center; segment the OT network so capture points are limited; monitor with a protocol-aware sensor. Encryption complements — does not replace — DNP3-SA.</p></div><div class="seccard" style="border-left-color:#dc2626"><div class="sech"><span class="sevpill" style="background:#dc2626">CRITICAL</span><span class="secid">D3</span><b>Source spoofing / command injection</b></div><div class="secmeta">Seen in: <a href="#" class="framelink" data-f="27">frame&nbsp;27</a>, <a href="#" class="framelink" data-f="29">frame&nbsp;29</a></div><p><b>Risk.</b> An unsolicited DIRECT OPERATE from an unexpected IP, spoofing the master&#x27;s link address, is executed and acknowledged (frames 27–29). There is no SELECT interlock on DIRECT OPERATE and no source verification.</p><p><b>Real-world.</b> Command injection is possible only because the outstation cannot verify the sender; years of ICS-CERT advisories on internet-exposed and weakly-segmented DNP3 endpoints show how often that reachability exists in practice.</p><p class="attk">MITRE ATT&amp;CK for ICS T0855 / T0856 (Spoof Reporting Message)</p><p><b>Control.</b> Lead with the controls you can deploy without re-flashing: an OT firewall/data diode that lets only the sanctioned front-end processor reach TCP/20000, IEC 62443 zones/conduits, and a Zeek+ICSNPP sensor keyed on the invariant {link address ↔ expected source ↔ known-master set ↔ SELECT-before-OPERATE} rather than a single source IP. DNP3-SA is the durable upgrade that authenticates the command&#x27;s origin. Disabling DIRECT OPERATE only lowers the odds of an accidental single-frame actuation — it does not stop an attacker, who can forge SELECT then OPERATE just as easily.</p></div><div class="seccard" style="border-left-color:#334155"><div class="sech"><span class="sevpill" style="background:#334155">HIGH</span><span class="secid">D4</span><b>Availability attacks via control functions</b></div><div class="secmeta">Seen in: <a href="#" class="framelink" data-f="31">frame&nbsp;31</a>, <a href="#" class="framelink" data-f="33">frame&nbsp;33</a></div><p><b>Risk.</b> COLD RESTART (and its warm variant) will reboot an outstation on command, blinding operators to the site during recovery (frames 31–33). Combined with spoofing, it is a remote denial-of-control.</p><p><b>Real-world.</b> Loss of view/loss of control is a recurring objective in grid intrusions; the 2015 Ukraine attackers also bricked serial-to-Ethernet converters to prolong the outage.</p><p class="attk">MITRE ATT&amp;CK for ICS T0814 (Denial of Service)</p><p><b>Control.</b> Block administrative function codes (COLD/WARM RESTART) from all sources except the master at an OT firewall; require DNP3-SA for critical functions; monitor for unexpected Device Restart IIN flags.</p></div><div class="seccard" style="border-left-color:#334155"><div class="sech"><span class="sevpill" style="background:#334155">HIGH</span><span class="secid">D5</span><b>Protocol-implementation fragility (fuzzing)</b></div><p><b>Risk.</b> Many DNP3 stacks historically mishandled malformed frames, allowing a single crafted packet to crash or hang a master or outstation — a denial of service against the monitoring path itself. This is an implementation problem, separate from the design gaps above.</p><p><b>Real-world.</b> Project Robus (Adam Crain &amp; Chris Sistrunk) reported on the order of 28 flaws and roughly 16 ICS-CERT advisories across vendor DNP3 stacks as of early 2014 (umbrella advisory ICSA-13-291-01B, improper input validation); the effort continued through 2016 to ~30+ advisories in total.</p><p class="attk">MITRE ATT&amp;CK for ICS T0814 (Denial of Service)</p><p><b>Control.</b> Patch to fuzz-tested stack versions; front devices with a protocol-aware firewall/IDS that drops malformed DNP3; include robustness/fuzz testing in ICS procurement (per NIST SP 800-82r3 guidance).</p></div>
-    <div class="card"><h4 style="margin-top:0">Detection under adversarial and operational reality</h4><p>The module&#x27;s headline rule — *alarm on any control whose source is not the sanctioned master IP* — survives this capture only by luck. It keys on <code>source_h</code>, an IP field in dnp3_control.log. But the attacker in frame 27 forged only the 16-bit DNP3 <b>link</b> address (writing the master&#x27;s 100) and left his real IP (10.20.0.66) untouched — so source_h still reads 10.20.0.66 and the alert happens to fire.</p><p>Note what the sensor cannot see: the forged link address appears in <b>no</b> default ICSNPP log (dnp3.log carries fc_request/fc_reply/iin; dnp3_control.log carries only source/destination IPs). To key on the field the attacker actually forged, you must first extend the parser to emit it.</p><p>Worse, a competent adversary spoofs the master&#x27;s <b>IP</b> — free from an on-segment position, or by hijacking the master&#x27;s still-open TCP session to :20000 — yielding source_h = the master and <b>no</b> alert. The rule is also base-rate naive: real outstations answer to a <b>set</b> of legitimate masters (primary + backup control centers, multiple front-end processors, DMS/OMS, engineering laptops during commissioning and relay testing), so a single-IP rule either floods the SOC or is brittle.</p><p>Durable detection keys on an <b>invariant</b> the attacker cannot cheaply satisfy — bind {DNP3 link address ↔ expected source IP/TCP session ↔ known-master allow-set ↔ SELECT-before-OPERATE}. Alarm on OPERATE with no matching in-window SELECT, brand-new sessions to :20000, or off-baseline function codes/timing — correlated in a SIEM with maintenance-window suppression and asset-inventory enrichment, not a lone packet rule.</p></div><div class="card"><h4 style="margin-top:0">When you encrypt, you blind your network sensor</h4><p>The confidentiality controls (DNP3 D2; MQTT M1/M2) close the exposure gap but move the detection boundary. Once transport is encrypted — DNP3 over TLS/VPN, MQTT on 8883 — the ICSNPP/Zeek sensor goes <b>dark</b>: Zeek emits no mqtt_*.log on 8883 (only ssl.log), and a DNP3-in-TLS tunnel is opaque to ICSNPP. Detection must then move to broker auth logs, RTU/endpoint syslog, flow/JA3 metadata, or a controlled decryption/inspection point. Draw the line precisely: DNP3 Secure Authentication (SAv5) is a MAC — authenticity and integrity only — so it does <b>not</b> blind ICSNPP; only the transport-encryption controls do.</p><p><b>Sensor placement.</b> Detection only works if the tap sees the traffic. Site the sensor on a mirror/SPAN or TAP at the OT/DMZ conduit the control-center master traverses. An attacker on the substation LAN injecting into the <b>local</b> RTU never crosses a control-center SPAN, and serial-tail DNP3 (RS-232/485 into the RTU) is invisible to any network sensor.</p></div><div class="card"><h4 style="margin-top:0">What would make this real offense (out of scope in this kit)</h4><p>A fuller offensive track — deliberately <b>out of scope</b> in this analysis-and-recognition kit — would add:</p><ul><li><b>Asset/address enumeration</b> — derive the outstation and master link addresses, point map, and class assignments from a capture or scan, instead of being handed 10/100.</li><li><b>L2 positioning</b> — ARP-spoof the master↔outstation path to get on-path; this kit assumes that adjacency already exists.</li><li><b>TCP-session hijack</b> — ride the master&#x27;s existing session instead of opening a fresh, easily-flagged socket.</li><li><b>Defeat SELECT-before-OPERATE</b> — capture and replay a valid SELECT, or win the operate race, rather than side-stepping it with DIRECT OPERATE.</li><li><b>DNP3-SA attacks</b> — aggressive-mode replay, session-key recovery, and downgrade/strip to force base DNP3.</li><li><b>Real malformed-frame fuzzing</b> — an actual fuzz harness that crashes a stack (finding D5 cites Project Robus but ships no fuzzer).</li></ul></div></section>
+    <div class="seccard s-critical"><div class="sech"><span class="sevpill">CRITICAL</span><span class="secid">D1</span><b class="sectitle">No authentication on control commands</b></div><div class="secmeta">Seen in: <a href="#" class="framelink" data-f="16">frame&nbsp;16</a>, <a href="#" class="framelink" data-f="20">frame&nbsp;20</a>, <a href="#" class="framelink" data-f="27">frame&nbsp;27</a></div><p><b>Risk.</b> Base DNP3 accepts control commands (SELECT/OPERATE/DIRECT OPERATE) with no proof of identity. The outstation trusts a 16-bit link address that any host on-path can spoof, so a valid-looking TRIP or CLOSE can come from anywhere with network reachability (frame 27).</p><p><b>Real-world.</b> The 2015 Ukraine grid attack opened breakers by operating the utility&#x27;s own HMIs with stolen credentials; the 2007 INL Aurora test destroyed a generator by re-closing it out of synchronism (defended by sync-check relays). Both illustrate that command integrity — not data secrecy — is the crown jewel in OT, though neither was itself a DNP3 exploit.</p><p class="attk">MITRE ATT&amp;CK for ICS T0855 (Unauthorized Command Message)</p><p><b>Control.</b> Deploy DNP3 Secure Authentication (SAv5, IEEE 1815-2012): a challenge-response MAC on critical function codes proves a command came from a keyed master and was not altered. Layer on strict source allow-listing, IEC 62443 zones/conduits, and NERC CIP access controls. Note SAv5 provides authenticity and integrity, not confidentiality.</p></div><div class="seccard s-high"><div class="sech"><span class="sevpill">HIGH</span><span class="secid">D2</span><b class="sectitle">No encryption — full cleartext</b></div><div class="secmeta">Seen in: <a href="#" class="framelink" data-f="6">frame&nbsp;6</a>, <a href="#" class="framelink" data-f="10">frame&nbsp;10</a>, <a href="#" class="framelink" data-f="27">frame&nbsp;27</a></div><p><b>Risk.</b> Every value, command, and address travels in the clear. An attacker who can capture traffic learns the substation&#x27;s live state, point map, and control structure with zero cryptographic effort (frames 6 and 10 are a ready-made reconnaissance feed).</p><p><b>Real-world.</b> Cleartext OT telemetry is the reconnaissance foundation that precedes targeted ICS attacks; mapping the process is a documented step in intrusions like Industroyer.</p><p class="attk">MITRE ATT&amp;CK for ICS T0842 (Network Sniffing)</p><p><b>Control.</b> Tunnel DNP3 over TLS or an IPsec/VPN conduit between substation and control center; segment the OT network so capture points are limited; monitor with a protocol-aware sensor. Encryption complements — does not replace — DNP3-SA.</p></div><div class="seccard s-critical"><div class="sech"><span class="sevpill">CRITICAL</span><span class="secid">D3</span><b class="sectitle">Source spoofing / command injection</b></div><div class="secmeta">Seen in: <a href="#" class="framelink" data-f="27">frame&nbsp;27</a>, <a href="#" class="framelink" data-f="29">frame&nbsp;29</a></div><p><b>Risk.</b> An unsolicited DIRECT OPERATE from an unexpected IP, spoofing the master&#x27;s link address, is executed and acknowledged (frames 27–29). There is no SELECT interlock on DIRECT OPERATE and no source verification.</p><p><b>Real-world.</b> Command injection is possible only because the outstation cannot verify the sender; years of ICS-CERT advisories on internet-exposed and weakly-segmented DNP3 endpoints show how often that reachability exists in practice.</p><p class="attk">MITRE ATT&amp;CK for ICS T0855 / T0856 (Spoof Reporting Message)</p><p><b>Control.</b> Lead with the controls you can deploy without re-flashing: an OT firewall/data diode that lets only the sanctioned front-end processor reach TCP/20000, IEC 62443 zones/conduits, and a Zeek+ICSNPP sensor keyed on the invariant {link address ↔ expected source ↔ known-master set ↔ SELECT-before-OPERATE} rather than a single source IP. DNP3-SA is the durable upgrade that authenticates the command&#x27;s origin. Disabling DIRECT OPERATE only lowers the odds of an accidental single-frame actuation — it does not stop an attacker, who can forge SELECT then OPERATE just as easily.</p></div><div class="seccard s-high"><div class="sech"><span class="sevpill">HIGH</span><span class="secid">D4</span><b class="sectitle">Availability attacks via control functions</b></div><div class="secmeta">Seen in: <a href="#" class="framelink" data-f="31">frame&nbsp;31</a>, <a href="#" class="framelink" data-f="33">frame&nbsp;33</a></div><p><b>Risk.</b> COLD RESTART (and its warm variant) will reboot an outstation on command, blinding operators to the site during recovery (frames 31–33). Combined with spoofing, it is a remote denial-of-control.</p><p><b>Real-world.</b> Loss of view/loss of control is a recurring objective in grid intrusions; the 2015 Ukraine attackers also bricked serial-to-Ethernet converters to prolong the outage.</p><p class="attk">MITRE ATT&amp;CK for ICS T0814 (Denial of Service)</p><p><b>Control.</b> Block administrative function codes (COLD/WARM RESTART) from all sources except the master at an OT firewall; require DNP3-SA for critical functions; monitor for unexpected Device Restart IIN flags.</p></div><div class="seccard s-high"><div class="sech"><span class="sevpill">HIGH</span><span class="secid">D5</span><b class="sectitle">Protocol-implementation fragility (fuzzing)</b></div><p><b>Risk.</b> Many DNP3 stacks historically mishandled malformed frames, allowing a single crafted packet to crash or hang a master or outstation — a denial of service against the monitoring path itself. This is an implementation problem, separate from the design gaps above.</p><p><b>Real-world.</b> Project Robus (Adam Crain &amp; Chris Sistrunk) reported on the order of 28 flaws and roughly 16 ICS-CERT advisories across vendor DNP3 stacks as of early 2014 (umbrella advisory ICSA-13-291-01B, improper input validation); the effort continued through 2016 to ~30+ advisories in total.</p><p class="attk">MITRE ATT&amp;CK for ICS T0814 (Denial of Service)</p><p><b>Control.</b> Patch to fuzz-tested stack versions; front devices with a protocol-aware firewall/IDS that drops malformed DNP3; include robustness/fuzz testing in ICS procurement (per NIST SP 800-82r3 guidance).</p></div>
+    <div class="card"><h3 class="cardh">Detection under adversarial and operational reality</h3><p>The module&#x27;s headline rule — *alarm on any control whose source is not the sanctioned master IP* — survives this capture only by luck. It keys on <code>source_h</code>, an IP field in dnp3_control.log. But the attacker in frame 27 forged only the 16-bit DNP3 <b>link</b> address (writing the master&#x27;s 100) and left his real IP (10.20.0.66) untouched — so source_h still reads 10.20.0.66 and the alert happens to fire.</p><p>Note what the sensor cannot see: the forged link address appears in <b>no</b> default ICSNPP log (dnp3.log carries fc_request/fc_reply/iin; dnp3_control.log carries only source/destination IPs). To key on the field the attacker actually forged, you must first extend the parser to emit it.</p><p>Worse, a competent adversary spoofs the master&#x27;s <b>IP</b> — free from an on-segment position, or by hijacking the master&#x27;s still-open TCP session to :20000 — yielding source_h = the master and <b>no</b> alert. The rule is also base-rate naive: real outstations answer to a <b>set</b> of legitimate masters (primary + backup control centers, multiple front-end processors, DMS/OMS, engineering laptops during commissioning and relay testing), so a single-IP rule either floods the SOC or is brittle.</p><p>Durable detection keys on an <b>invariant</b> the attacker cannot cheaply satisfy — bind {DNP3 link address ↔ expected source IP/TCP session ↔ known-master allow-set ↔ SELECT-before-OPERATE}. Alarm on OPERATE with no matching in-window SELECT, brand-new sessions to :20000, or off-baseline function codes/timing — correlated in a SIEM with maintenance-window suppression and asset-inventory enrichment, not a lone packet rule.</p></div><div class="card"><h3 class="cardh">When you encrypt, you blind your network sensor</h3><p>The confidentiality controls (DNP3 D2; MQTT M1/M2) close the exposure gap but move the detection boundary. Once transport is encrypted — DNP3 over TLS/VPN, MQTT on 8883 — the ICSNPP/Zeek sensor goes <b>dark</b>: Zeek emits no mqtt_*.log on 8883 (only ssl.log), and a DNP3-in-TLS tunnel is opaque to ICSNPP. Detection must then move to broker auth logs, RTU/endpoint syslog, flow/JA3 metadata, or a controlled decryption/inspection point. Draw the line precisely: DNP3 Secure Authentication (SAv5) is a MAC — authenticity and integrity only — so it does <b>not</b> blind ICSNPP; only the transport-encryption controls do.</p><p><b>Sensor placement.</b> Detection only works if the tap sees the traffic. Site the sensor on a mirror/SPAN or TAP at the OT/DMZ conduit the control-center master traverses. An attacker on the substation LAN injecting into the <b>local</b> RTU never crosses a control-center SPAN, and serial-tail DNP3 (RS-232/485 into the RTU) is invisible to any network sensor.</p></div><div class="card"><h3 class="cardh">What would make this real offense (out of scope in this kit)</h3><p>A fuller offensive track — deliberately <b>out of scope</b> in this analysis-and-recognition kit — would add:</p><ul><li><b>Asset/address enumeration</b> — derive the outstation and master link addresses, point map, and class assignments from a capture or scan, instead of being handed 10/100.</li><li><b>L2 positioning</b> — ARP-spoof the master↔outstation path to get on-path; this kit assumes that adjacency already exists.</li><li><b>TCP-session hijack</b> — ride the master&#x27;s existing session instead of opening a fresh, easily-flagged socket.</li><li><b>Defeat SELECT-before-OPERATE</b> — capture and replay a valid SELECT, or win the operate race, rather than side-stepping it with DIRECT OPERATE.</li><li><b>DNP3-SA attacks</b> — aggressive-mode replay, session-key recovery, and downgrade/strip to force base DNP3.</li><li><b>Real malformed-frame fuzzing</b> — an actual fuzz harness that crashes a stack (finding D5 cites Project Robus but ships no fuzzer).</li></ul></div></section>
 
-  <section id="lab"><h2>Hands-on lab</h2><div class="card"><p>The Docker lab ships a small Python DNP3 outstation and master so you can generate your own traffic, plus tcpreplay to replay this capture and Zeek + the CISA ICSNPP DNP3 parser to turn packets into readable logs. Start with the provided pcap in Wireshark, then reproduce it live.</p><div class="ex"><h4>Exercise 1. Find the control lifecycle</h4><ol><li>Open dnp3_substation.pcap in Wireshark.</li><li>Apply the display filter dnp3.al.func in {3,4,5} to isolate every control.</li><li>Identify the legitimate SELECT→OPERATE pair and the rogue DIRECT OPERATE.</li></ol><p class="q"><b>Question.</b> How many control messages are there, and which one lacks a SELECT — and why does that matter?</p><details><summary>Show answer</summary><p>Three controls: SELECT (frame 16) and OPERATE (frame 20) from the master, and a DIRECT OPERATE (frame 27) from 10.20.0.66. The DIRECT OPERATE has no SELECT interlock and comes from a non-master IP — it is the injected TRIP that opens the breaker.</p></details></div><div class="ex"><h4>Exercise 2. Spot the impostor by address</h4><ol><li>Filter dnp3 and add columns for ip.src and dnp3.src (DNP3 link source).</li><li>Compare the IP source and the DNP3 link source for every control frame.</li></ol><p class="q"><b>Question.</b> What is inconsistent about frame 27, and which field did the attacker forge?</p><details><summary>Show answer</summary><p>Frame 27&#x27;s IP source is 10.20.0.66 but its DNP3 link source is 100 — the master&#x27;s address. The attacker forged the link source to impersonate the master. Base DNP3 has no way to reject this.</p></details></div><div class="ex"><h4>Exercise 3. Turn packets into detections with ICSNPP</h4><ol><li>In the lab container run: zeek -C -r /pcaps/dnp3_substation.pcap icsnpp-dnp3</li><li>Open dnp3_control.log and dnp3_objects.log.</li></ol><p class="q"><b>Question.</b> Which single log line is your best alert for the attack, and what field makes it detectable?</p><details><summary>Show answer</summary><p>The dnp3_control.log line &#x27;DIRECT_OPERATE … Trip … Success&#x27; whose source_h is 10.20.0.66. But note that works here only because the attacker kept his real IP while forging the DNP3 link address; a smarter attacker who also spoofs the master&#x27;s IP (or hijacks its TCP session) defeats a source-IP rule. The durable detection keys on an invariant — a control with no preceding SELECT, from an unexpected session, or off the master&#x27;s baseline cadence (see &#x27;Detection under adversarial and operational reality&#x27;).</p></details></div><div class="ex"><h4>Exercise 4. Design the control</h4><ol><li>Re-read security findings D1 and D3.</li><li>Given a substation you cannot re-flash to add DNP3-SA tomorrow, list compensating controls you can deploy this week.</li></ol><p class="q"><b>Question.</b> Name three compensating controls that reduce the frame-27 risk without changing the outstation firmware.</p><details><summary>Show answer</summary><p>(1) OT firewall rule allowing TCP/20000 to the outstation only from the master IP; (2) network segmentation / a data diode isolating the control LAN; (3) a Zeek+ICSNPP sensor alarming on controls from non-master sources. DNP3-SA is the durable fix once the device supports it.</p></details></div></div></section>
+  <section id="lab"><h2>Hands-on lab</h2><div class="card"><p>The Docker lab ships a small Python DNP3 outstation and master so you can generate your own traffic, plus tcpreplay to replay this capture and Zeek + the CISA ICSNPP DNP3 parser to turn packets into readable logs. Start with the provided pcap in Wireshark, then reproduce it live.</p><div class="ex"><h4 class="exh">Exercise 1. Find the control lifecycle</h4><ol><li>Open dnp3_substation.pcap in Wireshark.</li><li>Apply the display filter dnp3.al.func in {3,4,5} to isolate every control.</li><li>Identify the legitimate SELECT→OPERATE pair and the rogue DIRECT OPERATE.</li></ol><p class="q"><b>Question.</b> How many control messages are there, and which one lacks a SELECT — and why does that matter?</p><details><summary>Show answer</summary><p>Three controls: SELECT (frame 16) and OPERATE (frame 20) from the master, and a DIRECT OPERATE (frame 27) from 10.20.0.66. The DIRECT OPERATE has no SELECT interlock and comes from a non-master IP — it is the injected TRIP that opens the breaker.</p></details></div><div class="ex"><h4 class="exh">Exercise 2. Spot the impostor by address</h4><ol><li>Filter dnp3 and add columns for ip.src and dnp3.src (DNP3 link source).</li><li>Compare the IP source and the DNP3 link source for every control frame.</li></ol><p class="q"><b>Question.</b> What is inconsistent about frame 27, and which field did the attacker forge?</p><details><summary>Show answer</summary><p>Frame 27&#x27;s IP source is 10.20.0.66 but its DNP3 link source is 100 — the master&#x27;s address. The attacker forged the link source to impersonate the master. Base DNP3 has no way to reject this.</p></details></div><div class="ex"><h4 class="exh">Exercise 3. Turn packets into detections with ICSNPP</h4><ol><li>In the lab container run: zeek -C -r /pcaps/dnp3_substation.pcap icsnpp-dnp3</li><li>Open dnp3_control.log and dnp3_objects.log.</li></ol><p class="q"><b>Question.</b> Which single log line is your best alert for the attack, and what field makes it detectable?</p><details><summary>Show answer</summary><p>The dnp3_control.log line &#x27;DIRECT_OPERATE … Trip … Success&#x27; whose source_h is 10.20.0.66. But note that works here only because the attacker kept his real IP while forging the DNP3 link address; a smarter attacker who also spoofs the master&#x27;s IP (or hijacks its TCP session) defeats a source-IP rule. The durable detection keys on an invariant — a control with no preceding SELECT, from an unexpected session, or off the master&#x27;s baseline cadence (see &#x27;Detection under adversarial and operational reality&#x27;).</p></details></div><div class="ex"><h4 class="exh">Exercise 4. Design the control</h4><ol><li>Re-read security findings D1 and D3.</li><li>Given a substation you cannot re-flash to add DNP3-SA tomorrow, list compensating controls you can deploy this week.</li></ol><p class="q"><b>Question.</b> Name three compensating controls that reduce the frame-27 risk without changing the outstation firmware.</p><details><summary>Show answer</summary><p>(1) OT firewall rule allowing TCP/20000 to the outstation only from the master IP; (2) network segmentation / a data diode isolating the control LAN; (3) a Zeek+ICSNPP sensor alarming on controls from non-master sources. DNP3-SA is the durable fix once the device supports it.</p></details></div></div></section>
 
   <section id="onet"><h2>O*NET personas &amp; career pathways</h2>
-    <div class="card"><p class="muted">This module is framed around real O*NET occupational personas — the subject-matter voices that shaped it and the people whose work it maps to (see the split below: skills you practice vs. who this protects).</p><div class="persona"><div class="pcode">51-8012.00</div><div class="pbody"><h4>Power Distributors and Dispatchers <span class="ptag">Control-room career target</span></h4><p class="pvoice">“I sit at the SCADA/EMS master. When I close a breaker, frames 16–22 are literally my mouse click leaving the building.”</p><p>O*NET tasks: &#x27;Control, monitor, or operate equipment that regulates or distributes electricity … using data obtained from instruments or computers&#x27; and &#x27;Prepare switching orders.&#x27; DNP3 is the wire under those tasks. Tools list includes SCADA and EMS/OMS software.</p></div></div><div class="persona"><div class="pcode">49-2095.00</div><div class="pbody"><h4>Electrical &amp; Electronics Repairers — Powerhouse, Substation, and Relay <span class="ptag">Device-level career target (Bright Outlook)</span></h4><p class="pvoice">“I build, test, and repair the substation relay and control systems that are the outstation in this capture.”</p><p>O*NET tasks: &#x27;Construct, test, maintain, and repair substation relay and control systems&#x27; and &#x27;Inspect and test equipment and circuits.&#x27; This is the hands-on OT role that lives closest to the DNP3 outstation.</p></div></div><div class="persona"><div class="pcode">15-1212.00</div><div class="pbody"><h4>Information Security Analysts <span class="ptag">SME voice / IT-OT bridge (Bright Outlook)</span></h4><p class="pvoice">“I baseline the poll rhythm, then write the detection that fires when a control comes from the wrong source.”</p><p>One of the few O*NET IT-security occupations whose tool list explicitly names SCADA software alongside Wireshark and IDS/IPS — the natural author of the detections in this module.</p></div></div><div class="persona"><div class="pcode">17-2071.00</div><div class="pbody"><h4>Electrical Engineers <span class="ptag">Design authority (Bright Outlook)</span></h4><p class="pvoice">“I specify the RTUs and the point map, and increasingly I&#x27;m asked to require DNP3-SA in procurement.”</p><p>O*NET tasks include &#x27;Develop software to control electrical systems&#x27; and field power-system work; tool list includes SCADA and PLC software. The persona that can bake security controls into system design.</p></div></div><div class="persona"><div class="pcode">15-1299.04</div><div class="pbody"><h4>Penetration Testers <span class="ptag">Adversary emulation (Bright Outlook)</span></h4><p class="pvoice">“I demonstrate frame 27 safely in a lab so the utility funds the fix before an adversary finds it.”</p><p>O*NET tasks: &#x27;Develop and execute tests simulating known cyber threat actor techniques.&#x27; (O*NET has not yet published Knowledge domains for this newer occupation.)</p></div></div><div class="persona"><div class="pcode">25-9031.00</div><div class="pbody"><h4>Instructional Coordinators <span class="ptag">Curriculum author</span></h4><p class="pvoice">“I turned a verified capture into objectives, exercises, and an answer key mapped to real occupations.”</p><p>O*NET tasks: &#x27;Interview subject-matter experts … to develop instructional content&#x27; and &#x27;ensure students are trained with technologically current … processes&#x27; — the persona that assembled this module.</p></div></div></div>
+    <div class="card"><p class="muted">This module is framed around real O*NET occupational personas — the subject-matter voices that shaped it and the people whose work it maps to (see the split below: skills you practice vs. who this protects).</p><div class="persona"><div class="pcode">51-8012.00</div><div class="pbody"><h4 class="ph">Power Distributors and Dispatchers <span class="ptag">Control-room career target</span></h4><p class="pvoice">&ldquo;I sit at the SCADA/EMS master. When I close a breaker, frames 16–22 are literally my mouse click leaving the building.&rdquo;</p><p>O*NET tasks: &#x27;Control, monitor, or operate equipment that regulates or distributes electricity … using data obtained from instruments or computers&#x27; and &#x27;Prepare switching orders.&#x27; DNP3 is the wire under those tasks. Tools list includes SCADA and EMS/OMS software.</p></div></div><div class="persona"><div class="pcode">49-2095.00</div><div class="pbody"><h4 class="ph">Electrical &amp; Electronics Repairers — Powerhouse, Substation, and Relay <span class="ptag">Device-level career target (Bright Outlook)</span></h4><p class="pvoice">&ldquo;I build, test, and repair the substation relay and control systems that are the outstation in this capture.&rdquo;</p><p>O*NET tasks: &#x27;Construct, test, maintain, and repair substation relay and control systems&#x27; and &#x27;Inspect and test equipment and circuits.&#x27; This is the hands-on OT role that lives closest to the DNP3 outstation.</p></div></div><div class="persona"><div class="pcode">15-1212.00</div><div class="pbody"><h4 class="ph">Information Security Analysts <span class="ptag">SME voice / IT-OT bridge (Bright Outlook)</span></h4><p class="pvoice">&ldquo;I baseline the poll rhythm, then write the detection that fires when a control comes from the wrong source.&rdquo;</p><p>One of the few O*NET IT-security occupations whose tool list explicitly names SCADA software alongside Wireshark and IDS/IPS — the natural author of the detections in this module.</p></div></div><div class="persona"><div class="pcode">17-2071.00</div><div class="pbody"><h4 class="ph">Electrical Engineers <span class="ptag">Design authority (Bright Outlook)</span></h4><p class="pvoice">&ldquo;I specify the RTUs and the point map, and increasingly I&#x27;m asked to require DNP3-SA in procurement.&rdquo;</p><p>O*NET tasks include &#x27;Develop software to control electrical systems&#x27; and field power-system work; tool list includes SCADA and PLC software. The persona that can bake security controls into system design.</p></div></div><div class="persona"><div class="pcode">15-1299.04</div><div class="pbody"><h4 class="ph">Penetration Testers <span class="ptag">Adversary emulation (Bright Outlook)</span></h4><p class="pvoice">&ldquo;I demonstrate frame 27 safely in a lab so the utility funds the fix before an adversary finds it.&rdquo;</p><p>O*NET tasks: &#x27;Develop and execute tests simulating known cyber threat actor techniques.&#x27; (O*NET has not yet published Knowledge domains for this newer occupation.)</p></div></div><div class="persona"><div class="pcode">25-9031.00</div><div class="pbody"><h4 class="ph">Instructional Coordinators <span class="ptag">Curriculum author</span></h4><p class="pvoice">&ldquo;I turned a verified capture into objectives, exercises, and an answer key mapped to real occupations.&rdquo;</p><p>O*NET tasks: &#x27;Interview subject-matter experts … to develop instructional content&#x27; and &#x27;ensure students are trained with technologically current … processes&#x27; — the persona that assembled this module.</p></div></div></div>
     <h2>What you practice &rarr; who does this work</h2>
     <div class="card">
-      <p class="muted">These occupations do packet and detection analysis (or implement the controls) as their actual job — the skills this kit rehearses.</p>
+      <p class="muted">These occupations do packet and detection analysis (or implement the controls) as their actual job &mdash; the skills this kit rehearses.</p>
       <table><tr><th>Skill you practice in this kit</th><th>O*NET</th><th>The real work it maps to</th></tr><tr><td>Read the DNP3 layers and function codes, baseline the poll/response rhythm, and differentiate a legitimate control from a spoofed frame by cross-checking IP source against the DNP3 link address — then build and revise the detection that fires on wrong-source or anomalous frames</td><td class="mono">15-1212.00</td><td>Information Security Analysts — monitor networks and analyze traffic (Wireshark/IDS) to detect intrusions</td></tr><tr><td>Safely emulate the command injection (frame 27) and the unseen spoofed-unsolicited-response attack to prove the risk before an adversary does</td><td class="mono">15-1299.04</td><td>Penetration Testers — develop and execute tests simulating known cyber-threat-actor techniques</td></tr><tr><td>Scope network segmentation, IEC 62443 zones/conduits, and an OT-firewall source allow-list around TCP/20000</td><td class="mono">15-1241.00</td><td>Computer Network Architects — design data-communication networks (&#x27;packet analysis software&#x27; is a named O*NET tool)</td></tr></table>
     </div>
     <h2>Context: who this protects</h2>
     <div class="card">
-      <p class="muted">These roles operate, maintain, design, or authored the systems under analysis — beneficiaries and design authorities, not skills the learner performs here.</p>
+      <p class="muted">These roles operate, maintain, design, or authored the systems under analysis &mdash; beneficiaries and design authorities, not skills the learner performs here.</p>
       <table><tr><th>Occupation</th><th>O*NET</th><th>Why they are in the room</th></tr><tr><td><b>Power Distributors and Dispatchers</b></td><td class="mono">51-8012.00</td><td>Operate the substation from the SCADA/EMS master; the spoofed-status attack in the unseen capture is built to deceive them (loss of view). The analysis protects their picture — it does not train them.</td></tr><tr><td><b>Electrical &amp; Electronics Repairers — Powerhouse, Substation, and Relay</b></td><td class="mono">49-2095.00</td><td>Build, test, and maintain the outstation relays/RTUs that are the target device — the asset this analysis defends.</td></tr><tr><td><b>Electrical Engineers</b></td><td class="mono">17-2071.00</td><td>Design authority: specify the RTUs/point map and require DNP3-SA in procurement so the durable fix exists.</td></tr><tr><td><b>Instructional Coordinators</b></td><td class="mono">25-9031.00</td><td>Authored this module from the verified capture — the author&#x27;s own occupation, not a skill the learner practices.</td></tr></table>
     </div>
   </section>
 
   <section id="refs"><h2>References &amp; sources</h2><div class="card"><ul><li><a href="https://www.dnp.org/Portals/0/AboutUs/DNP3%20Primer%20Rev%20A.pdf" target="_blank" rel="noopener">DNP Users Group — &#x27;A DNP3 Protocol Primer&#x27; (Rev A)</a></li><li><a href="https://standards.ieee.org/standard/1815-2012.html" target="_blank" rel="noopener">IEEE 1815-2012 — DNP3 with Secure Authentication</a></li><li><a href="https://github.com/cisagov/icsnpp-dnp3" target="_blank" rel="noopener">CISA ICSNPP — DNP3 Zeek parser (icsnpp-dnp3)</a></li><li><a href="https://www.cisa.gov/news-events/ics-advisories/icsa-13-291-01b" target="_blank" rel="noopener">CISA ICS Advisory ICSA-13-291-01B — DNP3 Implementation Vulnerability</a></li><li><a href="https://media.kasperskycontenthub.com/wp-content/uploads/sites/43/2016/05/20081514/E-ISAC_SANS_Ukraine_DUC_5.pdf" target="_blank" rel="noopener">E-ISAC / SANS — Analysis of the Cyber Attack on the Ukrainian Power Grid (2016)</a></li><li><a href="https://www.welivesecurity.com/2022/04/12/industroyer2-industroyer-reloaded/" target="_blank" rel="noopener">ESET — Industroyer2: Industroyer reloaded (2022)</a></li><li><a href="https://csrc.nist.gov/pubs/sp/800/82/r3/final" target="_blank" rel="noopener">NIST SP 800-82 Rev. 3 — Guide to Operational Technology (OT) Security</a></li><li><a href="https://attack.mitre.org/matrices/ics/" target="_blank" rel="noopener">MITRE ATT&amp;CK for ICS</a></li><li><a href="https://www.onetonline.org/link/summary/51-8012.00" target="_blank" rel="noopener">O*NET — Power Distributors and Dispatchers 51-8012.00</a></li><li><a href="https://www.onetonline.org/link/summary/15-1212.00" target="_blank" rel="noopener">O*NET — Information Security Analysts 15-1212.00</a></li></ul>
-    <p class="foot">Companion module: <a href="mqtt_module.html">MQTT module</a>. All frame numbers, field values, and CRCs verified with tshark and CISA ICSNPP/Zeek. This is a curated teaching capture — synthetic but protocol-valid.</p>
+    <p class="foot">Companion module: <a href="mqtt_module.html">MQTT module</a> &middot; <a href="../curriculum/index.html">First Light hub</a>. All frame numbers, field values, and CRCs verified with tshark and CISA ICSNPP/Zeek. This is a curated teaching capture &mdash; synthetic but protocol-valid.</p>
   </div></section>
 </main>
 
 <script>
 const FRAMES = [{"n": 1, "t": "0.000", "src": "10.20.0.5", "dst": "10.20.0.20", "layer": "TCP", "summary": "52100 → 20000 [SYN]", "plain": "The master opens the TCP connection to the outstation on DNP3's port 20000. DNP3-over-TCP rides an ordinary 3-way handshake.", "fields": [["Dst port", "20000 (DNP3)"], ["Flags", "SYN"]], "teach": "Port 20000 is the fingerprint of DNP3 on a network. Seeing it between an IT-looking host and an OT device is itself worth noting.", "security": null, "filter": "tcp.port==20000 && tcp.flags.syn==1", "hex": ""}, {"n": 4, "t": "0.002", "src": "10.20.0.5", "dst": "10.20.0.20", "layer": "DNP3", "summary": "Read, Class 0123 (integrity poll)", "plain": "The master's integrity poll: 'send me all your Class 1, 2, 3 event data and your Class 0 static data.' This is how a master gets a complete current picture of the outstation.", "fields": [["App function", "READ (0x01)"], ["Objects", "g60 v2,v3,v4,v1 (Class 1/2/3/0) qualifier 0x06 = all"], ["Link dst→src", "10 ← 100"], ["Data-link CRC", "valid"]], "teach": "Group 60 is 'class data' — a shorthand for 'whatever points you have assigned to these classes.' Qualifier 0x06 means 'all objects, no range.' One tiny request pulls the outstation's entire state.", "security": null, "filter": "dnp3.al.func==1", "hex": "0000  05 64 14 c3 0a 00 64 00 1b c0 c0 c0 01 3c 02 06  .d....d......<..\n0010  3c 03 06 3c 04 06 3c 01 06 8a 51                 <..<..<...Q"}, {"n": 6, "t": "0.004", "src": "10.20.0.20", "dst": "10.20.0.5", "layer": "DNP3", "summary": "Response — binary + analog inputs", "plain": "The outstation answers with its current data: four binary inputs (breaker and switch status) and three 32-bit analog inputs (bus voltage and per-phase line currents).", "fields": [["App function", "RESPONSE (0x81)"], ["IIN", "0x0000 (no flags — healthy)"], ["g1v2", "4 binary inputs — pts 0,1 = 1 (closed); pts 2,3 = 0"], ["g30v1", "3 analog inputs = 13245, 452, 6001"]], "teach": "This single response is a slice of the substation's state in bytes: breaker CLOSED, disconnect CLOSED, ground switch OPEN, plus live analog telemetry. The two-byte IIN is the outstation's health flag word; 0x0000 means 'all normal.' Scale caveat: this is a deliberately tiny teaching slice — a real feeder RTU carries hundreds to thousands of points, not seven.", "security": {"level": "info", "note": "Everything here is in cleartext. Anyone capturing this traffic reads the live state of the substation — reconnaissance requires no decryption."}, "filter": "dnp3.al.func==129", "hex": "0000  05 64 27 43 64 00 0a 00 31 44 c0 c0 81 00 00 01  .d'Cd...1D......\n0010  02 00 00 03 81 81 01 01 1e 01 7e df 00 00 02 01  ..........~.....\n0020  bd 33 00 00 01 c4 01 00 00 01 71 17 6f 5a 00 00  .3........q.oZ..\n0030  ff ff                                            .."}, {"n": 8, "t": "2.006", "src": "10.20.0.5", "dst": "10.20.0.20", "layer": "DNP3", "summary": "Read, Class 0 (static poll)", "plain": "Two seconds later the master runs a lighter Class 0 poll — just the current static values, no events.", "fields": [["App function", "READ (0x01)"], ["Objects", "g60 v1 (Class 0) qualifier 0x06"]], "teach": "Masters mix heavy integrity polls with frequent light Class-0 polls to keep the display fresh without flooding slow links. Spotting the polling rhythm helps you baseline 'normal' for an outstation.", "security": null, "filter": "dnp3.al.func==1", "hex": "0000  05 64 0b c3 0a 00 64 00 38 fc c1 c1 01 3c 01 06  .d....d.8....<..\n0010  1e c6                                            .."}, {"n": 10, "t": "2.007", "src": "10.20.0.20", "dst": "10.20.0.5", "layer": "DNP3", "summary": "Response — inputs + counter", "plain": "The outstation returns updated binary and analog values plus a 32-bit counter (e.g., an accumulated energy/pulse count of 148213).", "fields": [["App function", "RESPONSE (0x81)"], ["g1v2", "4 binary inputs"], ["g30v1", "3 analog inputs = 13240, 455, 6000"], ["g20v1", "counter = 148213"]], "teach": "Counters (group 20) accumulate — think kWh or pulse totals. Analog values drift slightly between polls (452→455), which is exactly what live instrumentation looks like.", "security": null, "filter": "dnp3.al.func==129", "hex": "0000  05 64 31 43 64 00 0a 00 29 57 c1 c1 81 00 00 01  .d1Cd...)W......\n0010  02 00 00 03 81 81 01 01 1e 01 ea fc 00 00 02 01  ................\n0020  b8 33 00 00 01 c7 01 00 00 01 70 17 77 98 00 00  .3........p.w...\n0030  14 01 00 00 00 01 f5 42 02 00 27 73              .......B..'s"}, {"n": 12, "t": "5.509", "src": "10.20.0.20", "dst": "10.20.0.5", "layer": "DNP3", "summary": "Unsolicited Response — binary input event", "plain": "Without being polled, the outstation reports a change: a breaker auxiliary contact opened (binary input event, point 0 → 0). This is DNP3 'report-by-exception.'", "fields": [["App function", "UNSOLICITED RESPONSE (0x82)"], ["App control", "UNS + CON set (confirmation requested)"], ["IIN", "0x0200 — Class 1 data available"], ["g2v1", "binary input event, point 0 = 0"]], "teach": "Unsolicited responses are how operators learn about a trip within milliseconds instead of at the next poll. The UNS bit in the application control octet is what distinguishes an event report from a polled response.", "security": {"level": "info", "note": "Because responses carry no authentication, a spoofed unsolicited response could feed an operator false status (MITRE ATT&CK for ICS T0856, Spoof Reporting Message). Nothing in the frame proves it came from the real outstation."}, "filter": "dnp3.al.func==130", "hex": "0000  05 64 10 43 64 00 0a 00 4c 13 c2 f2 82 02 00 02  .d.Cd...L.......\n0010  01 17 01 00 01 85 42                             ......B"}, {"n": 14, "t": "5.510", "src": "10.20.0.5", "dst": "10.20.0.20", "layer": "DNP3", "summary": "Confirm", "plain": "The master acknowledges the event at the application layer with a CONFIRM, so the outstation knows the event was received and can clear it from its buffer.", "fields": [["App function", "CONFIRM (0x00)"], ["App control", "UNS set, matching sequence"]], "teach": "DNP3 has confirmations at both the link and application layers. Application confirms make report-by-exception reliable over lossy links — events aren't dropped silently.", "security": null, "filter": "dnp3.al.func==0", "hex": "0000  05 64 08 c3 0a 00 64 00 68 6f c2 d2 00 8e 61     .d....d.ho....a"}, {"n": 16, "t": "8.012", "src": "10.20.0.5", "dst": "10.20.0.20", "layer": "DNP3", "summary": "SELECT — CROB close breaker", "plain": "The operator initiates a supervised control: SELECT the feeder breaker's Control Relay Output Block (CROB) with a Close / Pulse-On command. SELECT arms but does not fire.", "fields": [["App function", "SELECT (0x03)"], ["Object", "g12v1 CROB, point 0"], ["Control code", "0x41 — Close, Pulse On"], ["On-time", "1000 ms"]], "teach": "The CROB is the single most security-relevant object in DNP3: it is a command that moves physical equipment. Group 12, variation 1, point index = which relay/breaker. (A 1000 ms pulse is on the long side for a trip/close coil — the breaker's own 52a/52b auxiliary contacts interrupt the coil within a few cycles, and utilities typically set output pulses well under a second.)", "security": {"level": "warn", "note": "This is a legitimate control from the real master — but the outstation accepts it purely on the basis of link/source addressing, which is trivially spoofable. Hold this thought for frame 27."}, "filter": "dnp3.al.func==3", "hex": "0000  05 64 18 c3 0a 00 64 00 a9 17 c3 c3 03 0c 01 17  .d....d.........\n0010  01 00 41 01 e8 03 00 00 00 00 aa 94 00 00 00 ff  ..A.............\n0020  ff                                               ."}, {"n": 18, "t": "8.014", "src": "10.20.0.20", "dst": "10.20.0.5", "layer": "DNP3", "summary": "Response — select echo (Success)", "plain": "The outstation echoes the CROB back with a status of Success, confirming it is armed and ready to operate the selected point.", "fields": [["App function", "RESPONSE (0x81)"], ["Echoed CROB", "Close, Pulse On, point 0"], ["Status", "Success (0)"]], "teach": "The echo lets the master verify the outstation understood exactly the point and action requested before it commits. A mismatch here would abort the control.", "security": null, "filter": "dnp3.al.func==129", "hex": "0000  05 64 1a 43 64 00 0a 00 27 af c3 c3 81 00 00 0c  .d.Cd...'.......\n0010  01 17 01 00 41 01 e8 03 00 00 61 6f 00 00 00 00  ....A.....ao....\n0020  00 ff ff                                         ..."}, {"n": 20, "t": "8.015", "src": "10.20.0.5", "dst": "10.20.0.20", "layer": "DNP3", "summary": "OPERATE — execute the close", "plain": "The master sends OPERATE for the same CROB. This is the command that actually closes the breaker.", "fields": [["App function", "OPERATE (0x04)"], ["Object", "g12v1 CROB, point 0, Close/Pulse On"]], "teach": "SELECT-before-OPERATE is DNP3's safety interlock: two matching messages are required to move equipment, reducing the chance a single corrupted or stray frame throws a breaker. Note this is a **safety and robustness** interlock, not authentication — a forger who can send a DIRECT OPERATE can just as easily send a SELECT and then a matching OPERATE.", "security": null, "filter": "dnp3.al.func==4", "hex": "0000  05 64 18 c3 0a 00 64 00 a9 17 c4 c4 04 0c 01 17  .d....d.........\n0010  01 00 41 01 e8 03 00 00 00 00 96 c6 00 00 00 ff  ..A.............\n0020  ff                                               ."}, {"n": 22, "t": "8.017", "src": "10.20.0.20", "dst": "10.20.0.5", "layer": "DNP3", "summary": "Response — operate echo (Success)", "plain": "The outstation confirms the operation succeeded — the breaker is now closed. The supervised control sequence is complete.", "fields": [["App function", "RESPONSE (0x81)"], ["Status", "Success (0)"]], "teach": "Frames 16–22 are the full, correct control lifecycle: SELECT → echo → OPERATE → echo. Memorize this shape; deviations from it (an OPERATE with no preceding SELECT, or a control from an unexpected source) are red flags.", "security": null, "filter": "dnp3.al.func==129", "hex": "0000  05 64 1a 43 64 00 0a 00 27 af c4 c4 81 00 00 0c  .d.Cd...'.......\n0010  01 17 01 00 41 01 e8 03 00 00 8d 85 00 00 00 00  ....A...........\n0020  00 ff ff                                         ..."}, {"n": 27, "t": "12.021", "src": "10.20.0.66", "dst": "10.20.0.20", "layer": "DNP3", "summary": "⚠ Direct Operate — CROB TRIP (rogue host)", "anomaly": true, "plain": "A different host (10.20.0.66) — not the master — opens its own session and issues a DIRECT OPERATE that TRIPS (opens) the breaker in one step, with no SELECT and no authorization. It spoofs the master's DNP3 link address (100).", "fields": [["Source IP", "10.20.0.66 (NOT the master 10.20.0.5)"], ["App function", "DIRECT OPERATE (0x05)"], ["Object", "g12v1 CROB — Trip, Pulse On"], ["Spoofed link src", "100 (the master's address)"]], "teach": "This is the module's centerpiece. Nothing in DNP3 lets the outstation tell this apart from a real command. The only 'identity' is a 16-bit link address the attacker simply wrote into the frame.", "security": {"level": "critical", "note": "Unauthorized command injection — MITRE ATT&CK for ICS T0855. The teaching point is narrow and real: the outstation performs no origin check, so an unauthenticated frame is obeyed. Resist over-claiming the analogies — the 2007 Aurora test destroyed a generator by re-CLOSING it out of synchronism (a mechanical-torque attack that sync-check (25) relays defend against), not by a feeder trip; and Ukraine 2015 was hands-on-keyboard operation of the utility's own HMIs via stolen credentials, with Industroyer using IEC-101/104, IEC 61850, and OPC — not DNP3. Fix: DNP3-SA, source allow-listing, segmentation."}, "filter": "dnp3.al.func==5", "hex": "0000  05 64 18 c3 0a 00 64 00 a9 17 c0 c0 05 0c 01 17  .d....d.........\n0010  01 00 81 01 e8 03 00 00 00 00 e3 e8 00 00 00 ff  ................\n0020  ff                                               ."}, {"n": 29, "t": "12.022", "src": "10.20.0.20", "dst": "10.20.0.66", "layer": "DNP3", "summary": "⚠ Response — Success (breaker tripped)", "anomaly": true, "plain": "The outstation obeys the rogue command and returns Success. The breaker is now open — an unplanned outage — caused by a host that never authenticated.", "fields": [["App function", "RESPONSE (0x81)"], ["Status", "Success (0)"], ["Reply to", "10.20.0.66"]], "teach": "The outstation politely reports success to the attacker. In CISA's ICSNPP dnp3_control.log this appears as a DIRECT_OPERATE / Trip / Success line from source 10.20.0.66 — a detection you can build on.", "security": {"level": "critical", "note": "Detection nuance: the obvious rule — alarm when a control's source IP isn't the master — fires here only because the attacker kept his real IP (10.20.0.66) while forging just the DNP3 link address. A smarter attacker spoofs the master's IP or hijacks its TCP session and evades it. See 'Detection under adversarial and operational reality' below for the invariant-based rule that survives."}, "filter": "dnp3.al.func==129 && ip.dst==10.20.0.66", "hex": "0000  05 64 1a 43 64 00 0a 00 27 af c0 c0 81 00 00 0c  .d.Cd...'.......\n0010  01 17 01 00 81 01 e8 03 00 00 23 b4 00 00 00 00  ..........#.....\n0020  00 ff ff                                         ..."}, {"n": 31, "t": "13.524", "src": "10.20.0.66", "dst": "10.20.0.20", "layer": "DNP3", "summary": "⚠ Cold Restart (rogue host)", "anomaly": true, "plain": "The rogue host follows up with a COLD RESTART — commanding the outstation to fully reboot, dropping its monitoring and control of the substation while it restarts.", "fields": [["Source IP", "10.20.0.66"], ["App function", "COLD RESTART (0x0D)"]], "teach": "A restart is a denial-of-availability weapon in OT: while the RTU reboots, operators are blind and cannot control the site. No credentials were needed.", "security": {"level": "critical", "note": "Denial of Service against a control device — MITRE ATT&CK for ICS T0814. Function-code filtering at an OT firewall (block COLD RESTART from anything but the master) and DNP3-SA both mitigate this."}, "filter": "dnp3.al.func==13", "hex": "0000  05 64 08 c3 0a 00 64 00 68 6f c1 c1 0d 6a 34     .d....d.ho...j4"}, {"n": 33, "t": "13.526", "src": "10.20.0.20", "dst": "10.20.0.66", "layer": "DNP3", "summary": "⚠ Response — Device Restart (IIN set)", "anomaly": true, "plain": "The outstation acknowledges the restart. Its Internal Indications now show the Device Restart bit set, and it returns a time-delay object indicating how long it will be unavailable.", "fields": [["App function", "RESPONSE (0x81)"], ["IIN", "0x8000 — Device Restart set"], ["g52v2", "time delay = 30000 ms"]], "teach": "IIN bit 1.7 (Device Restart) is how an outstation tells a master 'I just rebooted — re-initialize me.' Seeing it unexpectedly, or triggered from a non-master source, is a strong incident signal.", "security": {"level": "warn", "note": "The restart IIN flag is a free tripwire: a master (or monitoring tool) that sees an unexpected Device Restart should investigate why the outstation rebooted."}, "filter": "dnp3.al.iin.rst==1", "hex": "0000  05 64 10 43 64 00 0a 00 4c 13 c1 c1 81 80 00 34  .d.Cd...L......4\n0010  02 07 01 30 75 c3 cc                             ...0u.."}];
-const SEV = {"info":"#2563eb","warn":"#b45309","critical":"#dc2626"};
+const SEV = {"info":"#38bdf8","warn":"#f59e0b","critical":"#f87171"};
 const SEVL = {"info":"NOTE","warn":"CAUTION","critical":"CRITICAL"};
-function dotColor(f){ if(f.anomaly) return "#dc2626"; if(f.security) return SEV[f.security.level]||"#94a3b8"; return "#94a3b8"; }
+const CMAP = {"info":"note","warn":"caution","critical":"crit"};
+function dotColor(f){ if(f.anomaly) return "#f87171"; if(f.security) return SEV[f.security.level]||"#64748b"; return "#64748b"; }
 function esc(s){return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
 let sel = 0;
@@ -222,13 +414,12 @@ function render(){
   const f = FRAMES[sel];
   const kv = (f.fields||[]).map(x=>`<tr><td>${esc(x[0])}</td><td>${esc(x[1])}</td></tr>`).join('');
   let sec='';
-  if(f.security){const c=SEV[f.security.level];sec=`<div class="callout" style="border-color:${c};background:${c}12">
-     <b style="color:${c}">${SEVL[f.security.level]}.</b> ${esc(f.security.note)}</div>`;}
+  if(f.security){const lc=CMAP[f.security.level]||'note';sec=`<div class="fcallout c-${lc}"><b>${SEVL[f.security.level]}.</b> ${esc(f.security.note)}</div>`;}
   const anom = f.anomaly?` <span class="xbadge">ANOMALY</span>`:'';
   const hex = f.hex?`<h4>Application-layer bytes</h4><div class="hex">${esc(f.hex)}</div>`:'';
   document.getElementById('detail').innerHTML = `
-    <h3>Frame ${f.n} &nbsp;<span style="font-weight:400;color:#64748b">t=${f.t}s · ${esc(f.layer)}</span>${anom}</h3>
-    <div class="pathline">${esc(f.src)} &nbsp;→&nbsp; ${esc(f.dst)} &nbsp;·&nbsp; ${esc(f.summary)}</div>
+    <h3>Frame ${f.n} &nbsp;<span class="fmeta">t=${f.t}s · ${esc(f.layer)}</span>${anom}</h3>
+    <div class="pathline">${esc(f.src)} &nbsp;&rarr;&nbsp; ${esc(f.dst)} &nbsp;&middot;&nbsp; ${esc(f.summary)}</div>
     <p>${esc(f.plain)}</p>
     <table class="kv">${kv}</table>
     <div class="teach"><b>Why it matters.</b> ${esc(f.teach)}</div>
@@ -249,7 +440,7 @@ function show(t){
 }
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>show(b.dataset.t));
 document.querySelectorAll('.gotab').forEach(a=>a.onclick=ev=>{ev.preventDefault();show(a.dataset.t);});
-// frame links from security section
+// frame links from the security section
 document.querySelectorAll('.framelink').forEach(a=>a.onclick=ev=>{ev.preventDefault();
   const n=+a.dataset.f; const i=FRAMES.findIndex(x=>x.n===n); if(i>=0){document.getElementById('anomOnly').checked=false;sel=i;buildList();render();show('explorer');}
 });
@@ -263,5 +454,160 @@ flist.addEventListener('keydown', ev=>{
   else if(ev.key==='Enter'||ev.key===' '){ev.preventDefault(); selectRow(sel,true);}
 });
 buildList(); render();
+
+/* ============ theme: OS preference wins until the user overrides (persisted, shared with the hub) ============ */
+(function(){
+  try{
+    var TK = "icskit.path.theme.v1";
+    var btn = document.getElementById("themebtn");
+    var ic = document.getElementById("theme-ic"), tx = document.getElementById("theme-tx");
+    function stored(){ try{ return localStorage.getItem(TK); }catch(e){ return null; } }
+    function osLight(){ try{ return window.matchMedia("(prefers-color-scheme: light)").matches; }catch(e){ return false; } }
+    function effective(){ var s = stored(); if(s==="light"||s==="dark") return s; return osLight()?"light":"dark"; }
+    function paint(){
+      var s = stored();
+      if(s==="light"||s==="dark"){ document.documentElement.setAttribute("data-theme", s); }
+      else{ document.documentElement.removeAttribute("data-theme"); }
+      var eff = effective();
+      if(ic) ic.textContent = eff==="light" ? "◑" : "◐";
+      if(tx) tx.textContent = eff==="light" ? "Light" : "Dark";
+      if(btn) btn.setAttribute("aria-pressed", eff==="light" ? "true":"false");
+    }
+    if(btn) btn.addEventListener("click", function(){
+      var next = effective()==="light" ? "dark" : "light";
+      try{ localStorage.setItem(TK, next); }catch(e){}
+      paint();
+    });
+    try{ window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", paint); }catch(e){}
+    paint();
+  }catch(e){}
+})();
+
+/* ============ living hero: the conversation constellation (single rAF, DPR, paused, reduced-motion still) ============ */
+(function(){
+  try{
+    var cv = document.getElementById("constellation");
+    if(!cv || !cv.getContext) return;
+    var ctx = cv.getContext("2d");
+    var RM=false; try{ RM = window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){}
+    var proto = document.documentElement.getAttribute("data-proto") || "dnp3";
+    var AC = proto==="mqtt" ? "#2dd4bf" : "#f59e0b";
+    var GH = "#f87171";
+    var W=0,H=0,DPR=1, running=false, onscreen=true, raf=0, last=0;
+    var nodes=[], links=[], parts=[];
+
+    function build(){
+      if(proto==="mqtt"){
+        nodes = [
+          {id:"broker", x:.70, y:.44, r:6.5, c:AC, hub:1},
+          {id:"s1", x:.87, y:.22, r:3.4, c:AC},
+          {id:"s2", x:.91, y:.5, r:3.4, c:AC},
+          {id:"s3", x:.82, y:.72, r:3.4, c:AC},
+          {id:"s4", x:.6, y:.22, r:3.0, c:AC},
+          {id:"ghost", x:.45, y:.72, r:5, c:GH, ghost:1}
+        ];
+        links = [
+          {a:"broker",b:"s1",c:AC},{a:"broker",b:"s2",c:AC},{a:"broker",b:"s3",c:AC},{a:"broker",b:"s4",c:AC},
+          {a:"ghost",b:"broker",c:GH,rogue:1}
+        ];
+      } else {
+        nodes = [
+          {id:"master", x:.6, y:.3, r:6, c:AC, hub:1},
+          {id:"outst", x:.81, y:.58, r:5.5, c:AC},
+          {id:"rtu2", x:.66, y:.76, r:3.4, c:AC},
+          {id:"rtu3", x:.91, y:.32, r:3.4, c:AC},
+          {id:"ghost", x:.45, y:.68, r:5, c:GH, ghost:1}
+        ];
+        links = [
+          {a:"master",b:"outst",c:AC},{a:"master",b:"rtu3",c:AC},{a:"outst",b:"rtu2",c:AC},
+          {a:"ghost",b:"outst",c:GH,rogue:1}
+        ];
+      }
+      parts = [];
+    }
+    function N(id){ for(var i=0;i<nodes.length;i++) if(nodes[i].id===id) return nodes[i]; return null; }
+    function resize(){
+      var r = cv.getBoundingClientRect();
+      DPR = Math.min(window.devicePixelRatio||1, 2);
+      W = Math.max(1, r.width); H = Math.max(1, r.height);
+      cv.width = Math.round(W*DPR); cv.height = Math.round(H*DPR);
+      ctx.setTransform(DPR,0,0,DPR,0,0);
+    }
+    function px(n){ return {x:n.x*W, y:n.y*H}; }
+    function spawn(){
+      if(parts.length > 34) return;
+      var l = links[(Math.random()*links.length)|0];
+      parts.push({l:l, t:Math.random()*0.15, sp:0.10+Math.random()*0.16, rogue:l.rogue?1:0});
+    }
+    function glow(p, r, col, a){
+      var g = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*3.4);
+      g.addColorStop(0, col); g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = a; ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x,p.y,r*3.4,0,6.2832); ctx.fill(); ctx.globalAlpha=1;
+    }
+    function frame(ts){
+      if(!running){ return; }
+      var dt = last ? Math.min(0.05,(ts-last)/1000) : 0.016; last = ts;
+      ctx.clearRect(0,0,W,H);
+      links.forEach(function(l){
+        var a=px(N(l.a)), b=px(N(l.b));
+        ctx.strokeStyle = l.c; ctx.globalAlpha = l.rogue?0.13:0.17; ctx.lineWidth = 1;
+        if(l.rogue){ ctx.setLineDash([3,5]); } else { ctx.setLineDash([]); }
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+      });
+      ctx.setLineDash([]); ctx.globalAlpha=1;
+      nodes.forEach(function(n){
+        var p=px(n);
+        var jx = n.ghost ? Math.sin(ts/230)*2.2 : 0;
+        var jy = n.ghost ? Math.cos(ts/190)*1.6 : 0;
+        var pp = {x:p.x+jx, y:p.y+jy};
+        glow(pp, n.r, n.c, n.ghost ? (0.5+0.3*Math.abs(Math.sin(ts/300))) : (n.hub?0.5:0.34));
+        ctx.fillStyle = n.c; ctx.beginPath(); ctx.arc(pp.x,pp.y,n.r,0,6.2832); ctx.fill();
+        if(n.hub){ ctx.strokeStyle=n.c; ctx.globalAlpha=.5; ctx.lineWidth=1.4;
+          ctx.beginPath(); ctx.arc(pp.x,pp.y,n.r+4,0,6.2832); ctx.stroke(); ctx.globalAlpha=1; }
+      });
+      for(var i=parts.length-1;i>=0;i--){
+        var pt=parts[i]; pt.t += pt.sp*dt* (pt.rogue? (0.7+0.6*Math.abs(Math.sin(ts/160))) : 1);
+        if(pt.t>=1){ parts.splice(i,1); continue; }
+        var a=px(N(pt.l.a)), b=px(N(pt.l.b));
+        var x=a.x+(b.x-a.x)*pt.t, y=a.y+(b.y-a.y)*pt.t;
+        var jj = pt.rogue ? Math.sin(pt.t*30)*1.5 : 0;
+        glow({x:x,y:y+jj}, 2.4, pt.l.c, 0.9);
+        ctx.fillStyle="#fff"; ctx.globalAlpha=.85; ctx.beginPath(); ctx.arc(x,y+jj,1.5,0,6.2832); ctx.fill(); ctx.globalAlpha=1;
+      }
+      if(Math.random()<0.4) spawn();
+      raf = requestAnimationFrame(frame);
+    }
+    function still(){
+      resize(); ctx.clearRect(0,0,W,H);
+      links.forEach(function(l){ var a=px(N(l.a)),b=px(N(l.b));
+        ctx.strokeStyle=l.c; ctx.globalAlpha=l.rogue?0.13:0.17; ctx.lineWidth=1;
+        if(l.rogue) ctx.setLineDash([3,5]); else ctx.setLineDash([]);
+        ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
+      });
+      ctx.setLineDash([]); ctx.globalAlpha=1;
+      nodes.forEach(function(n){ var p=px(n); glow(p,n.r,n.c,n.hub?0.5:(n.ghost?0.6:0.34));
+        ctx.fillStyle=n.c; ctx.beginPath(); ctx.arc(p.x,p.y,n.r,0,6.2832); ctx.fill(); });
+      links.forEach(function(l,idx){ var a=px(N(l.a)),b=px(N(l.b)); var t=0.35+(idx%3)*0.12;
+        var x=a.x+(b.x-a.x)*t,y=a.y+(b.y-a.y)*t; glow({x:x,y:y},2.2,l.c,0.8);
+        ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(x,y,1.4,0,6.2832); ctx.fill(); });
+    }
+    function start(){ if(running) return; if(RM||document.hidden||!onscreen){ return; } running=true; last=0; raf=requestAnimationFrame(frame); }
+    function stop(){ running=false; if(raf) cancelAnimationFrame(raf); raf=0; }
+
+    build(); resize();
+    if(RM){ still(); }
+    else{
+      try{
+        var io = new IntersectionObserver(function(en){ onscreen = en[0].isIntersecting; if(onscreen) start(); else stop(); }, {threshold:0.02});
+        io.observe(cv);
+      }catch(e){ onscreen=true; }
+      document.addEventListener("visibilitychange", function(){ if(document.hidden) stop(); else start(); });
+      var rt=0; window.addEventListener("resize", function(){ clearTimeout(rt); rt=setTimeout(function(){ resize(); if(!running && !RM) still(); }, 150); }, {passive:true});
+      start();
+      setTimeout(function(){ if(!running) still(); }, 400);
+    }
+  }catch(e){ /* canvas failure never breaks the page — the CSS gradient remains */ }
+})();
 </script>
 </body></html>

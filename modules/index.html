@@ -1,32 +1,85 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>ICS/OT Protocol Analysis Lab Kit</title>
+<!DOCTYPE html><html lang="en" data-proto="hub"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>ICS/OT Protocol Analysis Lab Kit — Modules</title>
 <style>
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:#1e293b;background:#f1f5f9;line-height:1.55}
-header{background:linear-gradient(135deg,#3730a3,#0f766e);color:#fff;padding:40px 24px}
-header h1{margin:0 0 6px;font-size:28px}
-main{max-width:900px;margin:0 auto;padding:24px 18px 60px}
+:root{
+  color-scheme:dark;
+  --bg:#0a0e1a; --bg-raise:#111725; --card:#131a2b; --line:#232e49;
+  --ink:#e8edf7; --mut:#9aa7bd; --faint:#64748b; --link:#a5b4fc; --accent-glow:#818cf8;
+  --dnp3:#f59e0b; --mqtt:#2dd4bf;
+  --step--1:clamp(.78rem,.75rem + .18vw,.86rem);
+  --step-0:clamp(.95rem,.9rem + .25vw,1.05rem);
+  --step-2:clamp(1.2rem,1.1rem + .6vw,1.45rem);
+  --step-4:clamp(1.7rem,1.4rem + 1.4vw,2.25rem);
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+html[data-theme="light"]{color-scheme:light;--bg:#f1f5f9;--bg-raise:#e9eef5;--card:#fff;--line:#e2e8f0;
+  --ink:#1e293b;--mut:#475569;--faint:#94a3b8;--link:#4f46e5;--accent-glow:#6366f1;--dnp3:#b45309;--mqtt:#0f766e}
+@media(prefers-color-scheme:light){:root:not([data-theme]){color-scheme:light;--bg:#f1f5f9;--bg-raise:#e9eef5;--card:#fff;--line:#e2e8f0;
+  --ink:#1e293b;--mut:#475569;--faint:#94a3b8;--link:#4f46e5;--accent-glow:#6366f1;--dnp3:#b45309;--mqtt:#0f766e}}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color:var(--ink);background:var(--bg);line-height:1.6;font-size:var(--step-0);-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--accent-glow);outline-offset:2px;border-radius:4px}
+.hero{position:relative;overflow:hidden;color:#e8edf7;padding:clamp(2rem,4vw,3.4rem) clamp(1.1rem,2vw,2.4rem)}
+.hero::before{content:"";position:absolute;inset:0;z-index:0;background:
+  radial-gradient(120% 90% at 82% 4%,rgba(245,158,11,.16),transparent 55%),
+  radial-gradient(90% 80% at 8% 0%,rgba(45,212,191,.14),transparent 55%),
+  linear-gradient(160deg,#0b1020,#0a0e1a 55%,#080b14)}
+.heroinner{position:relative;z-index:1;max-width:960px;margin:0 auto}
+.kick{font-size:var(--step--1);letter-spacing:.2em;text-transform:uppercase;color:#aeb9d6;font-weight:700}
+.hero h1{margin:.15em 0 .3em;font-size:var(--step-4);line-height:1.08;letter-spacing:-.02em;font-weight:800;max-width:22ch}
+.hero p{color:#c9d3e6;margin:0;max-width:64ch;font-size:var(--step-0)}
+.themebtn{position:absolute;top:clamp(1rem,2vw,1.6rem);right:clamp(1rem,2vw,1.6rem);z-index:2;
+  display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);
+  color:#e8edf7;border-radius:10px;padding:7px 12px;font-size:var(--step--1);cursor:pointer;font-weight:600}
+.themebtn:hover{background:rgba(255,255,255,.16)}
+main{max-width:960px;margin:0 auto;padding:24px 18px 64px}
 .mods{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0}
-.mod{display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 1px 2px rgba(15,23,42,.05)}
-.mod:hover{box-shadow:0 6px 18px rgba(15,23,42,.10);transform:translateY(-2px);transition:.15s}
-.mod h2{margin:.1em 0}
-.badge{display:inline-block;font-size:12px;font-weight:700;color:#fff;padding:3px 10px;border-radius:20px}
-.d{background:#b45309}.m{background:#0f766e}
-.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin:14px 0}
-code{background:#eef2ff;padding:1px 5px;border-radius:4px;font-family:ui-monospace,monospace}
-ul{margin:.3em 0}
-.muted{color:#64748b}
+.mod{display:block;text-decoration:none;color:inherit;background:linear-gradient(180deg,var(--card),var(--bg-raise));
+  border:1px solid var(--line);border-radius:16px;padding:20px 22px;position:relative;overflow:hidden;
+  transition:transform .18s var(--ease),border-color .18s var(--ease),box-shadow .18s var(--ease)}
+.mod::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px}
+.mod.dnp3::before{background:linear-gradient(180deg,var(--dnp3),#b45309)}
+.mod.mqtt::before{background:linear-gradient(180deg,var(--mqtt),#0f766e)}
+.mod:hover{transform:translateY(-2px);border-color:var(--accent-glow);box-shadow:0 14px 34px -18px rgba(0,0,0,.7);text-decoration:none}
+.mod h2{margin:.35em 0 .2em;font-size:var(--step-2)}
+.mod .muted{color:var(--mut)}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.05em;
+  padding:4px 11px;border-radius:20px;border:1px solid}
+.badge::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 9px currentColor}
+.badge.d{color:var(--dnp3);background:color-mix(in srgb,var(--dnp3) 15%,transparent);border-color:color-mix(in srgb,var(--dnp3) 32%,transparent)}
+.badge.m{color:var(--mqtt);background:color-mix(in srgb,var(--mqtt) 15%,transparent);border-color:color-mix(in srgb,var(--mqtt) 32%,transparent)}
+.card{background:linear-gradient(180deg,var(--card),var(--bg-raise));border:1px solid var(--line);border-radius:16px;padding:18px 22px;margin:14px 0}
+.card h3{margin:.1em 0 .5em}
+code{background:color-mix(in srgb,var(--accent-glow) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent-glow) 24%,transparent);
+  padding:1px 6px;border-radius:5px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em}
+ul{margin:.4em 0;padding-left:1.3em}li{margin:.3em 0}li::marker{color:var(--accent-glow)}
+.muted{color:var(--mut)}
+.foot{color:var(--faint);font-size:var(--step--1);margin-top:8px}
+.foot a{color:var(--link);font-weight:600}
 @media(max-width:720px){.mods{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
 </style></head><body>
-<header><h1>ICS / OT Protocol Analysis Lab Kit</h1>
-<p>Hands-on packet analysis for DNP3 &amp; MQTT — built with CISA ICSNPP, Wireshark, and Zeek. Intermediate level.</p></header>
+<header class="hero">
+  <button class="themebtn" id="themebtn" type="button" aria-pressed="false" aria-label="Toggle light and dark theme">
+    <span id="theme-ic" aria-hidden="true">&#9680;</span><span id="theme-tx">Dark</span></button>
+  <div class="heroinner">
+    <div class="kick">ICS &middot; OT Signal Field</div>
+    <h1>Protocol Analysis Lab Kit &mdash; Modules</h1>
+    <p>Hands-on packet analysis for DNP3 &amp; MQTT &mdash; built with CISA ICSNPP, Wireshark, and Zeek. Part of the <a href="../curriculum/index.html" style="color:#c7d2fe">First Light</a> curriculum.</p>
+  </div>
+</header>
 <main>
 <div class="mods">
-  <a class="mod" href="dnp3_module.html"><span class="badge d">DNP3</span>
-    <h2>DNP3 — Substation SCADA</h2>
-    <p class="muted">Master/outstation polling &amp; control on TCP/20000, a supervised breaker close, and an unauthenticated command-injection attack — frame by frame.</p></a>
-  <a class="mod" href="mqtt_module.html"><span class="badge m">MQTT</span>
-    <h2>MQTT — IIoT Telemetry</h2>
-    <p class="muted">Publish/subscribe telemetry on TCP/1883, broker fan-out, and an anonymous eavesdrop-and-inject intrusion — frame by frame.</p></a>
+  <a class="mod dnp3" href="dnp3_module.html"><span class="badge d">DNP3</span>
+    <h2>DNP3 &mdash; Substation SCADA</h2>
+    <p class="muted">Master/outstation polling &amp; control on TCP/20000, a supervised breaker close, and an unauthenticated command-injection attack &mdash; frame by frame.</p></a>
+  <a class="mod mqtt" href="mqtt_module.html"><span class="badge m">MQTT</span>
+    <h2>MQTT &mdash; IIoT Telemetry</h2>
+    <p class="muted">Publish/subscribe telemetry on TCP/1883, broker fan-out, and an anonymous eavesdrop-and-inject intrusion &mdash; frame by frame.</p></a>
 </div>
 <div class="card"><h3>What's in the kit</h3>
 <ul>
@@ -35,5 +88,23 @@ ul{margin:.3em 0}
 <li>A runnable Docker lab: Mosquitto broker, a Python DNP3 outstation/master, tcpreplay, and Zeek + CISA ICSNPP parsers.</li>
 <li>Student worksheets, instructor answer keys, and real Zeek/ICSNPP reference logs.</li>
 </ul>
-<p class="muted">Open a module, read the Overview, then work the Frame Explorer with the matching .pcap open in Wireshark.</p></div>
-</main></body></html>
+<p class="muted">Open a module, read the Overview, then work the Frame Explorer with the matching .pcap open in Wireshark.</p>
+<p class="foot">Return to the <a href="../curriculum/index.html">First Light hub</a>.</p></div>
+</main>
+<script>
+(function(){ try{
+  var TK="icskit.path.theme.v1", btn=document.getElementById("themebtn");
+  var ic=document.getElementById("theme-ic"), tx=document.getElementById("theme-tx");
+  function stored(){ try{ return localStorage.getItem(TK); }catch(e){ return null; } }
+  function osLight(){ try{ return window.matchMedia("(prefers-color-scheme: light)").matches; }catch(e){ return false; } }
+  function effective(){ var s=stored(); if(s==="light"||s==="dark") return s; return osLight()?"light":"dark"; }
+  function paint(){ var s=stored();
+    if(s==="light"||s==="dark"){ document.documentElement.setAttribute("data-theme", s); } else { document.documentElement.removeAttribute("data-theme"); }
+    var eff=effective(); if(ic) ic.textContent=eff==="light"?"◑":"◐"; if(tx) tx.textContent=eff==="light"?"Light":"Dark";
+    if(btn) btn.setAttribute("aria-pressed", eff==="light"?"true":"false"); }
+  if(btn) btn.addEventListener("click", function(){ var n=effective()==="light"?"dark":"light"; try{ localStorage.setItem(TK,n);}catch(e){} paint(); });
+  try{ window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", paint); }catch(e){}
+  paint();
+}catch(e){} })();
+</script>
+</body></html>

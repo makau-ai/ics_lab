@@ -1,0 +1,42 @@
+name: ics-twin-liftstation
+
+# ===========================================================================
+#  HARDENED override -- applied ON TOP of docker-compose.twin.yml:
+#     docker compose -f docker-compose.twin.yml -f docker-compose.hardened.yml up -d
+#
+#  Flips EVERY CIE control at once so students run the identical attack and watch
+#  it fail (CIE_HARDENING 6). One control at a time = set the same env by hand.
+#
+#   plant-sim      FLOAT_ENABLED true        -> hardwired HH float at 95 %  (W6)
+#   openplc        hardened_wetwell.st        -> clamp + interlock + local decision (W1/W5/W6)
+#   dnp3-gw        HARDEN=1 SAV5=1            -> arm-latch, no DIRECT_OPERATE, allow-list, SAv5 (W1/W4/W5)
+#   mqtt-broker    secure.conf + acl (+certs) -> auth + ACL (+8883 mTLS)      (W1/W3)
+#   pump-controller replicas 0                -> MQTT command path designed OUT (CIE #4)
+# ===========================================================================
+
+services:
+  plant-sim:
+    environment:
+      FLOAT_ENABLED: "true"        # <-- the single most important control: the analog float
+      WEIR_ENABLED: "true"
+      MOTOR_PROT_ENABLED: "true"
+
+  openplc:
+    environment:
+      PLC_PROGRAM: hardened_wetwell.st   # clamp + stop-interlock + EU-range + local-sensor decision
+
+  dnp3-gw:
+    environment:
+      HARDEN: "1"                  # SELECT arm-latch + reject DIRECT_OPERATE + object/link allow-list
+      SAV5: "1"                    # require SAv5 aggressive-mode HMAC on control FCs
+
+  mqtt-broker:
+    volumes:
+      - ./mosquitto/mosquitto.secure.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - ./mosquitto/acl:/mosquitto/config/acl:ro
+      - ./mosquitto/certs:/mosquitto/config/certs:ro
+
+  pump-controller:
+    deploy:
+      replicas: 0                  # the trusting subscriber is removed -- no cloud command authority
