@@ -1,104 +1,142 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ICS/OT Protocol Analysis Lab Kit — DNP3 &amp; MQTT</title>
+<meta name="color-scheme" content="dark light">
+<title>First Light — ICS/OT Signal Analysis · DNP3 &amp; MQTT</title>
 <style>
-:root{--ink:#1e293b;--mut:#64748b;--line:#e2e8f0}
+:root{color-scheme:dark;
+  --bg:#0a0e1a;--bg2:#0b1020;--card:#131a2b;--card2:#1a2336;--line:#232e49;
+  --ink:#e8edf7;--mut:#9aa7bd;--faint:#64748b;--link:#a5b4fc;
+  --accent:#818cf8;--dnp3:#f59e0b;--mqtt:#2dd4bf;--ghost:#f87171;--ok:#34d399;
+  --s6:clamp(2rem,1.4rem+3vw,3.2rem);--s2:clamp(1.2rem,1rem+.7vw,1.5rem);--s1:clamp(1.05rem,1rem+.4vw,1.22rem);
+  --spring:cubic-bezier(.34,1.56,.64,1);--ease:cubic-bezier(.4,0,.2,1)}
+@media(prefers-color-scheme:light){:root{color-scheme:light;
+  --bg:#f1f5f9;--bg2:#e9eef5;--card:#fff;--card2:#f8fafc;--line:#e2e8f0;
+  --ink:#1e293b;--mut:#475569;--faint:#94a3b8;--link:#4f46e5;--accent:#6366f1;
+  --dnp3:#b45309;--mqtt:#0f766e;--ghost:#dc2626;--ok:#16a34a}}
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:#f1f5f9;line-height:1.55}
-header{background:linear-gradient(135deg,#3730a3,#0f766e);color:#fff;padding:44px 24px 34px}
-header .kick{font-size:12px;letter-spacing:.16em;text-transform:uppercase;opacity:.85}
-header h1{margin:.2em 0 .1em;font-size:30px}
-header p{margin:.2em 0 0;max-width:60ch;opacity:.96}
-main{max-width:960px;margin:0 auto;padding:24px 18px 64px}
-h2{font-size:18px;border-bottom:2px solid var(--line);padding-bottom:6px;margin-top:30px}
-.mods{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0}
-.mod{display:block;text-decoration:none;color:inherit;background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:0 1px 2px rgba(15,23,42,.05);transition:.15s}
-.mod:hover{box-shadow:0 8px 22px rgba(15,23,42,.12);transform:translateY(-2px)}
-.mod h3{margin:.1em 0 .3em;font-size:19px}
-.badge{display:inline-block;font-size:12px;font-weight:700;color:#fff;padding:3px 10px;border-radius:20px;margin-bottom:8px}
-.d{background:#b45309}.m{background:#0f766e}
-.hero{background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border-radius:16px;padding:22px 24px;margin:18px 0 6px;box-shadow:0 8px 26px rgba(79,70,229,.22)}
-.hero .step0{font-size:12px;letter-spacing:.14em;text-transform:uppercase;opacity:.9}
-.hero h2{border:0;color:#fff;font-size:22px;margin:.2em 0 .1em;padding:0}
-.hero p{opacity:.96;margin:.3em 0 0;max-width:66ch}
-.hero .go{display:inline-block;margin-top:14px;background:#fff;color:#4f46e5;font-weight:700;text-decoration:none;padding:11px 20px;border-radius:10px;font-size:15px}
-.hero .go:hover{background:#eef2ff}
-.hero .arc{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px;font-size:12.5px}
-.hero .arc span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.34);border-radius:20px;padding:2px 10px}
-.hero .arc .a{opacity:.7}
-.mod .fmts{margin-top:10px;font-size:13px;color:var(--mut)}
-.mod .fmts a{color:#4f46e5;text-decoration:none;margin-right:10px;white-space:nowrap}
-.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin:14px 0}
-code{background:#eef2ff;padding:1px 5px;border-radius:4px;font-family:ui-monospace,monospace;font-size:.92em}
-ul{margin:.4em 0}
-li{margin:.28em 0}
-.muted{color:var(--mut)}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-table{border-collapse:collapse;width:100%;font-size:14px}
-td,th{border:1px solid var(--line);padding:7px 9px;text-align:left}
-th{background:#f8fafc}
-a{color:#4f46e5}
-@media(max-width:720px){.mods,.grid{grid-template-columns:1fr}}
-</style></head><body>
-<header>
-  <div class="kick">Hands-on packet analysis · CISA ICSNPP · Wireshark · Zeek</div>
-  <h1>ICS/OT Protocol Analysis Lab Kit</h1>
-  <p>Learn <strong>DNP3</strong> and <strong>MQTT</strong> by reading real captures frame by frame — protocol function, security risk, and defensive control, tied to documented real-world activity. Intermediate level.</p>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  color:var(--ink);background:var(--bg);line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:5px}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:color-mix(in srgb,var(--accent) 14%,transparent);
+  padding:1px 6px;border-radius:5px;font-size:.9em;border:1px solid color-mix(in srgb,var(--accent) 22%,transparent)}
+/* hero */
+.hero{position:relative;overflow:hidden;isolation:isolate;padding:clamp(2rem,1rem+4vw,4rem) clamp(1.1rem,.6rem+2vw,2.4rem) clamp(1.6rem,1rem+2vw,3rem)}
+.hero::before{content:"";position:absolute;inset:0;z-index:-2;
+  background:radial-gradient(120% 90% at 82% 6%,rgba(45,212,191,.14),transparent 52%),
+    radial-gradient(90% 80% at 10% 2%,rgba(129,140,248,.16),transparent 52%),
+    linear-gradient(160deg,#0b1020,#0a0e1a 55%,#080b14)}
+@media(prefers-color-scheme:light){.hero::before{background:radial-gradient(120% 90% at 82% 6%,rgba(13,148,136,.10),transparent 52%),
+    radial-gradient(90% 80% at 10% 2%,rgba(99,102,241,.12),transparent 52%),linear-gradient(160deg,#eef2fb,#f1f5f9)}}
+.hero svg.field{position:absolute;inset:0;width:100%;height:100%;z-index:-1;opacity:.85}
+.wrap{max-width:1080px;margin:0 auto;position:relative}
+.kick{font-size:.8rem;letter-spacing:.22em;text-transform:uppercase;color:var(--mut);font-weight:700;display:inline-flex;align-items:center;gap:.55em}
+.kick .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent)}
+h1{font-size:var(--s6);line-height:1.04;letter-spacing:-.02em;margin:.35em 0 .3em;max-width:18ch;text-wrap:balance;font-weight:800}
+h1 .fl{background:linear-gradient(100deg,#fcd34d,#fb923c 45%,#f472b6);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sub{color:var(--mut);font-size:var(--s1);max-width:60ch;margin:0 0 1.4em;line-height:1.55}
+.legend{display:flex;flex-wrap:wrap;gap:9px;margin:0 0 1.6em}
+.lg{display:inline-flex;align-items:center;gap:7px;font-size:.82rem;font-weight:600;color:var(--ink);
+  background:color-mix(in srgb,var(--card) 70%,transparent);border:1px solid var(--line);border-radius:20px;padding:5px 12px}
+.lg::before{content:"";width:9px;height:9px;border-radius:50%;box-shadow:0 0 10px currentColor}
+.lg-d{color:var(--dnp3)}.lg-m{color:var(--mqtt)}.lg-g{color:var(--ghost)}.lg span{color:var(--ink)}
+.enter{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(100deg,var(--accent),#a78bfa);color:#0a0e1a;
+  font-weight:800;font-size:1.05rem;border-radius:30px;padding:13px 26px;box-shadow:0 10px 30px -8px color-mix(in srgb,var(--accent) 70%,transparent);
+  transition:gap .25s var(--spring),transform .2s var(--ease)}
+.enter:hover{gap:16px;transform:translateY(-1px);text-decoration:none}
+/* cards */
+main{max-width:1080px;margin:0 auto;padding:6px 18px 70px}
+.eyebrow{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:800;margin:34px 0 12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.card{display:block;background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:16px;
+  padding:20px;color:inherit;position:relative;overflow:hidden;transition:transform .25s var(--ease),border-color .25s var(--ease),box-shadow .25s var(--ease)}
+.card:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--accent) 50%,var(--line));text-decoration:none;box-shadow:0 16px 40px -20px rgba(0,0,0,.6)}
+.card .edge{position:absolute;left:0;top:0;bottom:0;width:4px}
+.card.d .edge{background:linear-gradient(180deg,var(--dnp3),color-mix(in srgb,var(--dnp3) 30%,transparent))}
+.card.m .edge{background:linear-gradient(180deg,var(--mqtt),color-mix(in srgb,var(--mqtt) 30%,transparent))}
+.card h3{margin:.1em 0 .3em;font-size:var(--s2);letter-spacing:-.01em}
+.card p{margin:.3em 0;color:var(--mut);font-size:.95rem}
+.badge{display:inline-block;font-size:.7rem;font-weight:800;letter-spacing:.04em;padding:3px 10px;border-radius:20px;margin-bottom:9px}
+.badge.d{background:color-mix(in srgb,var(--dnp3) 20%,transparent);color:var(--dnp3);border:1px solid color-mix(in srgb,var(--dnp3) 34%,transparent)}
+.badge.m{background:color-mix(in srgb,var(--mqtt) 20%,transparent);color:var(--mqtt);border:1px solid color-mix(in srgb,var(--mqtt) 34%,transparent)}
+.fmts{margin-top:11px;font-size:.85rem;color:var(--faint);position:relative;z-index:2}.fmts a{color:var(--link);margin-right:12px;white-space:nowrap}
+.card h3 a.stretch{color:inherit;text-decoration:none}
+.card .stretch::after{content:"";position:absolute;inset:0;z-index:1;border-radius:16px}
+.hero-card{grid-column:1/-1;background:linear-gradient(120deg,color-mix(in srgb,var(--accent) 14%,var(--card)),var(--card));
+  border-color:color-mix(in srgb,var(--accent) 34%,var(--line))}
+.arc{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:12px 0 4px;font-size:.82rem}
+.arc .pl{background:color-mix(in srgb,var(--accent) 14%,transparent);border:1px solid color-mix(in srgb,var(--accent) 26%,transparent);
+  color:var(--ink);border-radius:20px;padding:3px 10px;font-weight:600}.arc .ar{color:var(--faint)}
+.plain{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 20px;margin-top:15px}
+.plain ul{margin:.4em 0;padding-left:1.2em}.plain li{margin:.3em 0;color:var(--mut)}.plain b{color:var(--ink)}
+.foot{max-width:1080px;margin:0 auto;padding:0 18px 50px;color:var(--faint);font-size:.85rem}
+@media(max-width:720px){.grid{grid-template-columns:1fr}}
+</style></head>
+<body>
+<header class="hero">
+  <svg class="field" viewBox="0 0 1080 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g stroke="#2dd4bf" stroke-width="1" opacity=".5">
+      <line x1="820" y1="150" x2="700" y2="90"/><line x1="820" y1="150" x2="940" y2="95"/>
+      <line x1="820" y1="150" x2="900" y2="235"/><line x1="820" y1="150" x2="990" y2="205"/></g>
+    <g fill="#2dd4bf"><circle cx="820" cy="150" r="7"/><circle cx="700" cy="90" r="3.4"/>
+      <circle cx="940" cy="95" r="3.4"/><circle cx="900" cy="235" r="3.4"/><circle cx="990" cy="205" r="3.4"/></g>
+    <g fill="#f59e0b"><circle cx="150" cy="250" r="6"/><circle cx="300" cy="250" r="5"/></g>
+    <line x1="150" y1="250" x2="300" y2="250" stroke="#f59e0b" stroke-width="1" opacity=".5"/>
+    <g fill="#f87171"><circle cx="560" cy="300" r="4.5"/></g>
+    <line x1="560" y1="300" x2="820" y2="150" stroke="#f87171" stroke-width="1" opacity=".35" stroke-dasharray="3 6"/>
+  </svg>
+  <div class="wrap">
+    <div class="kick"><span class="dot"></span> First Light &nbsp;·&nbsp; The Signal Descent</div>
+    <h1>ICS/OT signal analysis — <span class="fl">First Light</span></h1>
+    <p class="sub">Learn to see inside a living network. Descend seven altitudes — from the whole network down to a
+    single byte — reading <strong>DNP3</strong> and <strong>MQTT</strong> on the wire, and catch the intruder hiding in
+    ordinary‑looking traffic.</p>
+    <div class="legend">
+      <span class="lg lg-d"><span>Amber · DNP3 substation</span></span>
+      <span class="lg lg-m"><span>Teal · MQTT telemetry</span></span>
+      <span class="lg lg-g"><span>Red · the rogue .66</span></span>
+    </div>
+    <a class="enter" href="curriculum/index.html">Begin the descent →</a>
+  </div>
 </header>
 <main>
-
-  <div class="hero">
-    <div class="step0">Start here · one click</div>
-    <h2>▶ The Learning Path — 7 levels, in order</h2>
-    <p>From watching live traffic, to naming the endpoints, to opening packets byte by byte, to catching an
-    intruder you've never seen — ending in a university-style Machine Problem. Progress is tracked as you go.</p>
-    <div class="arc">
-      <span>0 · Orientation</span><span class="a">→</span><span>1 · Endpoints</span><span class="a">→</span>
-      <span>2 · Messages</span><span class="a">→</span><span>3 · Inside the packet</span><span class="a">→</span>
-      <span>4 · Find the attack</span><span class="a">→</span><span>5 · Detection</span><span class="a">→</span>
-      <span>6 · Machine Problem</span>
-    </div>
-    <a class="go" href="curriculum/index.html">Start the Learning Path →</a>
-  </div>
-  <p class="muted">New here? Take the path above. Want a reference instead? The two protocol modules are below.</p>
-
-  <h2>The two modules</h2>
-  <div class="mods">
-    <a class="mod" href="modules/dnp3_module.html">
-      <span class="badge d">DNP3</span>
-      <h3>Substation SCADA</h3>
-      <p class="muted">Master/outstation polling &amp; control on TCP/20000, a supervised breaker close, and an unauthenticated command-injection attack — frame by frame.</p>
-      <div class="fmts">Also: <a href="modules/dnp3_module.pdf">PDF</a><a href="modules/dnp3_module.docx">Word</a><a href="modules/dnp3_module.md">Markdown</a></div>
-    </a>
-    <a class="mod" href="modules/mqtt_module.html">
-      <span class="badge m">MQTT</span>
-      <h3>IIoT Telemetry</h3>
-      <p class="muted">Publish/subscribe telemetry on TCP/1883, QoS &amp; broker fan-out, and an anonymous eavesdrop-and-inject intrusion — frame by frame.</p>
-      <div class="fmts">Also: <a href="modules/mqtt_module.pdf">PDF</a><a href="modules/mqtt_module.docx">Word</a><a href="modules/mqtt_module.md">Markdown</a></div>
-    </a>
-  </div>
-  <p class="muted">Tip: open a module's <strong>Frame Explorer</strong> with the matching capture below open in Wireshark.</p>
-
-  <h2>Captures &amp; lab</h2>
+  <div class="eyebrow">Start here</div>
   <div class="grid">
-    <div class="card"><h3 style="margin-top:0">Packet captures</h3>
-      <ul>
-        <li><a href="pcaps/dnp3_substation.pcap">dnp3_substation.pcap</a> — 37 frames, TCP/20000</li>
-        <li><a href="pcaps/mqtt_iot_telemetry.pcap">mqtt_iot_telemetry.pcap</a> — 61 frames, TCP/1883</li>
-      </ul>
-      <p class="muted">Curated teaching captures — synthetic but protocol-valid (CRC-checked, ICSNPP-parsed).</p>
+    <a class="card hero-card" href="curriculum/index.html">
+      <span class="edge" style="background:linear-gradient(180deg,var(--accent),#a78bfa)"></span>
+      <h3>▶ The Learning Path — 7 levels</h3>
+      <p>The full First Light experience: a living signal‑field, the Climb spine, and stations you descend from
+      whole‑network down to a single byte — ending in a university‑level Machine Problem. Your progress is tracked.</p>
+      <div class="arc"><span class="pl">tooling</span><span class="ar">→</span><span class="pl">endpoints</span><span class="ar">→</span>
+        <span class="pl">messages</span><span class="ar">→</span><span class="pl">inside the packet</span><span class="ar">→</span>
+        <span class="pl">find the attack</span><span class="ar">→</span><span class="pl">detection</span><span class="ar">→</span>
+        <span class="pl">Machine Problem</span></div>
+    </a>
+    <div class="card d">
+      <span class="edge"></span><span class="badge d">DNP3</span>
+      <h3><a class="stretch" href="modules/dnp3_module.html">Substation SCADA</a></h3>
+      <p>Master/outstation polling &amp; control on TCP/20000, a supervised breaker close, and an unauthenticated
+      command‑injection — frame by frame.</p>
+      <div class="fmts">Also: <a href="modules/dnp3_module.pdf">PDF</a><a href="modules/dnp3_module.docx">Word</a><a href="modules/dnp3_module.md">Markdown</a></div>
     </div>
-    <div class="card"><h3 style="margin-top:0">Runnable Docker lab</h3>
-      <p>Mosquitto broker, a Python DNP3 outstation/master, MQTT pub/sub + attacker scripts, packet capture, and Zeek + CISA ICSNPP.</p>
-      <p><code>cd lab &amp;&amp; docker compose up --build</code></p>
-      <p class="muted">Guide: <a href="lab/README.md">lab/README.md</a> · Worksheets: <a href="lab/worksheets/student_worksheet.pdf">student</a> / <a href="lab/worksheets/instructor_answer_key.pdf">instructor key</a></p>
+    <div class="card m">
+      <span class="edge"></span><span class="badge m">MQTT</span>
+      <h3><a class="stretch" href="modules/mqtt_module.html">IIoT Telemetry</a></h3>
+      <p>Publish/subscribe telemetry on TCP/1883, QoS &amp; broker fan‑out, and an anonymous eavesdrop‑and‑inject
+      intrusion — frame by frame.</p>
+      <div class="fmts">Also: <a href="modules/mqtt_module.pdf">PDF</a><a href="modules/mqtt_module.docx">Word</a><a href="modules/mqtt_module.md">Markdown</a></div>
     </div>
   </div>
 
-  <h2>What each module covers</h2>
-  <div class="card">
-    <p>Overview &amp; objectives · industry and use cases · protocol anatomy · a frame-by-frame walkthrough tied to exact frame numbers · security risks &amp; controls (each mapped to a real incident, a MITRE ATT&amp;CK for ICS technique, and a control) · a hands-on lab with answer keys · O*NET personas and career pathways · full references.</p>
-    <p class="muted">Built and verified with tshark/Wireshark and CISA's ICSNPP/Zeek parsers. See <a href="README.md">README.md</a> for the full contents and the accuracy/ethics note.</p>
+  <div class="eyebrow">Captures &amp; lab</div>
+  <div class="plain">
+    <ul>
+      <li><b>Teaching captures</b> (synthetic, CRC‑verified): <code>pcaps/dnp3_substation.pcap</code>, <code>pcaps/mqtt_iot_telemetry.pcap</code>.</li>
+      <li><b>Real, approved‑source captures</b>: CISA's BSD‑3 DNP3 example in <code>pcaps/real/</code>; run <code>./lab/fetch_real_captures.sh</code> for the CICIoMT2024 MQTT set (see <code>pcaps/real/NOTICE.md</code>).</li>
+      <li><b>Runnable lab</b>: <code>cd lab &amp;&amp; docker compose up --build</code> — Mosquitto, a Python DNP3 outstation/master, MQTT pub/sub + attacker, capture, and Zeek + CISA ICSNPP.</li>
+      <li>The <b>Machine Problem</b> (Level 6) lives in <code>mp/</code> with a self‑check autograder.</li>
+    </ul>
   </div>
-
-</main></body></html>
+</main>
+<div class="foot">Self‑contained · dark‑first with a light twin · built and verified with tshark/Wireshark and CISA's ICSNPP. See <a href="README.md">README.md</a>, <a href="CURRICULUM.md">CURRICULUM.md</a>, and <a href="FORMAL_VERIFICATION.md">FORMAL_VERIFICATION.md</a>.</div>
+</body></html>
