@@ -33,11 +33,27 @@ digital twin, and it is where the skills become yours.
 
 ## Definition of done
 
-A complete submission mirrors the worked exemplar in **[`../verification/`](../verification/README.md)**:
-a captured `pcap` (plus a benign control capture), a `ground_truth.labels.json`, a `report.md` that
-opens with a BLUF and cites frames + fields, a `detector.py` that keys on an **invariant** (not a
-hard-coded frame number), and a one-command `REPRODUCE.md`. For the twin capstone, add the
-`spill == 0 under full write access` acceptance run, hardened vs. vulnerable.
+> **Read** — A complete submission mirrors the worked exemplar in
+> **[`../verification/`](../verification/README.md)**: a captured `pcap` (plus a benign control
+> capture), a `ground_truth.labels.json`, a `report.md` that opens with a BLUF and cites frames +
+> fields, a `detector.py` that keys on an **invariant** (not a hard-coded frame number), and a
+> one-command `REPRODUCE.md`. For the twin capstone, add the `spill == 0 under full write access`
+> acceptance run, hardened vs. vulnerable.
+
+Before you submit, prove the capture at the heart of the bundle actually holds the traffic you claim.
+
+> Commands copy with the **Copy** button on the fenced block, or paste them with
+> **Ctrl/Cmd+Shift+V** (the paste-backup) if the terminal swallows a normal paste.
+
+**Do · Type** — confirm your primary capture parses as a real protocol, not just bare TCP:
+
+```
+tshark -r capture.pcap -Y 'dnp3 || mqtt || mbtcp'
+```
+
+**Check —** you should see DNP3, MQTT, or Modbus/TCP rows, not an empty result; if it comes back empty
+your bundle would ship a capture a grader cannot read — re-capture the target while it is mid-conversation
+before assembling the rest of the bundle.
 
 > Scope & ethics: build and attack only the systems you create in this kit's lab. Never point any
 > of this at production OT or a system you don't own. The whole kit is analysis-first and defensive

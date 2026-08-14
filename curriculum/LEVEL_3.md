@@ -20,24 +20,19 @@ DNP3 is layered: **data link** (0x0564 start, addresses, CRC) → **pseudo-trans
 
 ## Do this
 
-```bash
-# MQTT: read the cleartext login straight off the wire
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==1 -T fields -e mqtt.clientid -e mqtt.username -e mqtt.passwd
-```
-> **Expected:** hmi-scada-01  hmi_operator  Plant!ntel2024   (…and the sensor's creds). Cleartext — no TLS.
+**⌨ Type:** `l3`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==1 -T fields -e mqtt.clientid -e mqtt.username -e mqtt.passwd`
 
-```bash
-# MQTT: topic, QoS and the RETAIN flag on each publish
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==3 -T fields -e frame.number -e mqtt.topic -e mqtt.qos -e mqtt.retain
-```
-> **Expected:** plant/tank1/telemetry with QoS 0 and 1; retain False. (mqtt.retain prints True/False.)
+> **Check (expected):** hmi-scada-01  hmi_operator  Plant!ntel2024   (…and the sensor's creds). Cleartext — no TLS.
 
-- **In Wireshark:** In Wireshark, click a DNP3 frame and expand **Distributed Network Protocol 3.0**: the Data Link Layer (Source/Destination link addresses + CRC), the Transport, and the Application Layer (Function Code, Internal Indications, Objects).
-```bash
-# DNP3: compare the IP source with the DNP3 LINK source, and read the control
-tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5}" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.ctl.trip -e dnp3.ctl.op
-```
-> **Expected:** the legitimate close (Close/Pulse-On) from the master, and the rogue Trip — note ip.src vs dnp3.src.
+**⌨ Type:** `l3b`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==3 -T fields -e frame.number -e mqtt.topic -e mqtt.qos -e mqtt.retain`
+
+> **Check (expected):** plant/tank1/telemetry with QoS 0 and 1; retain False. (mqtt.retain prints True/False.)
+
+- **Do · Click.** In Wireshark, click a DNP3 frame and expand **Distributed Network Protocol 3.0**: the Data Link Layer (Source/Destination link addresses + CRC), the Transport, and the Application Layer (Function Code, Internal Indications, Objects).
+
+**⌨ Type:** `l3c`  — runs `tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5}" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.ctl.trip -e dnp3.ctl.op`
+
+> **Check (expected):** the legitimate close (Close/Pulse-On) from the master, and the rogue Trip — note ip.src vs dnp3.src.
 
 
 ## Check yourself

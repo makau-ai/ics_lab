@@ -452,10 +452,21 @@ A fuller offensive track — deliberately **out of scope** here — would add:
 
 The Docker lab runs a real Mosquitto broker plus paho-mqtt Python publisher/subscriber scripts, so you can reproduce this whole capture live and then harden it. You will start with the insecure default (anonymous, 1883), watch it in Wireshark, then add authentication, ACLs, and TLS and watch the capture change.
 
+**How to run these exercises.** Each one is written as **Read** (why), **Do · Type** or **Do · Click** (exactly one action), and **Check** (what you should see). Terminal commands sit in a code block — copy them with the **Copy** button or **Ctrl/Cmd+Shift+V** (the paste-backup), never by re-typing. Where a command already has a lab-runner token you can `lab <token>` instead of copying. The analysis desktop opens on port **:6080** straight to the desktop with **no password**, and Wireshark is already capturing on `lo` (if a VNC prompt ever appears, it's `vscode`).
+
 ### Exercise 1. Read a password off the wire
 
-1. Open mqtt_iot_telemetry.pcap in Wireshark.
-2. Apply mqtt.msgtype==1 and expand the CONNECT tree on frame 4.
+1. **Read.** MQTT carries its username and password inside the CONNECT packet with no protection of their own. On plaintext port 1883 that means the credentials sit in the payload in plain ASCII — no cracking, no decryption, just reading. This is the most visceral demonstration of why 1883 belongs only inside a trusted segment.
+2. **Do · Click** — In Wireshark, type `mqtt.msgtype==1` in the display-filter bar and press Enter, click frame 4, then expand the **MQ Telemetry Transport Protocol** tree in the detail pane down to the Username and Password fields.
+3. **Check —** the Username reads `hmi_operator` and the Password reads `Plant!ntel2024`, both in cleartext; if the tree is collapsed, click the ▸ triangle beside 'MQ Telemetry Transport' to expand it.
+4. **Do · Type** — Read the same credentials straight off the wire:
+
+```
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==1 -T fields -e mqtt.clientid -e mqtt.username -e mqtt.passwd
+```
+
+— or just type `l3`.
+5. **Check —** one row per CONNECT, including `hmi-scada-01  hmi_operator  Plant!ntel2024`; if the passwd column is blank, confirm you are reading `mqtt_iot_telemetry.pcap` and not a hardened capture.
 
 **Question.** What are the HMI's username and password, and which single control would have prevented you from reading them?
 
@@ -463,8 +474,11 @@ The Docker lab runs a real Mosquitto broker plus paho-mqtt Python publisher/subs
 
 ### Exercise 2. Trace one message to two subscribers
 
-1. Filter mqtt.msgtype==3 (all PUBLISH).
-2. Follow the third telemetry reading from the sensor through the broker.
+1. **Read.** In pub/sub the publisher never addresses a subscriber — it publishes to a topic, and the broker fans the message out to everyone whose subscription matches. That is the elegance and the risk: once the rogue host holds a `#` subscription, the broker delivers the plant's telemetry to it exactly as it delivers to the legitimate HMI, with no extra step from the attacker.
+2. **Do · Click** — In Wireshark, apply the filter `mqtt.msgtype==3` to show only PUBLISH frames, then click the sensor's third reading at frame 46.
+3. **Check —** frame 46 is a PUBLISH from 10.10.20.7 to the broker on topic `plant/tank1/telemetry`; if the frame numbers differ, confirm the filter is `mqtt.msgtype==3` and not `==8`.
+4. **Do · Click** — Read the two PUBLISH frames the broker sends immediately after — frame 48 and frame 50 — and note the destination IP on each.
+5. **Check —** frame 48 goes to the HMI (10.10.20.30) and frame 50 goes to the rogue host (10.10.20.66) — one publish, two deliveries, the second unauthorized; if you see only one delivery, clear any leftover `ip.dst` filter.
 
 **Question.** Starting at the sensor's publish (frame 46), which frames deliver that same reading, and to whom?
 
@@ -472,8 +486,17 @@ The Docker lab runs a real Mosquitto broker plus paho-mqtt Python publisher/subs
 
 ### Exercise 3. Catch the anonymous intruder
 
-1. Filter mqtt.msgtype==1 and compare the connect flags of frames 4, 15, and 38.
-2. In the lab container run: zeek -C -r /pcaps/mqtt_iot_telemetry.pcap and open mqtt_connect.log.
+1. **Read.** An anonymous CONNECT is one whose connect-flags carry no username or password bit. Whether it is a problem depends entirely on the broker: a hardened broker refuses it, an open one hands back a return-code-0 CONNACK and a full session. The tell is in the CONNECT itself, before the attacker does anything else.
+2. **Do · Click** — In Wireshark, filter `mqtt.msgtype==1` and compare the connect-flags of frames 4, 15, and 38 in the detail pane.
+3. **Check —** frames 4 and 15 have the Username/Password flags set, while frame 38 (`mqtt-explorer-x`) has neither — it is the anonymous one; if all three look identical, expand the 'Connect Flags' sub-tree to see the individual bits.
+4. **Do · Type** — Detect the credential-less CONNECT from the terminal:
+
+```
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number -e mqtt.clientid
+```
+
+— or just type `l4`.
+5. **Check —** exactly one row, `38  mqtt-explorer-x`; if you get more rows, confirm you loaded `mqtt_iot_telemetry.pcap` (a legitimate client should never be missing its username here).
 
 **Question.** Which CONNECT is anonymous, and what does mqtt_connect.log show for it?
 
@@ -481,8 +504,23 @@ The Docker lab runs a real Mosquitto broker plus paho-mqtt Python publisher/subs
 
 ### Exercise 4. Harden the broker
 
-1. In the lab, edit mosquitto.conf: set allow_anonymous false, add a password_file, and an acl_file scoping the HMI to read plant/+/telemetry only.
-2. Restart the broker and re-run the publisher/subscriber and a '#' subscriber.
+1. **Read.** The whole intrusion — anonymous connect, `#` harvest, command injection — collapses if the broker stops trusting strangers. Three settings do it: `allow_anonymous false` forces credentials, a `password_file` defines who those credentials belong to, and an `acl_file` scopes each identity to only the topics it needs. Authentication decides *who*; the ACL decides *what*.
+2. **Do · Click** — In VS Code, open `lab/mosquitto/mosquitto.conf`, set `allow_anonymous false`, add a `password_file` line, and add an `acl_file` scoping the HMI to read `plant/+/telemetry` only.
+3. **Check —** the three directives are present and the file is saved (VS Code's unsaved-dot on the tab clears on save); if the file is read-only, open the folder from the lab workspace root.
+4. **Do · Type** — Restart the broker so it reloads the new config:
+
+```
+lab reset
+```
+5. **Check —** the broker comes back up listening on 1883 (the command prints the restart lines with no error); if it fails to start, re-open `mosquitto.conf` and check for a typo in the directives.
+6. **Do · Type** — Replay the intrusion against the hardened broker:
+
+```
+./lab/intrude.sh
+```
+
+— or just type `l0b`.
+7. **Check —** the anonymous CONNECT is now refused with CONNACK return code 5 (Not Authorized), so the rogue never subscribes and the leaked-telemetry PUBLISH frames do not appear; if it still connects, confirm `allow_anonymous false` was saved and the broker actually restarted (`lab reset` again).
 
 **Question.** After hardening, what happens to the anonymous connect, and how does the capture differ?
 

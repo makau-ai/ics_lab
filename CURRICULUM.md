@@ -42,19 +42,17 @@ Two protocols are flowing. **MQTT** is publish/subscribe messaging (IoT/IIoT tel
 
 ## Do this
 
-- **Note:** Open the forwarded port **6080** ('noVNC Desktop', password `vscode`). Wireshark is already open and capturing.
-- **In Wireshark:** In Wireshark's green display-filter bar, type `mqtt` and press Enter. Watch the telemetry. Then clear it and type `dnp3`.
-```bash
-# prefer the terminal? watch it headless:
-tshark -i lo -c 10 -f "tcp port 1883 or tcp port 20000"
-```
-> **Expected:** 10 packets summarised — a mix of MQTT (1883) and DNP3 (20000).
+- **Read.** Open the forwarded port **6080** ('noVNC Desktop'). It opens **straight to the desktop — no password prompt** — with Wireshark already capturing on `lo`. (If a VNC prompt ever appears, the password is `vscode`.)
 
-```bash
-# re-run the attacks any time and watch them appear:
-./lab/intrude.sh
-```
-> **Expected:** MQTT anonymous connect + command injection, then a DNP3 trip.
+- **Do · Click.** In Wireshark's green display-filter bar, type `mqtt` and press Enter. Watch the telemetry. Then clear it and type `dnp3`.
+
+**⌨ Type:** `l0`  — runs `tshark -i lo -c 10 -f "tcp port 1883 or tcp port 20000"`
+
+> **Check (expected):** 10 packets summarised — a mix of MQTT (1883) and DNP3 (20000).
+
+**⌨ Type:** `l0b`  — runs `./lab/intrude.sh`
+
+> **Check (expected):** MQTT anonymous connect + command injection, then a DNP3 trip.
 
 
 ## Check yourself
@@ -92,24 +90,22 @@ Before you read bytes, understand the **graph**: who are the endpoints and who t
 
 ## Do this
 
-```bash
-tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z endpoints,ip
-```
-> **Expected:** 10.10.20.10  (61 pkts)  <- the broker (busiest)
+**⌨ Type:** `l1`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z endpoints,ip`
+
+> **Check (expected):** 10.10.20.10  (61 pkts)  <- the broker (busiest)
 10.10.20.30  (22)   <- HMI
 10.10.20.7   (22)   <- sensor
 10.10.20.66  (17)   <- rogue
 
-```bash
-tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z conv,tcp
-```
-> **Expected:** three TCP conversations, all to 10.10.20.10:1883 — the broker is the hub.
+**⌨ Type:** `l1b`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z conv,tcp`
 
-- **In Wireshark:** In Wireshark: **Statistics ▸ Conversations** (TCP tab) and **Statistics ▸ Endpoints** (IPv4). Then **Statistics ▸ Protocol Hierarchy** to see mqtt under tcp.
-```bash
-tshark -r pcaps/dnp3_substation.pcap -q -z conv,tcp
-```
-> **Expected:** the master (10.20.0.5) ↔ outstation (10.20.0.20:20000), plus a second session from 10.20.0.66 — the rogue.
+> **Check (expected):** three TCP conversations, all to 10.10.20.10:1883 — the broker is the hub.
+
+- **Do · Click.** In Wireshark: **Statistics ▸ Conversations** (TCP tab) and **Statistics ▸ Endpoints** (IPv4). Then **Statistics ▸ Protocol Hierarchy** to see mqtt under tcp.
+
+**⌨ Type:** `l1c`  — runs `tshark -r pcaps/dnp3_substation.pcap -q -z conv,tcp`
+
+> **Check (expected):** the master (10.20.0.5) ↔ outstation (10.20.0.20:20000), plus a second session from 10.20.0.66 — the rogue.
 
 
 ## Check yourself
@@ -150,18 +146,18 @@ Every protocol has a small vocabulary of message types. MQTT: CONNECT/CONNACK, S
 
 ## Do this
 
-```bash
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt -T fields -e mqtt.msgtype | sort | uniq -c
-```
-> **Expected:** 3 CONNECT(1), 3 CONNACK(2), 8 PUBLISH(3), 2 PUBACK(4), 2 SUBSCRIBE(8), 2 SUBACK(9), 1 PINGREQ(12), 1 PINGRESP(13), 1 DISCONNECT(14).
+**⌨ Type:** `l2`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt -T fields -e mqtt.msgtype | sort | uniq -c`
 
-```bash
-tshark -r pcaps/dnp3_substation.pcap -Y dnp3 -T fields -e dnp3.al.func | sort | uniq -c
-```
-> **Expected:** READ(1)x2, SELECT(3), OPERATE(4), DIRECT_OPERATE(5), COLD_RESTART(13), RESPONSE(129)x6, UNSOL(130), CONFIRM(0).
+> **Check (expected):** 3 CONNECT(1), 3 CONNACK(2), 8 PUBLISH(3), 2 PUBACK(4), 2 SUBSCRIBE(8), 2 SUBACK(9), 1 PINGREQ(12), 1 PINGRESP(13), 1 DISCONNECT(14).
 
-- **In Wireshark:** Apply `mqtt` then `dnp3` in Wireshark and read the **Info** column top-to-bottom — you can follow the whole story without expanding a packet.
-- **Note:** Controls are the dangerous ones: MQTT PUBLISH to a command topic, and DNP3 SELECT/OPERATE/DIRECT_OPERATE (function codes 3/4/5). Note how few there are — they're easy to enumerate.
+**⌨ Type:** `l2b`  — runs `tshark -r pcaps/dnp3_substation.pcap -Y dnp3 -T fields -e dnp3.al.func | sort | uniq -c`
+
+> **Check (expected):** READ(1)x2, SELECT(3), OPERATE(4), DIRECT_OPERATE(5), COLD_RESTART(13), RESPONSE(129)x6, UNSOL(130), CONFIRM(0).
+
+- **Do · Click.** Apply `mqtt` then `dnp3` in Wireshark and read the **Info** column top-to-bottom — you can follow the whole story without expanding a packet.
+
+- **Read.** Controls are the dangerous ones: MQTT PUBLISH to a command topic, and DNP3 SELECT/OPERATE/DIRECT_OPERATE (function codes 3/4/5). Note how few there are — they're easy to enumerate.
+
 
 ## Check yourself
 
@@ -203,24 +199,19 @@ DNP3 is layered: **data link** (0x0564 start, addresses, CRC) → **pseudo-trans
 
 ## Do this
 
-```bash
-# MQTT: read the cleartext login straight off the wire
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==1 -T fields -e mqtt.clientid -e mqtt.username -e mqtt.passwd
-```
-> **Expected:** hmi-scada-01  hmi_operator  Plant!ntel2024   (…and the sensor's creds). Cleartext — no TLS.
+**⌨ Type:** `l3`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==1 -T fields -e mqtt.clientid -e mqtt.username -e mqtt.passwd`
 
-```bash
-# MQTT: topic, QoS and the RETAIN flag on each publish
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==3 -T fields -e frame.number -e mqtt.topic -e mqtt.qos -e mqtt.retain
-```
-> **Expected:** plant/tank1/telemetry with QoS 0 and 1; retain False. (mqtt.retain prints True/False.)
+> **Check (expected):** hmi-scada-01  hmi_operator  Plant!ntel2024   (…and the sensor's creds). Cleartext — no TLS.
 
-- **In Wireshark:** In Wireshark, click a DNP3 frame and expand **Distributed Network Protocol 3.0**: the Data Link Layer (Source/Destination link addresses + CRC), the Transport, and the Application Layer (Function Code, Internal Indications, Objects).
-```bash
-# DNP3: compare the IP source with the DNP3 LINK source, and read the control
-tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5}" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.ctl.trip -e dnp3.ctl.op
-```
-> **Expected:** the legitimate close (Close/Pulse-On) from the master, and the rogue Trip — note ip.src vs dnp3.src.
+**⌨ Type:** `l3b`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==3 -T fields -e frame.number -e mqtt.topic -e mqtt.qos -e mqtt.retain`
+
+> **Check (expected):** plant/tank1/telemetry with QoS 0 and 1; retain False. (mqtt.retain prints True/False.)
+
+- **Do · Click.** In Wireshark, click a DNP3 frame and expand **Distributed Network Protocol 3.0**: the Data Link Layer (Source/Destination link addresses + CRC), the Transport, and the Application Layer (Function Code, Internal Indications, Objects).
+
+**⌨ Type:** `l3c`  — runs `tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5}" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.ctl.trip -e dnp3.ctl.op`
+
+> **Check (expected):** the legitimate close (Close/Pulse-On) from the master, and the rogue Trip — note ip.src vs dnp3.src.
 
 
 ## Check yourself
@@ -261,25 +252,20 @@ Attacks in these protocols rarely look 'malformed' — they look like *valid mes
 
 ## Do this
 
-```bash
-# MQTT: anonymous CONNECT (no username) the broker accepted
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number -e mqtt.clientid
-```
-> **Expected:** frame 38, client mqtt-explorer-x — no credentials.
+**⌨ Type:** `l4`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number -e mqtt.clientid`
 
-```bash
-# MQTT: the '#' wildcard subscribe (eavesdrop-all) and the injected command
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.topic=="#" || mqtt.topic=="plant/tank1/command"' -T fields -e frame.number -e mqtt.msgtype -e mqtt.topic
-```
-> **Expected:** the '#' SUBSCRIBE and the PUBLISH to plant/tank1/command (frame 52).
+> **Check (expected):** frame 38, client mqtt-explorer-x — no credentials.
 
-```bash
-# DNP3: the unauthenticated trip and the cold restart, and who sent them
-tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func==5 || dnp3.al.func==13" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.al.func
-```
-> **Expected:** DIRECT_OPERATE (5) and COLD_RESTART (13) from 10.20.0.66 — with dnp3.src forged to the master's 100.
+**⌨ Type:** `l4b`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.topic=="#" || mqtt.topic=="plant/tank1/command"' -T fields -e frame.number -e mqtt.msgtype -e mqtt.topic`
 
-- **Note:** For each finding, open the matching module (modules/*.html) ▸ **Frame Explorer** and jump to that frame to read the full teaching note and the control that stops it.
+> **Check (expected):** the '#' SUBSCRIBE and the PUBLISH to plant/tank1/command (frame 52).
+
+**⌨ Type:** `l4c`  — runs `tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func==5 || dnp3.al.func==13" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.al.func`
+
+> **Check (expected):** DIRECT_OPERATE (5) and COLD_RESTART (13) from 10.20.0.66 — with dnp3.src forged to the master's 100.
+
+- **Read.** For each finding, open the matching module (modules/*.html) ▸ **Frame Explorer** and jump to that frame to read the full teaching note and the control that stops it.
+
 
 ## Check yourself
 
@@ -316,27 +302,20 @@ A detection is only as good as its evasion resistance. The obvious DNP3 rule —
 
 ## Do this
 
-```bash
-# a first-cut DNP3 rule: controls not from the master IP
-tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5,13} && ip.src != 10.20.0.5" -T fields -e frame.number -e ip.src -e dnp3.al.func
-```
-> **Expected:** catches the rogue trip & restart HERE — but only because the attacker kept its real IP.
+**⌨ Type:** `l5`  — runs `tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5,13} && ip.src != 10.20.0.5" -T fields -e frame.number -e ip.src -e dnp3.al.func`
 
-```bash
-# turn packets into readable logs with Zeek + CISA ICSNPP
-docker compose -f lab/docker-compose.yml --profile tools run --rm zeek run-zeek /kit/pcaps/dnp3_substation.pcap
-cat lab/zeek_reference_output/dnp3/dnp3_control.log | grep -i direct
-```
-> **Expected:** a DIRECT_OPERATE / Trip / Success line whose source host is 10.20.0.66 — your best single alert.
+> **Check (expected):** catches the rogue trip & restart HERE — but only because the attacker kept its real IP.
 
-```bash
-# MQTT detections: anonymous connect, and a '#' subscribe
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.msgtype==8 && mqtt.topic=="#"' -T fields -e frame.number
-```
-> **Expected:** the anonymous CONNECT and the wildcard SUBSCRIBE.
+**⌨ Type:** `l5b`  — runs `docker compose -f lab/docker-compose.yml --profile tools run --rm zeek run-zeek /kit/pcaps/dnp3_substation.pcap ; cat lab/zeek_reference_output/dnp3/dnp3_control.log | grep -i direct`
 
-- **Note:** Now break your own rule: in the lab, re-run the DNP3 attack with `--src-addr 100` (spoofing the master's link address) and with a spoofed IP, and watch the naive source-IP rule miss it. That's why Level 6 asks for an invariant detector.
+> **Check (expected):** a DIRECT_OPERATE / Trip / Success line whose source host is 10.20.0.66 — your best single alert.
+
+**⌨ Type:** `l5c`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number ; tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.msgtype==8 && mqtt.topic=="#"' -T fields -e frame.number`
+
+> **Check (expected):** the anonymous CONNECT and the wildcard SUBSCRIBE.
+
+- **Read.** Now break your own rule: in the lab, re-run the DNP3 attack with `--src-addr 100` (spoofing the master's link address) and with a spoofed IP, and watch the naive source-IP rule miss it. That's why Level 6 asks for an invariant detector.
+
 
 ## Check yourself
 
@@ -373,23 +352,17 @@ This is a formal, university-style Machine Problem. The handout, the two evidenc
 
 ## Do this
 
-```bash
-cd mp && cat README.md      # the full handout: parts, deliverables, grading
-```
-> **Expected:** MP: ICS Intrusion Analysis — Parts 1–3 + bonus.
+**⌨ Type:** `l6`  — runs `cd mp && cat README.md      # the full handout: parts, deliverables, grading`
 
-```bash
-# analyze the two unseen captures
-../lab/open-wireshark.sh captures/dnp3_assessment.pcap
-tshark -r captures/mqtt_assessment.pcap -Y mqtt
-```
-> **Expected:** two captures you have not walked — apply everything from Levels 1–5.
+> **Check (expected):** MP: ICS Intrusion Analysis — Parts 1–3 + bonus.
 
-```bash
-# fill submission/answers.json, write detector.py and report.md, then self-check:
-python3 grade.py
-```
-> **Expected:** PASS/FAIL per item and a score /100. Iterate to green.
+**⌨ Type:** `l6b`  — runs `../lab/open-wireshark.sh captures/dnp3_assessment.pcap ; tshark -r captures/mqtt_assessment.pcap -Y mqtt`
+
+> **Check (expected):** two captures you have not walked — apply everything from Levels 1–5.
+
+**⌨ Type:** `l6c`  — runs `python3 grade.py`
+
+> **Check (expected):** PASS/FAIL per item and a score /100. Iterate to green.
 
 
 ## Check yourself
@@ -431,53 +404,36 @@ Nothing here is a new skill. You already know how to map endpoints (Level 1), cl
 
 ## Do this
 
-- **Note:** **Apply your Level 0 skill — 'see it running' — to an entire plant.** Boot the multi-zone digital twin with the adversary foothold staged (the capture plane comes up automatically):
+- **Read.** **Apply your Level 0 skill — 'see it running' — to an entire plant.** Boot the multi-zone digital twin with the adversary foothold staged (the capture plane comes up automatically):
 
 `bash lab/twin/launch-twin.sh --attack`
 
 Doors once it boots: OpenPLC control logic **:8088** · FUXA HMI **:1881** · noVNC Wireshark **:3000**. The objective scoreboard is the plant-sim SSO **spill** counter — Pass = spill stays 0 under full DNP3 + MQTT write access. Follow it with `bash lab/twin/launch-twin.sh --logs`.
-- **In Wireshark:** **Apply your Level 1 skill — the map before the message — to five zones.** Open Wireshark at **:3000**, load `/caps/conduit_live.pcap` (the whole-zone conduit tap), and run **Statistics ▸ Conversations** (TCP): the SCADA master ↔ outstation on 20000 and the MQTT broker star on 1883, both crossing the `zone-fw` conduit between IEC-62443 zones.
-```bash
-# Level 1, headless: who is talking across the conduit right now?
-tshark -r lab/twin/captures/conduit_live.pcap -q -z conv,tcp
-```
-> **Expected:** the SCADA master↔outstation on 20000 and the broker star on 1883, both crossing zone-fw — plus the foothold 172.30.10.66, an endpoint that fits no legitimate role.
 
-```bash
-# Level 2, live: classify the vocabulary on real multi-zone traffic
-tshark -r lab/twin/captures/conduit_live.pcap -Y dnp3 -T fields -e dnp3.al.func | sort | uniq -c
-tshark -r lab/twin/captures/mqtt_live.pcap  -Y mqtt -T fields -e mqtt.msgtype | sort | uniq -c
-```
-> **Expected:** READ(1)/RESPONSE(129) polling from the SCADA master, plus the injected DIRECT_OPERATE(5); MQTT PUBLISH(3) telemetry plus the rogue CONNECT(1) and its injected PUBLISH.
+- **Do · Click.** **Apply your Level 1 skill — the map before the message — to five zones.** Open Wireshark at **:3000**, load `/caps/conduit_live.pcap` (the whole-zone conduit tap), and run **Statistics ▸ Conversations** (TCP): the SCADA master ↔ outstation on 20000 and the MQTT broker star on 1883, both crossing the `zone-fw` conduit between IEC-62443 zones.
 
-```bash
-# Level 4, live: turn access into a finding — fire the attack from the granted cell foothold.
-# (run from lab/twin/; the launcher pins the compose project 'ics-twin-liftstation')
-cd lab/twin && docker compose -p ics-twin-liftstation -f docker-compose.twin.yml \
-  exec adversary-foothold python master.py --host 172.30.10.12 --attack
-# ...and the MQTT command injection from the insecure cell:
-docker compose -p ics-twin-liftstation -f docker-compose.twin.yml \
-  exec iiot-gw python attacker.py
-```
-> **Expected:** adversary-foothold: DIRECT_OPERATE(5) accepted, pumps forced off. attacker.py: CONNECT accepted with NO credentials, command PUBLISHed. The spill scoreboard (launch-twin.sh --logs) starts climbing.
+**⌨ Type:** `l7`  — runs `tshark -r lab/twin/captures/conduit_live.pcap -q -z conv,tcp`
 
-```bash
-# Level 3, live: read the deciding field on the conduit tap — the SAME tell as the teaching capture.
-tshark -r lab/twin/captures/conduit_live.pcap -Y "dnp3.al.func==5" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.al.func
-# and the MQTT anonymous connect the broker accepted:
-tshark -r lab/twin/captures/mqtt_live.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number -e mqtt.clientid
-```
-> **Expected:** a DIRECT_OPERATE whose dnp3.src claims 100 (the master) but whose ip.src is 172.30.10.66 (the foothold) — the Level 3 link-vs-IP contradiction, now on five-zone traffic — and an anonymous CONNECT from mqtt-explorer-x.
+> **Check (expected):** the SCADA master↔outstation on 20000 and the broker star on 1883, both crossing zone-fw — plus the foothold 172.30.10.66, an endpoint that fits no legitimate role.
 
-```bash
-# Level 5, live: key on the invariant, watch it hold. Flip every CIE control on and replay the SAME attack.
-bash lab/twin/launch-twin.sh --hardened --attack
-cd lab/twin && docker compose -p ics-twin-liftstation -f docker-compose.twin.yml -f docker-compose.hardened.yml \
-  exec adversary-foothold python master.py --host 172.30.10.12 --attack
-```
-> **Expected:** the DIRECT_OPERATE is refused (status != Success): SAv5 + the arm-latch reject a lone control and the allow-list drops the forged link. Even if a control is bypassed, the hardwired HH float force-starts the pump at 95% — the spill counter stays 0.
+**⌨ Type:** `l7b`  — runs `tshark -r lab/twin/captures/conduit_live.pcap -Y dnp3 -T fields -e dnp3.al.func | sort | uniq -c ; tshark -r lab/twin/captures/mqtt_live.pcap  -Y mqtt -T fields -e mqtt.msgtype | sort | uniq -c`
 
-- **Note:** **This is your capstone artifact.** Diff the two runs — vulnerable `spill > 0` vs hardened `spill == 0` under identical write access — and the two `dnp3_control.log` files (add `--tools` for Zeek + CISA ICSNPP). Submit the twin evidence bundle (the conduit pcap + the plant-sim spill log + the Zeek logs) and grade it against **projects/ARTIFACT_RUBRIC.md** — R4 (invariant detection), R5 (the SSO High-Consequence Event), and R6 (proving the backstop holds under full write access).
+> **Check (expected):** READ(1)/RESPONSE(129) polling from the SCADA master, plus the injected DIRECT_OPERATE(5); MQTT PUBLISH(3) telemetry plus the rogue CONNECT(1) and its injected PUBLISH.
+
+**⌨ Type:** `l7c`  — runs `# (run from lab/twin/; the launcher pins the compose project 'ics-twin-liftstation') ; cd lab/twin && docker compose -p ics-twin-liftstation -f docker-compose.twin.yml \ ; exec adversary-foothold python master.py --host 172.30.10.12 --attack ; # ...and the MQTT command injection from the insecure cell: ; docker compose -p ics-twin-liftstation -f docker-compose.twin.yml \ ; exec iiot-gw python attacker.py`
+
+> **Check (expected):** adversary-foothold: DIRECT_OPERATE(5) accepted, pumps forced off. attacker.py: CONNECT accepted with NO credentials, command PUBLISHed. The spill scoreboard (launch-twin.sh --logs) starts climbing.
+
+**⌨ Type:** `l7d`  — runs `tshark -r lab/twin/captures/conduit_live.pcap -Y "dnp3.al.func==5" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.al.func ; # and the MQTT anonymous connect the broker accepted: ; tshark -r lab/twin/captures/mqtt_live.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number -e mqtt.clientid`
+
+> **Check (expected):** a DIRECT_OPERATE whose dnp3.src claims 100 (the master) but whose ip.src is 172.30.10.66 (the foothold) — the Level 3 link-vs-IP contradiction, now on five-zone traffic — and an anonymous CONNECT from mqtt-explorer-x.
+
+**⌨ Type:** `l7e`  — runs `bash lab/twin/launch-twin.sh --hardened --attack ; cd lab/twin && docker compose -p ics-twin-liftstation -f docker-compose.twin.yml -f docker-compose.hardened.yml \ ; exec adversary-foothold python master.py --host 172.30.10.12 --attack`
+
+> **Check (expected):** the DIRECT_OPERATE is refused (status != Success): SAv5 + the arm-latch reject a lone control and the allow-list drops the forged link. Even if a control is bypassed, the hardwired HH float force-starts the pump at 95% — the spill counter stays 0.
+
+- **Read.** **This is your capstone artifact.** Diff the two runs — vulnerable `spill > 0` vs hardened `spill == 0` under identical write access — and the two `dnp3_control.log` files (add `--tools` for Zeek + CISA ICSNPP). Submit the twin evidence bundle (the conduit pcap + the plant-sim spill log + the Zeek logs) and grade it against **projects/ARTIFACT_RUBRIC.md** — R4 (invariant detection), R5 (the SSO High-Consequence Event), and R6 (proving the backstop holds under full write access).
+
 
 ## Check yourself
 

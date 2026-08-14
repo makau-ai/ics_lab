@@ -428,11 +428,15 @@ A fuller offensive track — deliberately **out of scope** in this analysis-and-
 
 The Docker lab ships a small Python DNP3 outstation and master so you can generate your own traffic, plus tcpreplay to replay this capture and Zeek + the CISA ICSNPP DNP3 parser to turn packets into readable logs. Start with the provided pcap in Wireshark, then reproduce it live.
 
+**How to run these exercises.** Each one is written as **Read** (why), **Do · Type** or **Do · Click** (exactly one action), and **Check** (what you should see). Terminal commands sit in a code block — copy them with the **Copy** button or **Ctrl/Cmd+Shift+V** (the paste-backup), never by re-typing. Where a command already has a lab-runner token you can `lab <token>` instead of copying. The analysis desktop opens on port **:6080** straight to the desktop with **no password**, and Wireshark is already capturing on `lo` (if a VNC prompt ever appears, it's `vscode`).
+
 ### Exercise 1. Find the control lifecycle
 
-1. Open dnp3_substation.pcap in Wireshark.
-2. Apply the display filter dnp3.al.func in {3,4,5} to isolate every control.
-3. Identify the legitimate SELECT→OPERATE pair and the rogue DIRECT OPERATE.
+1. **Read.** DNP3 moves physical equipment with just three application function codes — SELECT (3), OPERATE (4), and DIRECT OPERATE (5). A legitimate control is *supervised*: a SELECT arms the point, then a matching OPERATE fires it. A lone DIRECT OPERATE skips that interlock. Isolating those three codes turns a 37-frame capture into the short list of frames that can actually throw a breaker.
+2. **Do · Click** — In the noVNC desktop, open Wireshark and choose **File ▸ Open**, then select `pcaps/dnp3_substation.pcap`.
+3. **Check —** the packet list fills with 37 frames and the title bar shows `dnp3_substation.pcap`; if it opens empty, re-open the file from the `pcaps/` folder.
+4. **Do · Click** — In Wireshark's green display-filter bar, type `dnp3.al.func in {3,4,5}` and press Enter to isolate every control frame.
+5. **Check —** exactly three frames remain — 16 (SELECT), 20 (OPERATE), and 27 (DIRECT OPERATE); if you see none, re-check the filter spelling (the braces and the spaces matter).
 
 **Question.** How many control messages are there, and which one lacks a SELECT — and why does that matter?
 
@@ -440,8 +444,17 @@ The Docker lab ships a small Python DNP3 outstation and master so you can genera
 
 ### Exercise 2. Spot the impostor by address
 
-1. Filter dnp3 and add columns for ip.src and dnp3.src (DNP3 link source).
-2. Compare the IP source and the DNP3 link source for every control frame.
+1. **Read.** Every DNP3 frame carries two 'from' identities: the network `ip.src` and the 16-bit DNP3 link address `dnp3.src` inside the data-link header. On honest traffic they agree. The attacker can forge the link address freely — it is just a number written into the frame — but forging it while leaving the real `ip.src` in place is exactly the contradiction that gives the injection away.
+2. **Do · Click** — In Wireshark, click a DNP3 frame, right-click the `ip.src` field in the detail pane, and choose **Apply as Column**; repeat for the DNP3 link source `dnp3.src`.
+3. **Check —** two new columns, `ip.src` and `dnp3.src`, appear in the packet list; if `dnp3.src` is missing, click a DNP3 frame first so the field exists to apply.
+4. **Do · Type** — Read both fields for every control straight from the terminal:
+
+```
+tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5}" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.ctl.trip -e dnp3.ctl.op
+```
+
+— or just type `l3c`.
+5. **Check —** frames 16 and 20 show `ip.src` 10.20.0.5 with `dnp3.src` 100 (they agree — the real master), while frame 27 shows `ip.src` 10.20.0.66 with `dnp3.src` 100 (they disagree — the forgery); if the command errors, re-check the quoting, and if the pcap is missing run `lab reset`.
 
 **Question.** What is inconsistent about frame 27, and which field did the attacker forge?
 
@@ -449,8 +462,19 @@ The Docker lab ships a small Python DNP3 outstation and master so you can genera
 
 ### Exercise 3. Turn packets into detections with ICSNPP
 
-1. In the lab container run: zeek -C -r /pcaps/dnp3_substation.pcap icsnpp-dnp3
-2. Open dnp3_control.log and dnp3_objects.log.
+1. **Read.** A packet capture is evidence; a log is something you can alert on. Zeek with CISA's ICSNPP DNP3 parser replays the pcap and emits structured logs — `dnp3_control.log` records every control with its operation and status, so an unauthorized TRIP becomes one greppable line instead of a frame you had to spot by eye.
+2. **Do · Type** — Inside the lab container, replay the capture through Zeek + the ICSNPP parser:
+
+```
+zeek -C -r pcaps/dnp3_substation.pcap icsnpp-dnp3
+```
+3. **Check —** Zeek exits without error and writes `dnp3.log`, `dnp3_control.log`, and `dnp3_objects.log` into the working directory; if the parser is not found or the run errors, run `lab reset` and retry inside the lab container.
+4. **Do · Type** — Read the control log:
+
+```
+cat dnp3_control.log
+```
+5. **Check —** you see a `DIRECT_OPERATE` / `Trip` / `Success` row whose source host is 10.20.0.66; if the file is empty, the Zeek run above did not complete — re-run it.
 
 **Question.** Which single log line is your best alert for the attack, and what field makes it detectable?
 
@@ -458,8 +482,9 @@ The Docker lab ships a small Python DNP3 outstation and master so you can genera
 
 ### Exercise 4. Design the control
 
-1. Re-read security findings D1 and D3.
-2. Given a substation you cannot re-flash to add DNP3-SA tomorrow, list compensating controls you can deploy this week.
+1. **Read.** Not every fix is firmware. Security finding **D1** (no authentication on controls) and **D3** (source spoofing / command injection) both point at frame 27, but the durable fix — DNP3 Secure Authentication — needs an outstation you can re-flash. This exercise is to name the controls you can deploy *this week* on hardware you cannot change.
+2. **Do · Click** — Open the module's **Security & Controls** tab and re-read findings **D1** and **D3**, reading the Control line under each.
+3. **Check —** you can point to at least one compensating control in each finding that does not require changing outstation firmware (an OT-firewall source allow-list on TCP/20000; segmentation or a data diode; a Zeek+ICSNPP sensor keyed on non-master sources); if the tab shows no Control line, reload the module page.
 
 **Question.** Name three compensating controls that reduce the frame-27 risk without changing the outstation firmware.
 

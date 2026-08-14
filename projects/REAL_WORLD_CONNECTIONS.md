@@ -87,12 +87,25 @@ humble about every other row in this table.
   *Remote Access Attack on Oldsmar Water Treatment Facility 2021* —
   <https://cyote.inl.gov/content/uploads/24/2025/12/CyOTE-Case-Study_Oldsmar.pdf>
 
-> `Investigate:` In the twin, run the Oldsmar-style move —
-> `master.py --host 172.30.10.12 --setpoint-lead 150` (push `LEAD_START` above 100% so the
-> pumps never start). Now write two incident narratives from the *same* `dnp3_objects.log`
-> g41-write line: one blaming an external actor, one blaming operator error. List the evidence
-> that would distinguish them, and note which of that evidence your packet sensor **cannot**
-> produce. That gap is the whole lesson.
+**`Investigate` —** reproduce the Oldsmar-style setpoint excursion in the twin, then reason about what
+the wire can and cannot tell you.
+
+> Commands copy with the **Copy** button on each fenced block, or paste them with
+> **Ctrl/Cmd+Shift+V** (the paste-backup) if the terminal swallows a normal paste.
+
+**Do · Type** — run the Oldsmar-style move: push `LEAD_START` above 100% so the pumps never start:
+
+```
+master.py --host 172.30.10.12 --setpoint-lead 150
+```
+
+**Check —** the twin's `dnp3_objects.log` records a g41 analog-output WRITE carrying the out-of-band
+`150` setpoint; if no g41 line appears, the write never reached the outstation — confirm the twin is up
+and re-run.
+
+> **Read** — Now write two incident narratives from that *same* `dnp3_objects.log` g41-write line: one
+> blaming an external actor, one blaming operator error. List the evidence that would distinguish them,
+> and note which of that evidence your packet sensor **cannot** produce. That gap is the whole lesson.
 
 ---
 
@@ -145,14 +158,33 @@ enumeration that must happen *before* anyone reaches your frame-27 injection.
 - **ATT&CK for ICS:** T0842 Network Sniffing (and Discovery-tactic asset enumeration). See the
   matrix at <https://attack.mitre.org/matrices/ics/>.
 
-> `Investigate:` Re-run Level 1 on `pcaps/mqtt_iot_telemetry.pcap` with
-> `tshark -q -z endpoints,ip` and `-z conv,tcp`, and on `pcaps/dnp3_substation.pcap` the same
-> way. You just did by hand what Havex's OPC scanner automated: you found the broker
-> (`10.10.20.10`), the master↔outstation pair, and the rogue. Now read the CyOTE Havex report
-> and list *which* of Havex's enumeration observables map to a DNP3 Class-0 integrity READ
-> ("point & tag identification") and a `SUBSCRIBE #` (automated collection) — and which of
-> Havex's steps (trojanized installer, C2 beaconing) leave **no trace** in a protocol capture
-> at all.
+**`Investigate` —** re-run the Level 1 recon by hand, then map it back to Havex's automated enumeration.
+
+**Do · Type** — rank endpoints and list conversations on the MQTT teaching capture (these are the
+curriculum's own steps — or just type `l1` then `l1b`):
+
+```
+tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z endpoints,ip
+tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z conv,tcp
+```
+
+**Check —** you should see the **broker** `10.10.20.10` as the busy star hub plus the rogue endpoint;
+if the capture is missing, run `lab reset`.
+
+**Do · Type** — do the same on the DNP3 capture (the conversations view is curriculum step `l1c`):
+
+```
+tshark -r pcaps/dnp3_substation.pcap -q -z endpoints,ip
+tshark -r pcaps/dnp3_substation.pcap -q -z conv,tcp
+```
+
+**Check —** you should see the **master ↔ outstation** pair on TCP/20000 plus the rogue `.66`; if not,
+run `lab reset`.
+
+> **Read** — You just did by hand what Havex's OPC scanner automated. Now read the CyOTE Havex report
+> and list *which* of Havex's enumeration observables map to a DNP3 Class-0 integrity READ ("point &
+> tag identification") and a `SUBSCRIBE #` (automated collection) — and which of Havex's steps
+> (trojanized installer, C2 beaconing) leave **no trace** in a protocol capture at all.
 
 ---
 
@@ -183,12 +215,33 @@ visible on the wire.
   T0856 Spoof Reporting Message (<https://attack.mitre.org/techniques/T0856/>); the physical
   end-state is T0831 Manipulation of Control.
 
-> `Investigate:` Compare frame 27 of `dnp3_substation.pcap` (the rogue **DIRECT OPERATE** whose
-> `dnp3.src` is forged to the master's `100` while `ip.src` stays `10.20.0.66`) to Maroochy's
-> stolen-identity rogue master. Both defeat *identity that is a claim, not a proof.* Then boot
-> the twin and reproduce the consequence: `master.py --host 172.30.10.12 --attack` (stop both
-> pumps) and watch `docker compose logs -f plant-sim` — the `spill` counter is your Maroochy
-> SSO. Which ATT&CK technique does the kit reproduce (T0848/T0856) and which one (T0860
+**`Investigate` —** compare the kit's forged DNP3 trip to Maroochy's rogue master, then reproduce the
+Maroochy consequence in the twin.
+
+> **Read** — Frame 27 of `dnp3_substation.pcap` is the rogue **DIRECT OPERATE** whose `dnp3.src` is
+> forged to the master's `100` while `ip.src` stays `10.20.0.66`. It defeats the same thing Maroochy's
+> stolen-identity rogue master did — *identity that is a claim, not a proof.*
+
+**Do · Click** — see it in the packet: in the noVNC desktop's Wireshark, choose **File ▸ Open** and
+load `pcaps/dnp3_substation.pcap`, then type `dnp3.al.func==5` in the green display-filter bar and
+press Enter. (The :6080 desktop opens with **no password** and Wireshark is already capturing; if a
+VNC prompt ever appears, it's `vscode`.)
+
+**Check —** the filtered frame is the DIRECT OPERATE showing DNP3 link source `100` (the master)
+arriving from IP source `10.20.0.66` (the rogue) — the two-sources contradiction; if the file won't
+open, confirm you launched the loopback lab (`lab reset`).
+
+**Do · Type** — now reproduce the physical consequence in the twin — stop both pumps as a rogue master:
+
+```
+master.py --host 172.30.10.12 --attack
+```
+
+**Check —** the `spill` counter climbs above 0 — your Maroochy SSO; watch it live with
+`docker compose logs -f plant-sim`, and if it stays at 0 the command never landed, so confirm the twin
+is up and re-run.
+
+> **Read** — Which ATT&CK technique does the kit reproduce (T0848 / T0856) and which one (T0860
 > Wireless Compromise) can it **not**, and why?
 
 ### Ukraine grid attack (2015) — why stolen credentials beat frame injection
@@ -301,10 +354,21 @@ precise boundary the DNP3 module draws: **DNP3 Secure Authentication (SAv5) is a
 authenticity/integrity only — so it does *not* take the sensor dark; only transport encryption
 does.** (See the standards section below for the SAv5 primary source.)
 
-> `Investigate:` Toggle the twin's optional 8883 mTLS (`mosquitto/gen-certs.sh`, then the
-> `listener 8883` block). Re-capture and confirm `mqtt_*.log` stops parsing while `ssl.log`
-> appears. Now re-home your anonymous-CONNECT detection onto the broker's own auth telemetry.
-> Where, exactly, did your visibility move — and what did it cost you?
+**`Investigate` —** take the sensor dark on purpose, then reason about where detection has to move.
+
+**Do · Type** — generate the certificates for the twin's optional 8883 mTLS listener:
+
+```
+bash mosquitto/gen-certs.sh
+```
+
+**Check —** the CA and server cert/key files appear under `mosquitto/`; if the script errors, confirm
+you are running it from the twin directory and that `openssl` is installed.
+
+> **Read** — Enable the `listener 8883` block, **re-capture**, and confirm `mqtt_*.log` stops parsing
+> while only `ssl.log` appears — your MQTT visibility just went dark. Now re-home your anonymous-CONNECT
+> detection onto the broker's own auth telemetry. Where, exactly, did your visibility move — and what
+> did it cost you?
 
 ---
 
@@ -517,18 +581,27 @@ at 0." It is a real, government-published framework, not a lab conceit.
 You now have every technique the kit touches, each tied to a real incident. Assemble them into a
 visual you can defend.
 
-1. Open the **MITRE ATT&CK Navigator** (hosted: <https://mitre-attack.github.io/attack-navigator/>;
-   source: <https://github.com/mitre-attack/attack-navigator>) and create a new **ICS** layer.
-2. **Highlight the kit's own chain** (frame-27 / frame-52 and the twin attack): T0842 Network
-   Sniffing → T0848 Rogue Master → T0855 Unauthorized Command Message → T0856 Spoof Reporting
-   Message → T0836 Modify Parameter → T0831 Manipulation of Control → T0814 Denial of Service.
-   (Confirm each against the ICS matrix: <https://attack.mitre.org/matrices/ics/>.)
-3. **Make a second layer for a real campaign** — Maroochy, or Ukraine 2015 — and **diff** it
-   against the kit's layer. The gap you see (initial access, lateral movement, wireless
-   compromise, credential theft — the "hard 95%") is exactly what the kit scopes out. Write two
-   sentences on what your lab captures and what it does not.
-4. **Tag each highlighted technique with its incident + primary URL from this document** as the
-   cell comment, so your layer is self-documenting evidence.
+**Do · Click** — open the **MITRE ATT&CK Navigator** (hosted:
+<https://mitre-attack.github.io/attack-navigator/>; source:
+<https://github.com/mitre-attack/attack-navigator>). On the landing page choose **Create New Layer ▸
+ICS** to start a fresh ICS-domain matrix.
+
+**Check —** you should see the ICS technique matrix (tactic columns like *Initial Access*, *Impair
+Process Control*, *Inhibit Response Function*), not the Enterprise one; if it looks wrong, delete the
+layer tab and pick **ICS** again under Create New Layer.
+
+> **Read** — Now build the evidence layer:
+>
+> 1. **Highlight the kit's own chain** (frame-27 / frame-52 and the twin attack): T0842 Network
+>    Sniffing → T0848 Rogue Master → T0855 Unauthorized Command Message → T0856 Spoof Reporting
+>    Message → T0836 Modify Parameter → T0831 Manipulation of Control → T0814 Denial of Service.
+>    (Confirm each against the ICS matrix: <https://attack.mitre.org/matrices/ics/>.)
+> 2. **Make a second layer for a real campaign** — Maroochy, or Ukraine 2015 — and **diff** it against
+>    the kit's layer. The gap you see (initial access, lateral movement, wireless compromise,
+>    credential theft — the "hard 95%") is exactly what the kit scopes out. Write two sentences on what
+>    your lab captures and what it does not.
+> 3. **Tag each highlighted technique with its incident + primary URL from this document** as the cell
+>    comment, so your layer is self-documenting evidence.
 
 The habit you are building — *technique ↔ incident ↔ primary source ↔ observable* — is the daily
 tradecraft of an OT intelligence analyst.

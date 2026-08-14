@@ -1,0 +1,1 @@
+a DIRECT_OPERATE whose dnp3.src claims 100 (the master) but whose ip.src is 172.30.10.66 (the foothold) — the Level 3 link-vs-IP contradiction, now on five-zone traffic — and an anonymous CONNECT from mqtt-explorer-x.

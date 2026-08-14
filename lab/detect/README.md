@@ -39,56 +39,97 @@ Why the map to attack frames survives real-world adversaries and where each rule
 
 ## How to run
 
+> **Read.** Every fenced command has a **Copy** button; click it, then paste into
+> your terminal (keyboard paste-backup: **Ctrl/Cmd+Shift+V**). These detectors are
+> plain `python3 <script>.py <pcap>` — they are **not** part of the leveled
+> curriculum, so there is no short `lab` token for them. Each takes a pcap path and
+> exits `0`=clean / `1`=alert / `2`=error.
+
+**Do · Type.** Move into the detector directory:
+
 ```bash
 cd lab/detect
+```
 
-# DNP3 — against the shipped substation capture (flags the forged-link attack)
+**Check —** `ls` should list `dnp3_link_spoof.py`, `dnp3_select_operate.py`,
+`dnp3_rogue_master.py`, `mqtt_abuse.py`, and `samples/`. If `tshark` is missing,
+install Wireshark's CLI first — it is the detectors' only external dependency.
+
+**Do · Type.** Run the three DNP3 detectors against the shipped substation
+capture:
+
+```bash
 python3 dnp3_link_spoof.py     ../../pcaps/dnp3_substation.pcap
 python3 dnp3_select_operate.py ../../pcaps/dnp3_substation.pcap
 python3 dnp3_rogue_master.py   ../../pcaps/dnp3_substation.pcap
+```
 
-# MQTT — against the shipped IoT telemetry capture
+**Check —** each should **ALERT** (exit `1`) on the forged-link attack:
+`dnp3_link_spoof.py` flags frames 27 & 31, `dnp3_select_operate.py` flags frame 27
+(DIRECT_OPERATE with no SELECT), `dnp3_rogue_master.py` flags 27 & 31 (off-baseline
+function codes). If they exit silently, confirm the pcap path resolves from
+`lab/detect/`.
+
+**Do · Type.** Run the MQTT detector against the shipped IoT telemetry capture:
+
+```bash
 python3 mqtt_abuse.py          ../../pcaps/mqtt_iot_telemetry.pcap
+```
 
-# Prove no false positive on a benign-only slice (both exit 0, silent)
+**Check —** it should **ALERT**, printing frame 38 (anonymous CONNECT), 42 (`#`
+SUBSCRIBE), and 52 (command PUBLISH from a non-controller).
+
+**Do · Type.** Prove there is no false positive on a benign-only slice:
+
+```bash
 python3 dnp3_rogue_master.py   samples/dnp3_benign.pcap
 python3 mqtt_abuse.py          samples/mqtt_benign.pcap
 ```
 
-Exit code drives automation:
+**Check —** both should exit `0` **silently** (no alert). If either fires, the
+allow-sets may need tuning to your inventory (below).
 
-```bash
-python3 mqtt_abuse.py capture.pcap && echo "clean" || echo "ALERT"
-```
+> **Read.** Exit code drives automation — the detectors compose in a pipeline:
+> `python3 mqtt_abuse.py capture.pcap && echo "clean" || echo "ALERT"`.
 
 ### Tuning to your asset inventory
 
-Durable OT detection binds alerts to an asset inventory (NIST SP 800-82r3,
-IEC 62443). Every allow-set is a CLI flag with a documented default:
+> **Read.** Durable OT detection binds alerts to an asset inventory (NIST SP
+> 800-82r3, IEC 62443). Every allow-set is a CLI flag with a documented default, so
+> the same detector fits your plant instead of only the teaching pcap.
+
+**Do · Type.** Name multiple legitimate masters (primary + backup FEP), widen the
+SELECT arm window, or scope the MQTT controllers/command topics — pick the flags
+your inventory needs:
 
 ```bash
-# multiple legitimate masters (primary + backup FEP)
 python3 dnp3_rogue_master.py cap.pcap --masters 10.20.0.5,10.20.0.6
-
-# widen/narrow the SELECT arm window (seconds)
 python3 dnp3_select_operate.py cap.pcap --window 5
-
-# name the controllers allowed to publish commands, and your command-topic regex
 python3 mqtt_abuse.py cap.pcap --controllers 10.10.20.20 --command-re 'command|/cmd|setpoint'
 ```
+
+**Check —** the detector should honor the wider allow-set / window (e.g. a backup
+FEP no longer alerts as a rogue master). Compare against a run without the flag to
+confirm the change took.
 
 ---
 
 ## Self-test
 
+> **Read.** One script asserts every expected verdict at once — alert on the attack
+> capture, clean on the benign slice, and the evasion outcome (the naive rule
+> misses, the grammar/off-baseline invariants survive). It regenerates the evasion
+> fixture via `make_evasion_pcap.py` if absent.
+
+**Do · Type.** Run the self-test:
+
 ```bash
 ./run_selftest.sh
 ```
 
-asserts, for all four detectors: **alert on the attack capture**, **clean on the
-benign slice**, and the **evasion outcome** (naive rule misses, grammar/off-baseline
-invariants survive). It regenerates the evasion fixture via `make_evasion_pcap.py`
-if absent.
+**Check —** you should see every assertion pass. If it can't find the evasion
+fixture, it rebuilds `samples/dnp3_master_ip_spoof.pcap` first (needs `scapy`,
+pinned at 2.7.0); the shipped fixture means a normal run does not.
 
 ## Files
 

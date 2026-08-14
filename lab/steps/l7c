@@ -1,0 +1,7 @@
+# Level 4, live: turn access into a finding — fire the attack from the granted cell foothold.
+# (run from lab/twin/; the launcher pins the compose project 'ics-twin-liftstation')
+cd lab/twin && docker compose -p ics-twin-liftstation -f docker-compose.twin.yml \
+  exec adversary-foothold python master.py --host 172.30.10.12 --attack
+# ...and the MQTT command injection from the insecure cell:
+docker compose -p ics-twin-liftstation -f docker-compose.twin.yml \
+  exec iiot-gw python attacker.py

@@ -1,43 +1,84 @@
 # Wastewater Lift-Station Digital Twin
 
 A multi-container ICS **digital twin** that replaces the loopback demo: a real
-closed-loop control process (OpenPLC controlling a simulated wet-well over
-Modbus), fronted by a **DNP3 outstation gateway** on TCP/20000 and an **MQTT**
-telemetry path on TCP/1883, across **5 segmented IEC-62443 zones** with an
-**nftables conduit firewall** (`zone-fw`), plus an **out-of-band capture plane**
-so students still SEE every packet. Ships a one-command **vulnerable ↔ hardened**
-toggle for the CIE "even-if" acceptance test.
+closed-loop control process (OpenPLC — a Modbus **client** — controlling a
+simulated wet-well, the Modbus **server**), fronted by a **DNP3 outstation
+gateway** on TCP/20000 that a SCADA **master** polls, and an **MQTT** telemetry
+path on TCP/1883 with a **publisher** and a pump-controller **subscriber**,
+across **5 segmented IEC-62443 zones** with an **nftables conduit firewall**
+(`zone-fw`), plus an **out-of-band capture plane** so students still SEE every
+packet. Ships a one-command **vulnerable ↔ hardened** toggle for the CIE
+"even-if" acceptance test.
 
 Built per `design/IMPLEMENTATION_PLAN.md` + `DIGITAL_TWIN_ARCHITECTURE.md` +
 `CIE_HARDENING.md`. Re-skins the existing `lab/` substrate (dnp3/mqtt/mosquitto/
 zeek); only `plant-sim`, `zone-fw`, the OpenPLC ST programs, and the Modbus
 plumbing are net-new.
 
+> **Read — how to run the commands below.** Every fenced command has a **Copy**
+> button; click it, then paste into your terminal. If Copy ever misbehaves, the
+> keyboard paste-backup is **Ctrl/Cmd+Shift+V**. The twin's commands are plain
+> `docker compose` and `bash lab/twin/launch-twin.sh` — there is **no** short
+> `lab` token for them (those tokens cover the leveled curriculum only). Run every
+> command in this guide from `lab/twin/`.
+
 ---
 
 ## 1. Boot it
 
-Run from `lab/twin/`. Requires Docker + the compose plugin.
+> **Read.** The twin is a fleet of containers, not a single process. You bring it
+> up in layers: the core control loop first, then the out-of-band capture plane,
+> then optional depth (Zeek, the red team, the enterprise/HMI tier). Requires
+> Docker + the compose plugin.
+
+**Do · Type.** Boot the VULNERABLE twin — core services only:
 
 ```bash
-# VULNERABLE twin (the base). Core services only:
 docker compose -f docker-compose.twin.yml up -d --build
+```
 
-# add the packet-capture plane (sniffers + noVNC Wireshark):
+**Check —** you should see the core containers come up (plant-sim, openplc,
+dnp3-gw, iiot-gw, pump-controller, mqtt-broker, scada-master, hmi, historian,
+zone-fw + route-injectors). If a build fails or a container is missing, re-run the
+command; to start clean, `docker compose -f docker-compose.twin.yml down` then
+bring it up again.
+
+**Do · Type.** Add the packet-capture plane (sniffers + noVNC Wireshark):
+
+```bash
 docker compose -f docker-compose.twin.yml --profile capture up -d
+```
 
-# add Zeek+ICSNPP, the red team, or the enterprise/HMI depth:
+**Check —** you should see the `sniff-*` taps and the `wireshark` container
+running. If they don't appear, re-run the command with the `--profile capture`
+flag present.
+
+**Do · Type.** Add Zeek+ICSNPP, the red team, and the enterprise/HMI depth:
+
+```bash
 docker compose -f docker-compose.twin.yml --profile tools --profile attack --profile twin-full up -d
 ```
 
-Profiles: `capture` (sniff-* + wireshark) · `tools` (zeek) · `attack` (adversary
-+ granted cell foothold) · `twin-full` (historian-influx + eng-ws + jump-host +
-edgeshark). Default `up` = the core twin (plant-sim, openplc, dnp3-gw, iiot-gw,
-pump-controller, mqtt-broker, scada-master, hmi, historian, zone-fw + route-injectors).
+**Check —** you should see the `zeek`, `adversary`, `adversary-foothold`, and the
+`twin-full` containers (historian-influx, eng-ws, jump-host, edgeshark) join the
+running set (`docker compose ps`).
 
-**Objective scoreboard:** `docker compose logs -f plant-sim` — watch `level` and
-the **`spill`** counter (gallons of Sanitary Sewer Overflow). **Pass = spill 0
-under full DNP3+MQTT write access.**
+> **Read.** Profiles: `capture` (sniff-* + wireshark) · `tools` (zeek) · `attack`
+> (adversary + granted cell foothold) · `twin-full` (historian-influx + eng-ws +
+> jump-host + edgeshark). Default `up` = the core twin (plant-sim, openplc,
+> dnp3-gw, iiot-gw, pump-controller, mqtt-broker, scada-master, hmi, historian,
+> zone-fw + route-injectors).
+
+**Do · Type.** Open the objective scoreboard — the **`spill`** counter (gallons of
+Sanitary Sewer Overflow):
+
+```bash
+docker compose logs -f plant-sim
+```
+
+**Check —** you should see `level` and `spill` fields update. **Pass = `spill`
+stays 0 under full DNP3+MQTT write access.** If the log is empty, confirm
+`plant-sim` is up in `docker compose ps`.
 
 ---
 
@@ -45,12 +86,21 @@ under full DNP3+MQTT write access.**
 
 ### Coarse — flip ALL CIE controls at once
 
+> **Read.** One thin override file turns every CIE control on at once, so you can
+> replay the identical attack against a hardened plant.
+
+**Do · Type.** Boot the HARDENED twin — the SAME base + the thin override:
+
 ```bash
-# HARDENED twin: the SAME base + the thin override
 docker compose -f docker-compose.twin.yml -f docker-compose.hardened.yml up -d --build
 ```
 
-The override (`docker-compose.hardened.yml`) changes exactly five things:
+**Check —** you should see the same container set rebuild with the hardened
+settings applied; confirm with `docker compose ps`. If the override was ignored,
+make sure both `-f` flags are present, in order.
+
+> **Read.** The override (`docker-compose.hardened.yml`) changes exactly five
+> things:
 
 | Service | Vulnerable (base) | Hardened (override) | Weakness |
 |---|---|---|---|
@@ -62,76 +112,157 @@ The override (`docker-compose.hardened.yml`) changes exactly five things:
 
 ### Fine — teach one weakness at a time
 
-Set the same env by hand instead of the whole override, e.g. only the PLC logic:
-`docker compose -f docker-compose.twin.yml run -e PLC_PROGRAM=hardened_wetwell.st openplc`,
-or only the gateway: `... -e HARDEN=1 dnp3-gw`, or only the broker: swap the
-`mosquitto.conf` mount. See `CIE_HARDENING.md` §6 for the per-control matrix.
+> **Read.** Instead of the whole override, set the same env by hand to isolate a
+> single control. The full per-control matrix is in `CIE_HARDENING.md` §6.
+
+**Do · Type.** Harden only the PLC logic (leave everything else vulnerable):
+
+```bash
+docker compose -f docker-compose.twin.yml run -e PLC_PROGRAM=hardened_wetwell.st openplc
+```
+
+**Check —** you should see OpenPLC restart running `hardened_wetwell.st`. The same
+pattern isolates the gateway (`... -e HARDEN=1 dnp3-gw`) or the broker (swap the
+`mosquitto.conf` mount) — see `CIE_HARDENING.md` §6.
 
 ### Optional 8883 mTLS (W2 deeper layer)
 
+> **Read.** For the deeper TLS layer you generate a CA + server certificate, then
+> enable the encrypted 8883 listener.
+
+**Do · Type.** Generate the certs:
+
 ```bash
-./mosquitto/gen-certs.sh                       # writes certs/{ca,server}.{crt,key}
-# then uncomment the "listener 8883" block in mosquitto/mosquitto.secure.conf
+./mosquitto/gen-certs.sh
 ```
+
+**Check —** you should see `certs/{ca,server}.{crt,key}` written under
+`mosquitto/`. If the script errors, confirm you are in `lab/twin/` and that
+`openssl` is on `PATH`.
+
+**Do · Click.** Open `mosquitto/mosquitto.secure.conf` in your editor and
+uncomment the `listener 8883` block.
+
+**Check —** the `listener 8883` lines should no longer be commented; restart the
+broker to pick up the change.
 
 ---
 
 ## 3. Run the attack, watch it fail hardened
 
-Bring up with `--profile attack`, then drive the chain from the **granted cell
-foothold** (`adversary-foothold`, on `cell_net`). The same commands from
-`adversary` (on `attacker_net`) are **dropped at the conduit** — the segmentation
-lesson.
+> **Read.** Bring the twin up with `--profile attack`, then drive the chain from
+> the **granted cell foothold** (`adversary-foothold`, on `cell_net`). The same
+> commands from `adversary` (on `attacker_net`) are **dropped at the conduit** —
+> that is the segmentation lesson, exercised at the end of this section. Protocol
+> roles stay precise: DNP3 **master/outstation**, MQTT **broker/publisher/subscriber**.
+
+**Do · Type.** 1 — manipulation of control: stop both pumps with an
+unauthenticated DNP3 `DIRECT_OPERATE`:
 
 ```bash
-# 1. manipulation of control: stop both pumps (unauthenticated DIRECT_OPERATE)
 docker compose exec adversary-foothold python master.py --host 172.30.10.12 --attack
-
-# 2. modify parameter (Oldsmar): push LEAD_START above 100% so pumps never start
-docker compose exec adversary-foothold python master.py --host 172.30.10.12 --setpoint-lead 150
-
-# 3. MQTT command injection (from the cell, insecure broker)
-docker compose exec iiot-gw python attacker.py         # uses BROKER=172.30.30.30
 ```
 
-- **Vulnerable:** pumps stop / never start, `plant-sim` `spill` climbs > 0 (SSO
-  reproduced), the HMI still reads "normal."
-- **Hardened:** DIRECT_OPERATE is rejected (`status ≠ Success`), a replayed SAv5
-  control is refused for stale CSQ, the g41 setpoint write is clamped to 78% in the
-  ladder (strictly below the 80% lag-start), and even if every digital layer is owned
-  the **hardwired float force-starts the pump at 95% → spill stays 0** (DB-1).
-- **From `attacker_net`:** `docker compose exec adversary python master.py --host
-  172.30.10.12 --attack` → the packet is dropped at `zone-fw` and logged
-  (`CONDUIT-DROP` in `dmesg` on the host).
+**Check —** *Vulnerable:* both pumps stop, `plant-sim` `spill` climbs > 0 (the SSO
+is reproduced) while the HMI still reads "normal." *Hardened:* the
+`DIRECT_OPERATE` is rejected (`status ≠ Success`) and `spill` stays 0. If nothing
+changes, confirm you booted with `--profile attack`.
 
-Legit supervised control (for contrast): `docker compose exec scada-master python
-master.py --host 172.30.10.12 --stop-pump 0 --sav5` (SELECT→OPERATE, HMAC-tagged).
+**Do · Type.** 2 — modify parameter (the Oldsmar move): push `LEAD_START` above
+100% so the pumps never start:
+
+```bash
+docker compose exec adversary-foothold python master.py --host 172.30.10.12 --setpoint-lead 150
+```
+
+**Check —** *Vulnerable:* the pumps never start and `spill` climbs. *Hardened:*
+the g41 setpoint write is clamped to 78% in the ladder (strictly below the 80%
+lag-start), so the pumps still run and `spill` stays 0.
+
+**Do · Type.** 3 — MQTT command injection from the cell, against the insecure
+broker:
+
+```bash
+docker compose exec iiot-gw python attacker.py
+```
+
+**Check —** *Vulnerable:* the broker accepts a `CONNECT` with NO credentials and
+the injected command `PUBLISH` lands. *Hardened:* the anonymous `CONNECT` is
+refused by the ACL and the command path is designed out (`pump-controller`
+`replicas: 0`). (`attacker.py` uses `BROKER=172.30.30.30`.)
+
+**Do · Type.** 4 — prove segmentation: fire the identical attack from
+`attacker_net` (no conduit) and watch it never reach the outstation:
+
+```bash
+docker compose exec adversary python master.py --host 172.30.10.12 --attack
+```
+
+**Check —** the packet is dropped at `zone-fw`; you should see a `CONDUIT-DROP`
+line in the host kernel ring buffer (`dmesg | grep CONDUIT-DROP`), and `spill`
+stays 0 because the control never arrived.
+
+> **Read — the CIE "even-if" guarantee.** Under `--hardened`, even if every digital
+> layer is owned: a replayed SAv5 control is refused for a stale CSQ, and the
+> hardwired float force-starts the pump at 95% → **`spill` stays 0** (DB-1). Same
+> attacker, same full write access, opposite outcome — held by an engineered
+> backstop, not by trusting the network.
+
+**Do · Type.** Legit supervised control, for contrast (a proper SELECT→OPERATE,
+HMAC-tagged):
+
+```bash
+docker compose exec scada-master python master.py --host 172.30.10.12 --stop-pump 0 --sav5
+```
+
+**Check —** you should see the control accepted (`status = Success`) through the
+two-phase SELECT→OPERATE handshake — the legitimate path the injected
+`DIRECT_OPERATE` skips.
 
 ---
 
 ## 4. See the packets (DNP3/MQTT between containers, never loopback)
 
-All traffic is plaintext and Zeek/ICSNPP-parseable. Capture is **out-of-band**.
+> **Read.** All traffic is plaintext and Zeek/ICSNPP-parseable, and capture is
+> **out-of-band** — three taps each share a target's netns and write auto-reloading
+> pcaps to `/captures`: `sniff-dnp3` (at the RTU), `sniff-mqtt` (at the broker),
+> and `sniff-conduit` (the SPAN-like whole-zone tap at `zone-fw`, every
+> cross-conduit packet at once). The noVNC desktops open **straight to the desktop
+> with NO password**, and Wireshark is already up (if a VNC prompt ever appears,
+> it's `vscode`).
 
-- **noVNC Wireshark** (`--profile capture`): open `http://localhost:3000` (or
-  3001 https). **File ▸ Open** the auto-reloading pcaps in `/captures`:
-  `dnp3_live.pcap`, `mqtt_live.pcap`, `conduit_live.pcap`.
-- Three taps write those pcaps, each sharing a target's netns (out-of-band):
-  `sniff-dnp3` (at the RTU), `sniff-mqtt` (at the broker), `sniff-conduit` (the
-  SPAN-like whole-zone tap at `zone-fw` — every cross-conduit packet at once).
-- **Edgeshark** (`--profile twin-full`): `http://localhost:5001`, click any
-  container interface → live-stream into desktop Wireshark (`cshargextcap`).
-- **Kit noVNC desktop (port 6080):** point `lab/open-wireshark.sh` at the real
-  pcaps in `lab/twin/captures/` instead of `lo`.
+**Do · Click.** Open the noVNC Wireshark (from `--profile capture`) at
+`http://localhost:3000` (or `3001` for https), then **File ▸ Open** and choose
+`/captures/conduit_live.pcap` (or `dnp3_live.pcap` / `mqtt_live.pcap`).
 
-Filters (unchanged, so the curriculum transfers):
-- capture: `tcp port 20000 or tcp port 1883 or tcp port 8883`
-- display: `dnp3 || mqtt`, then `dnp3.al.func`, `dnp3.al.ctrl.code`,
-  `mqtt.msgtype`, `mqtt.topic`.
+**Check —** you should see live, reloading DNP3/MQTT frames in the packet list. If
+the file list is empty, confirm the `--profile capture` taps are running
+(`docker compose ps`).
 
-Detection: pipe the pcaps to Zeek (`--profile tools`):
-`docker compose exec zeek run-zeek /caps/conduit_live.pcap` → `dnp3.log`,
-`dnp3_control.log`, `dnp3_objects.log`, `mqtt_*.log`.
+**Do · Click.** In that Wireshark, type `dnp3 || mqtt` in the green display-filter
+bar and press Enter; then drill with `dnp3.al.func`, `dnp3.al.ctrl.code`,
+`mqtt.msgtype`, or `mqtt.topic`.
+
+**Check —** the packet list should narrow to DNP3/MQTT only. These filters are
+unchanged from the teaching pcaps, so the curriculum transfers directly.
+
+> **Read — other capture doors.** **Edgeshark** (`--profile twin-full`):
+> `http://localhost:5001`, click any container interface → live-stream into desktop
+> Wireshark (`cshargextcap`). **Kit noVNC desktop (port 6080):** opens straight to
+> the desktop with no password (if a VNC prompt ever appears, it's `vscode`); point
+> `lab/open-wireshark.sh` at the real pcaps in `lab/twin/captures/` instead of `lo`.
+> Capture filter for a live tap: `tcp port 20000 or tcp port 1883 or tcp port 8883`.
+
+**Do · Type.** Turn the pcaps into readable logs with Zeek + CISA ICSNPP
+(`--profile tools`):
+
+```bash
+docker compose exec zeek run-zeek /caps/conduit_live.pcap
+```
+
+**Check —** you should see `dnp3.log`, `dnp3_control.log`, `dnp3_objects.log`, and
+`mqtt_*.log` written. If `run-zeek` is not found, confirm you booted with
+`--profile tools`.
 
 ---
 

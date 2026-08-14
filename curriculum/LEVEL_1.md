@@ -18,24 +18,22 @@ Before you read bytes, understand the **graph**: who are the endpoints and who t
 
 ## Do this
 
-```bash
-tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z endpoints,ip
-```
-> **Expected:** 10.10.20.10  (61 pkts)  <- the broker (busiest)
+**⌨ Type:** `l1`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z endpoints,ip`
+
+> **Check (expected):** 10.10.20.10  (61 pkts)  <- the broker (busiest)
 10.10.20.30  (22)   <- HMI
 10.10.20.7   (22)   <- sensor
 10.10.20.66  (17)   <- rogue
 
-```bash
-tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z conv,tcp
-```
-> **Expected:** three TCP conversations, all to 10.10.20.10:1883 — the broker is the hub.
+**⌨ Type:** `l1b`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z conv,tcp`
 
-- **In Wireshark:** In Wireshark: **Statistics ▸ Conversations** (TCP tab) and **Statistics ▸ Endpoints** (IPv4). Then **Statistics ▸ Protocol Hierarchy** to see mqtt under tcp.
-```bash
-tshark -r pcaps/dnp3_substation.pcap -q -z conv,tcp
-```
-> **Expected:** the master (10.20.0.5) ↔ outstation (10.20.0.20:20000), plus a second session from 10.20.0.66 — the rogue.
+> **Check (expected):** three TCP conversations, all to 10.10.20.10:1883 — the broker is the hub.
+
+- **Do · Click.** In Wireshark: **Statistics ▸ Conversations** (TCP tab) and **Statistics ▸ Endpoints** (IPv4). Then **Statistics ▸ Protocol Hierarchy** to see mqtt under tcp.
+
+**⌨ Type:** `l1c`  — runs `tshark -r pcaps/dnp3_substation.pcap -q -z conv,tcp`
+
+> **Check (expected):** the master (10.20.0.5) ↔ outstation (10.20.0.20:20000), plus a second session from 10.20.0.66 — the rogue.
 
 
 ## Check yourself

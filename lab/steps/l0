@@ -1,0 +1,2 @@
+# prefer the terminal? watch it headless:
+tshark -i lo -c 10 -f "tcp port 1883 or tcp port 20000"

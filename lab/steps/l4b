@@ -1,0 +1,2 @@
+# MQTT: the '#' wildcard subscribe (eavesdrop-all) and the injected command
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.topic=="#" || mqtt.topic=="plant/tank1/command"' -T fields -e frame.number -e mqtt.msgtype -e mqtt.topic

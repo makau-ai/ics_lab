@@ -1,0 +1,3 @@
+# MQTT detections: anonymous connect, and a '#' subscribe
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.msgtype==8 && mqtt.topic=="#"' -T fields -e frame.number

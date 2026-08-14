@@ -1,0 +1,2 @@
+# a first-cut DNP3 rule: controls not from the master IP
+tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5,13} && ip.src != 10.20.0.5" -T fields -e frame.number -e ip.src -e dnp3.al.func

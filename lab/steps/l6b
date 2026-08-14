@@ -1,0 +1,3 @@
+# analyze the two unseen captures
+../lab/open-wireshark.sh captures/dnp3_assessment.pcap
+tshark -r captures/mqtt_assessment.pcap -Y mqtt

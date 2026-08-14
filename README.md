@@ -67,8 +67,8 @@ cloud, with a browser-visible **Wireshark GUI over noVNC**. A student does nothi
    capturing on `lo`**. A short attack demo fires on its own.
 3. The **Learning Path** opens on its own on port **`8080`** — this is your front door. Work the
    **7 levels in order** (Level 0 Orientation → Level 6, a university-style Machine Problem); the page tracks
-   your progress. When Level 0 asks, open port **`6080`** ("noVNC Desktop", password **`vscode`**) to see
-   the live packets in Wireshark.
+   your progress. When Level 0 asks, open port **`6080`** ("noVNC Desktop") — it opens **straight to the
+   desktop, no password**, with Wireshark already capturing. New to the terminal? See [`RUNNING_COMMANDS.md`](RUNNING_COMMANDS.md).
 4. Re-run the attacks with **`./lab/intrude.sh`**; the multi-container + IEC 62443 segmentation labs also
    run here via docker-in-docker.
 

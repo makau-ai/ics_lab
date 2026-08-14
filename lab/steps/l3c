@@ -1,0 +1,2 @@
+# DNP3: compare the IP source with the DNP3 LINK source, and read the control
+tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5}" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.ctl.trip -e dnp3.ctl.op

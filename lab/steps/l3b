@@ -1,0 +1,2 @@
+# MQTT: topic, QoS and the RETAIN flag on each publish
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==3 -T fields -e frame.number -e mqtt.topic -e mqtt.qos -e mqtt.retain

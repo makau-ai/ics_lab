@@ -10,7 +10,7 @@ capture, and Zeek + CISA's ICSNPP parsers to turn traffic into readable logs.
 
 > **No local install? Use GitHub Codespaces.** The repo's `.devcontainer/` gives you a
 > browser-visible **Wireshark GUI over noVNC**. Open the Codespace, open port **6080**
-> (password `vscode`), then `./lab/run-local.sh up` → `./lab/open-wireshark.sh` → capture
+> (no password — it opens straight to the desktop), then `./lab/run-local.sh up` → `./lab/open-wireshark.sh` → capture
 > on interface `lo`. Details: `.devcontainer/README.md`.
 
 ## Prerequisites

@@ -39,15 +39,37 @@ charges. When in doubt, don't.
 
 ## 4. Environment & setup
 
-Do this MP inside the kit's Codespace (or any box with `tshark`, `wireshark`, and `python3`):
+> **Read** — Do this MP inside the kit's Codespace (or any box with `tshark`, `wireshark`, and
+> `python3`). The autograder is your self-check — run it as often as you like while you work. Copy any
+> command in this handout with its **Copy** button, or with **Ctrl/Cmd+Shift+V** (the paste-backup).
+
+**Do · Type** — Run the autograder from the `mp/` folder:
 
 ```bash
 cd mp
-python3 grade.py          # runs the autograder against your work (self-check as you go)
+python3 grade.py
 ```
 
-Open a capture in Wireshark with `../lab/open-wireshark.sh captures/dnp3_assessment.pcap`, or analyze
-headlessly with `tshark -r captures/dnp3_assessment.pcap -Y dnp3`.
+**Check —** you should see PASS/FAIL per item and a running score out of 100; if not, confirm you are
+in `mp/` and that `python3` and `tshark` are installed.
+
+**Do · Type** — Open a capture in Wireshark:
+
+```bash
+../lab/open-wireshark.sh captures/dnp3_assessment.pcap
+```
+
+**Check —** you should see the DNP3 assessment capture load in Wireshark, ready to filter; if not,
+confirm the path and that the noVNC desktop is open.
+
+**Do · Type** — Or analyze the same capture headlessly:
+
+```bash
+tshark -r captures/dnp3_assessment.pcap -Y dnp3
+```
+
+**Check —** you should see the capture's DNP3 frames summarized in the terminal; if not, confirm you
+are in `mp/` and the path is correct.
 
 ## 5. Provided files
 
@@ -131,12 +153,16 @@ succeeds. Document it in `report.md` under "Remediation."
 
 ## 7. Testing / autograder
 
+> **Read** — The autograder scores your work and is safe to run repeatedly. Iterate until green.
+
+**Do · Type** — Self-check your submission:
+
 ```bash
 cd mp && python3 grade.py
 ```
 
-It prints PASS/FAIL per item (with hints on failures) and a score out of 100 (Part 1 = 60, Part 2 =
-30 on precision/recall, Part 3 format = 10). Iterate until green.
+**Check —** you should see PASS/FAIL per item (with hints on failures) and a score out of 100 (Part 1
+= 60, Part 2 = 30 on precision/recall, Part 3 format = 10); if not, confirm you are in `mp/`.
 
 **Where the key lives (self-check vs. proctored).** `grade.py` does **not** contain the answers.
 It loads the Part-1 key from `instructor/answer_key.json` and the Part-2 detector ground truth from

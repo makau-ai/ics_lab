@@ -25,7 +25,7 @@ LEVELS = [
             "catch an intruder in them.",
         ],
         "steps": [
-            {"kind": "note", "text": "Open the forwarded port **6080** ('noVNC Desktop', password `vscode`). Wireshark is already open and capturing."},
+            {"kind": "note", "text": "Open the forwarded port **6080** ('noVNC Desktop'). It opens **straight to the desktop — no password prompt** — with Wireshark already capturing on `lo`. (If a VNC prompt ever appears, the password is `vscode`.)"},
             {"kind": "gui", "text": "In Wireshark's green display-filter bar, type `mqtt` and press Enter. Watch the telemetry. Then clear it and type `dnp3`."},
             {"kind": "cmd", "text": "# prefer the terminal? watch it headless:\ntshark -i lo -c 10 -f \"tcp port 1883 or tcp port 20000\"",
              "expect": "10 packets summarised — a mix of MQTT (1883) and DNP3 (20000)."},
@@ -339,3 +339,31 @@ LEVELS = [
         "evidence": "Proven on a living plant: the same link-vs-IP contradiction (dnp3.src=100 from the foothold 172.30.10.66) forces the pumps off and spills the wet-well — and under --hardened, identical write access yields spill == 0, held by an engineered float, not by trust.",
     },
 ]
+
+
+# ---------------------------------------------------------------- lab-runner helpers
+def type_tokens(lv):
+    """Stable short token per terminal ('cmd') step: l0, l1, l1b, l1c, ... (first cmd in level N = 'lN', then 'lNb','lNc')."""
+    out, seq = {}, 0
+    for i, st in enumerate(lv.get("steps", [])):
+        if st.get("kind") == "cmd":
+            out[i] = "l%d%s" % (lv["n"], ("" if seq == 0 else chr(ord('a') + seq)))
+            seq += 1
+    return out
+
+
+def split_cmd(text):
+    """Split a cmd step's 'text' into (gist, command).
+
+    The 'cmd' text often begins with a `# comment` line (a human 'gist' of what the
+    command does) followed by the real command, sometimes on several lines. If the
+    first line starts with '#', that line (minus the leading '# ') is the gist and the
+    remaining lines are the command; otherwise the gist is '' and the whole text is the
+    command.
+    """
+    lines = text.split("\n")
+    if lines and lines[0].lstrip().startswith("#"):
+        gist = lines[0].lstrip().lstrip("#").strip()
+        command = "\n".join(lines[1:]).strip("\n")
+        return gist, command
+    return "", text

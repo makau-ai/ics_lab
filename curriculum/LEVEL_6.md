@@ -18,23 +18,17 @@ This is a formal, university-style Machine Problem. The handout, the two evidenc
 
 ## Do this
 
-```bash
-cd mp && cat README.md      # the full handout: parts, deliverables, grading
-```
-> **Expected:** MP: ICS Intrusion Analysis — Parts 1–3 + bonus.
+**⌨ Type:** `l6`  — runs `cd mp && cat README.md      # the full handout: parts, deliverables, grading`
 
-```bash
-# analyze the two unseen captures
-../lab/open-wireshark.sh captures/dnp3_assessment.pcap
-tshark -r captures/mqtt_assessment.pcap -Y mqtt
-```
-> **Expected:** two captures you have not walked — apply everything from Levels 1–5.
+> **Check (expected):** MP: ICS Intrusion Analysis — Parts 1–3 + bonus.
 
-```bash
-# fill submission/answers.json, write detector.py and report.md, then self-check:
-python3 grade.py
-```
-> **Expected:** PASS/FAIL per item and a score /100. Iterate to green.
+**⌨ Type:** `l6b`  — runs `../lab/open-wireshark.sh captures/dnp3_assessment.pcap ; tshark -r captures/mqtt_assessment.pcap -Y mqtt`
+
+> **Check (expected):** two captures you have not walked — apply everything from Levels 1–5.
+
+**⌨ Type:** `l6c`  — runs `python3 grade.py`
+
+> **Check (expected):** PASS/FAIL per item and a score /100. Iterate to green.
 
 
 ## Check yourself

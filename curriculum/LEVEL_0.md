@@ -19,19 +19,17 @@ Two protocols are flowing. **MQTT** is publish/subscribe messaging (IoT/IIoT tel
 
 ## Do this
 
-- **Note:** Open the forwarded port **6080** ('noVNC Desktop', password `vscode`). Wireshark is already open and capturing.
-- **In Wireshark:** In Wireshark's green display-filter bar, type `mqtt` and press Enter. Watch the telemetry. Then clear it and type `dnp3`.
-```bash
-# prefer the terminal? watch it headless:
-tshark -i lo -c 10 -f "tcp port 1883 or tcp port 20000"
-```
-> **Expected:** 10 packets summarised — a mix of MQTT (1883) and DNP3 (20000).
+- **Read.** Open the forwarded port **6080** ('noVNC Desktop'). It opens **straight to the desktop — no password prompt** — with Wireshark already capturing on `lo`. (If a VNC prompt ever appears, the password is `vscode`.)
 
-```bash
-# re-run the attacks any time and watch them appear:
-./lab/intrude.sh
-```
-> **Expected:** MQTT anonymous connect + command injection, then a DNP3 trip.
+- **Do · Click.** In Wireshark's green display-filter bar, type `mqtt` and press Enter. Watch the telemetry. Then clear it and type `dnp3`.
+
+**⌨ Type:** `l0`  — runs `tshark -i lo -c 10 -f "tcp port 1883 or tcp port 20000"`
+
+> **Check (expected):** 10 packets summarised — a mix of MQTT (1883) and DNP3 (20000).
+
+**⌨ Type:** `l0b`  — runs `./lab/intrude.sh`
+
+> **Check (expected):** MQTT anonymous connect + command injection, then a DNP3 trip.
 
 
 ## Check yourself

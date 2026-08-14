@@ -18,25 +18,20 @@ Attacks in these protocols rarely look 'malformed' — they look like *valid mes
 
 ## Do this
 
-```bash
-# MQTT: anonymous CONNECT (no username) the broker accepted
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number -e mqtt.clientid
-```
-> **Expected:** frame 38, client mqtt-explorer-x — no credentials.
+**⌨ Type:** `l4`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number -e mqtt.clientid`
 
-```bash
-# MQTT: the '#' wildcard subscribe (eavesdrop-all) and the injected command
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.topic=="#" || mqtt.topic=="plant/tank1/command"' -T fields -e frame.number -e mqtt.msgtype -e mqtt.topic
-```
-> **Expected:** the '#' SUBSCRIBE and the PUBLISH to plant/tank1/command (frame 52).
+> **Check (expected):** frame 38, client mqtt-explorer-x — no credentials.
 
-```bash
-# DNP3: the unauthenticated trip and the cold restart, and who sent them
-tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func==5 || dnp3.al.func==13" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.al.func
-```
-> **Expected:** DIRECT_OPERATE (5) and COLD_RESTART (13) from 10.20.0.66 — with dnp3.src forged to the master's 100.
+**⌨ Type:** `l4b`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.topic=="#" || mqtt.topic=="plant/tank1/command"' -T fields -e frame.number -e mqtt.msgtype -e mqtt.topic`
 
-- **Note:** For each finding, open the matching module (modules/*.html) ▸ **Frame Explorer** and jump to that frame to read the full teaching note and the control that stops it.
+> **Check (expected):** the '#' SUBSCRIBE and the PUBLISH to plant/tank1/command (frame 52).
+
+**⌨ Type:** `l4c`  — runs `tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func==5 || dnp3.al.func==13" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.al.func`
+
+> **Check (expected):** DIRECT_OPERATE (5) and COLD_RESTART (13) from 10.20.0.66 — with dnp3.src forged to the master's 100.
+
+- **Read.** For each finding, open the matching module (modules/*.html) ▸ **Frame Explorer** and jump to that frame to read the full teaching note and the control that stops it.
+
 
 ## Check yourself
 

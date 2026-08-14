@@ -1,0 +1,1 @@
+tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z conv,tcp

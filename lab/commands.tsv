@@ -1,0 +1,24 @@
+l0	0	prefer the terminal? watch it headless:
+l0b	0	re-run the attacks any time and watch them appear:
+l1	1	tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z endpoints,ip
+l1b	1	tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z conv,tcp
+l1c	1	tshark -r pcaps/dnp3_substation.pcap -q -z conv,tcp
+l2	2	tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt -T fields -e mqtt.msgtype | sort | uniq -c
+l2b	2	tshark -r pcaps/dnp3_substation.pcap -Y dnp3 -T fields -e dnp3.al.func | sort | uniq -c
+l3	3	MQTT: read the cleartext login straight off the wire
+l3b	3	MQTT: topic, QoS and the RETAIN flag on each publish
+l3c	3	DNP3: compare the IP source with the DNP3 LINK source, and read the control
+l4	4	MQTT: anonymous CONNECT (no username) the broker accepted
+l4b	4	MQTT: the '#' wildcard subscribe (eavesdrop-all) and the injected command
+l4c	4	DNP3: the unauthenticated trip and the cold restart, and who sent them
+l5	5	a first-cut DNP3 rule: controls not from the master IP
+l5b	5	turn packets into readable logs with Zeek + CISA ICSNPP
+l5c	5	MQTT detections: anonymous connect, and a '#' subscribe
+l6	6	cd mp && cat README.md      # the full handout: parts, deliverables, grading
+l6b	6	analyze the two unseen captures
+l6c	6	fill submission/answers.json, write detector.py and report.md, then self-check:
+l7	7	Level 1, headless: who is talking across the conduit right now?
+l7b	7	Level 2, live: classify the vocabulary on real multi-zone traffic
+l7c	7	Level 4, live: turn access into a finding — fire the attack from the granted cell foothold.
+l7d	7	Level 3, live: read the deciding field on the conduit tap — the SAME tell as the teaching capture.
+l7e	7	Level 5, live: key on the invariant, watch it hold. Flip every CIE control on and replay the SAME attack.

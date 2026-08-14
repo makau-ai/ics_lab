@@ -1,0 +1,2 @@
+# MQTT: read the cleartext login straight off the wire
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==1 -T fields -e mqtt.clientid -e mqtt.username -e mqtt.passwd

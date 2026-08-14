@@ -18,27 +18,20 @@ A detection is only as good as its evasion resistance. The obvious DNP3 rule —
 
 ## Do this
 
-```bash
-# a first-cut DNP3 rule: controls not from the master IP
-tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5,13} && ip.src != 10.20.0.5" -T fields -e frame.number -e ip.src -e dnp3.al.func
-```
-> **Expected:** catches the rogue trip & restart HERE — but only because the attacker kept its real IP.
+**⌨ Type:** `l5`  — runs `tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5,13} && ip.src != 10.20.0.5" -T fields -e frame.number -e ip.src -e dnp3.al.func`
 
-```bash
-# turn packets into readable logs with Zeek + CISA ICSNPP
-docker compose -f lab/docker-compose.yml --profile tools run --rm zeek run-zeek /kit/pcaps/dnp3_substation.pcap
-cat lab/zeek_reference_output/dnp3/dnp3_control.log | grep -i direct
-```
-> **Expected:** a DIRECT_OPERATE / Trip / Success line whose source host is 10.20.0.66 — your best single alert.
+> **Check (expected):** catches the rogue trip & restart HERE — but only because the attacker kept its real IP.
 
-```bash
-# MQTT detections: anonymous connect, and a '#' subscribe
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number
-tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.msgtype==8 && mqtt.topic=="#"' -T fields -e frame.number
-```
-> **Expected:** the anonymous CONNECT and the wildcard SUBSCRIBE.
+**⌨ Type:** `l5b`  — runs `docker compose -f lab/docker-compose.yml --profile tools run --rm zeek run-zeek /kit/pcaps/dnp3_substation.pcap ; cat lab/zeek_reference_output/dnp3/dnp3_control.log | grep -i direct`
 
-- **Note:** Now break your own rule: in the lab, re-run the DNP3 attack with `--src-addr 100` (spoofing the master's link address) and with a spoofed IP, and watch the naive source-IP rule miss it. That's why Level 6 asks for an invariant detector.
+> **Check (expected):** a DIRECT_OPERATE / Trip / Success line whose source host is 10.20.0.66 — your best single alert.
+
+**⌨ Type:** `l5c`  — runs `tshark -r pcaps/mqtt_iot_telemetry.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number ; tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.msgtype==8 && mqtt.topic=="#"' -T fields -e frame.number`
+
+> **Check (expected):** the anonymous CONNECT and the wildcard SUBSCRIBE.
+
+- **Read.** Now break your own rule: in the lab, re-run the DNP3 attack with `--src-addr 100` (spoofing the master's link address) and with a spoofed IP, and watch the naive source-IP rule miss it. That's why Level 6 asks for an invariant detector.
+
 
 ## Check yourself
 

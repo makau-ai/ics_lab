@@ -1,0 +1,1 @@
+tshark -r pcaps/dnp3_substation.pcap -q -z conv,tcp

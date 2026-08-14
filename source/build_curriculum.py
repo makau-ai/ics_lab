@@ -19,7 +19,7 @@ import json
 import os
 import re
 
-from content_levels import LEVELS
+from content_levels import LEVELS, type_tokens, split_cmd
 
 KIT = "/root/icsnpp_kit"
 OUT_HTML_DIR = os.path.join(KIT, "curriculum")
@@ -254,7 +254,14 @@ def _cmd_proto(cmd):
     return "neutral"
 
 
-def step_html(st):
+def step_html(st, tok=None):
+    """Render one step as a Read / Do / Check card.
+
+    note  -> READ   (background context; badge 'READ')
+    gui   -> DO · CLICK (a Wireshark click; badge 'DO · CLICK')
+    cmd   -> DO · TYPE  (a terminal step; the student types the short token `tok`
+             — it prints the real command and runs it — then a CHECK reveal).
+    """
     kind = st.get("kind", "note")
     if kind == "cmd":
         cmd = e(st["text"])
@@ -262,6 +269,20 @@ def step_html(st):
         ctx = e(_cmd_context(st["text"]))
         ptag = {"dnp3": "DNP3", "mqtt": "MQTT", "neutral": ""}[proto]
         ptag_html = ('<span class="ptag ptag-' + proto + '">' + ptag + '</span>') if ptag else ""
+
+        # The token affordance: the short handle the student TYPES to run the real
+        # command below (no copy-paste). Degrades gracefully if a token is absent.
+        typerun_html = ""
+        if tok:
+            typerun_html = (
+                '<div class="typerun">'
+                '<span class="tr-badge">DO · TYPE</span>'
+                '<span class="tr-lead">⌨ Type</span>'
+                '<code class="tr-tok">' + e(tok) + '</code>'
+                '<span class="tr-hint">— prints the real command &amp; runs it</span>'
+                '</div>'
+            )
+
         cons = st.get("consequence")
         cons_html = ""
         if cons:
@@ -272,13 +293,14 @@ def step_html(st):
         if exp:
             exp_html = (
                 '<details class="reveal"><summary><span class="rv-ic" aria-hidden="true"></span>'
-                '<span class="rv-label">Predict, then reveal the output</span>'
+                '<span class="rv-label"><span class="rv-badge">CHECK</span> Predict, then reveal the expected output</span>'
                 '<span class="rv-hint">what will this print?</span></summary>'
-                '<div class="expect"><span class="explabel">Expected</span>'
+                '<div class="expect"><span class="explabel">Expected output</span>'
                 '<pre class="expbody">' + e(exp) + '</pre></div></details>'
             )
         return (
             '<div class="step cmd cmd-' + proto + '">'
+            + typerun_html +
             '<div class="termwrap">'
             '<div class="titlebar"><span class="tdots" aria-hidden="true"><i></i><i></i><i></i></span>'
             '<span class="tctx">' + ctx + '</span>' + ptag_html +
@@ -287,9 +309,9 @@ def step_html(st):
             + cons_html + exp_html + '</div>'
         )
     if kind == "gui":
-        return ('<div class="step gui"><span class="kind kind-gui">In Wireshark</span>'
+        return ('<div class="step gui"><span class="kind kind-gui">DO · CLICK</span>'
                 '<div class="steptext">' + md_inline(st["text"]) + '</div></div>')
-    return ('<div class="step note"><span class="kind kind-note">Note</span>'
+    return ('<div class="step note"><span class="kind kind-read">READ</span>'
             '<div class="steptext">' + md_inline(st["text"]) + '</div></div>')
 
 
@@ -322,7 +344,8 @@ def level_html(lv):
     zoom = zoom_for(lv)
     objectives = "".join("<li>" + md_inline(o) + "</li>" for o in lv["objectives"])
     background = "".join("<p>" + md_inline(b) + "</p>" for b in lv["background"])
-    steps = "".join(step_html(s) for s in lv["steps"])
+    toks = type_tokens(lv)
+    steps = "".join(step_html(s, toks.get(i)) for i, s in enumerate(lv["steps"]))
     checks = "".join(checkpoint_html(c) for c in lv["checkpoints"])
     open_attr = " open" if n == 0 else ""
     mpclass = " mp" if is_mp else ""
@@ -841,13 +864,28 @@ html[data-theme="light"] .lvl.done .donebox{color:#15803d}
 .expbody .cursor{display:inline-block;width:.6em;height:1.05em;vertical-align:-.18em;background:var(--ok);
   margin-left:1px;animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
+/* DO · TYPE affordance — the short token the student types to run the command below */
+.typerun{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin:0 0 9px;padding:8px 13px;border-radius:11px;
+  background:color-mix(in srgb,var(--accent) 12%,var(--card-2));border:1px solid color-mix(in srgb,var(--accent) 34%,var(--line))}
+.tr-badge{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:20px;flex:0 0 auto;
+  background:color-mix(in srgb,var(--accent) 28%,transparent);color:var(--accent-glow)}
+html[data-theme="light"] .tr-badge{color:var(--accent)}
+.tr-lead{font-weight:700;color:var(--ink);font-size:var(--step--1)}
+.tr-tok{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-weight:800;font-size:1.05em;letter-spacing:.03em;
+  background:var(--ink);color:var(--bg);padding:2px 13px;border-radius:8px}
+.tr-hint{color:var(--faint);font-size:var(--step--1)}
+/* CHECK badge inside the expected-output reveal summary */
+.rv-badge{display:inline-block;font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:2px 7px;border-radius:20px;margin-right:7px;
+  background:color-mix(in srgb,var(--ok) 22%,transparent);color:var(--ok)}
 .step.gui,.step.note{display:flex;gap:12px;align-items:flex-start;padding:11px 14px}
 .step.gui{background:color-mix(in srgb,#38bdf8 8%,var(--card-2))}
-.step.note{background:color-mix(in srgb,var(--dnp3) 8%,var(--card-2))}
+.step.note{background:color-mix(in srgb,var(--mut) 7%,var(--card-2))}
 .kind{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:20px;flex:0 0 auto;margin-top:1px}
 .kind-gui{background:color-mix(in srgb,#38bdf8 22%,transparent);color:#7dd3fc}
 .kind-note{background:color-mix(in srgb,var(--dnp3) 22%,transparent);color:#fcd34d}
+.kind-read{background:color-mix(in srgb,var(--mut) 20%,transparent);color:var(--mut)}
 html[data-theme="light"] .kind-gui{color:#1d4ed8}html[data-theme="light"] .kind-note{color:#92400e}
+html[data-theme="light"] .kind-read{color:#475569}
 .steptext{flex:1;color:var(--mut)}
 .steptext b{color:var(--ink)}
 
@@ -1092,11 +1130,15 @@ html[data-theme="light"] .kind-gui{color:#1d4ed8}html[data-theme="light"] .kind-
 
     <div class="intro">
       <h2>How the descent works</h2>
-      <p>Seven stations, one continuous zoom. Read the <b>Goal</b>, open a station, and run the commands in
-      the terminal (a <span class="inlinekind">Terminal</span> block copies with one click) or follow the
-      <span class="inlinekind">In&nbsp;Wireshark</span> steps on the noVNC desktop. Predict each output before you
-      reveal it, tick <b>Done</b>, and watch the sky warm from night toward first light. Your progress is saved in
-      this browser; the seven-station descent ends in a graded-style capstone (Level&nbsp;6), and an advanced
+      <p>Seven stations, one continuous zoom. Read the <b>Goal</b>, open a station, and work its steps — each one is
+      one of three kinds. A <span class="inlinekind">READ</span> step is background: read it and move on. A
+      <span class="inlinekind">DO&nbsp;·&nbsp;CLICK</span> step is a click to make in Wireshark on the noVNC desktop.
+      A <span class="inlinekind">DO&nbsp;·&nbsp;TYPE</span> step shows a short handle like <code>l1</code> that you just
+      <b>type</b> in the terminal — it prints the real command <em>and runs it</em>, so there is nothing to copy-paste
+      (the terminal card's <span class="inlinekind">Copy</span> button stays as a backup, and <code>lab list</code> shows
+      every handle). Each command ends in a <span class="inlinekind">CHECK</span> — the expected output: predict it, then
+      reveal to self-verify. Tick <b>Done</b> and watch the sky warm from night toward first light. Your progress is saved
+      in this browser; the seven-station descent ends in a graded-style capstone (Level&nbsp;6), and an advanced
       <b>Level&nbsp;7</b> then carries those exact skills onto a living digital-twin plant.</p>
       <div class="pathline">
         <span class="pl">tooling</span><span class="arr">&rarr;</span>
@@ -1739,19 +1781,26 @@ def level_md(lv):
         L.append("")
     L.append("## Do this")
     L.append("")
-    for st in lv["steps"]:
+    toks = type_tokens(lv)
+    for i, st in enumerate(lv["steps"]):
         kind = st.get("kind", "note")
         if kind == "cmd":
-            L.append("```bash")
-            L.append(st["text"])
-            L.append("```")
+            tok = toks.get(i, "")
+            _gist, command = split_cmd(st["text"])
+            # Collapse a multi-line command to one runnable line (sequential ';') for the
+            # inline 'runs' phrase; the individual commands stay runnable.
+            oneline = " ; ".join(ln.strip() for ln in command.splitlines() if ln.strip())
+            L.append(f"**⌨ Type:** `{tok}`  — runs `{oneline}`")
             if st.get("expect"):
-                L.append(f"> **Expected:** {st['expect']}")
+                L.append("")
+                L.append(f"> **Check (expected):** {st['expect']}")
             L.append("")
         elif kind == "gui":
-            L.append(f"- **In Wireshark:** {st['text']}")
+            L.append(f"- **Do · Click.** {st['text']}")
+            L.append("")
         else:
-            L.append(f"- **Note:** {st['text']}")
+            L.append(f"- **Read.** {st['text']}")
+            L.append("")
     L.append("")
     L.append("## Check yourself")
     L.append("")

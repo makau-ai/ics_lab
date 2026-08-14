@@ -1,0 +1,3 @@
+# turn packets into readable logs with Zeek + CISA ICSNPP
+docker compose -f lab/docker-compose.yml --profile tools run --rm zeek run-zeek /kit/pcaps/dnp3_substation.pcap
+cat lab/zeek_reference_output/dnp3/dnp3_control.log | grep -i direct

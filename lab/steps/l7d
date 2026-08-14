@@ -1,0 +1,4 @@
+# Level 3, live: read the deciding field on the conduit tap — the SAME tell as the teaching capture.
+tshark -r lab/twin/captures/conduit_live.pcap -Y "dnp3.al.func==5" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.al.func
+# and the MQTT anonymous connect the broker accepted:
+tshark -r lab/twin/captures/mqtt_live.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number -e mqtt.clientid

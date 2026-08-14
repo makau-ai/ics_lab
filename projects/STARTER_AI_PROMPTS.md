@@ -51,17 +51,46 @@ The rungs mirror the kit's levels:
 
 ## How to run a rung
 
-1. **Forward.** Paste the rung's **FORWARD PROMPT** into an AI coding assistant. Read what it gives
-   you for wire-validity and scope (correct port, plaintext, stdlib/`paho-mqtt`/Mosquitto, a
-   one-command run that also captures). Run it in the lab.
-2. **Capture.** Sniff out-of-band to a `.pcap` (`tcpdump`/`tshark` on the lab interface, or the twin's
-   capture plane). Confirm it parses: `tshark -r cap.pcap -Y 'dnp3 || mqtt || mbtcp'` shows the
-   protocol, not just TCP.
-3. **Reverse.** Do the rung's **REVERSE TASK** *without reading your own source* — analyze the pcap as
-   if it were an unseen incident, then diff your reconstruction against what you actually built.
-4. **Assemble the bundle** in [§ Definition of done](#definition-of-done) and self-score against
-   [`ARTIFACT_RUBRIC.md`](ARTIFACT_RUBRIC.md). The worked exemplar of a Mastery bundle is
-   [`../verification/`](../verification/README.md).
+Every rung is the same four-move loop — **Forward** (build) → **Capture** → **Reverse** (analyze) →
+**Assemble** (grade). Background is a **Read**; anything you actually run is a **Do · Type** followed
+by a **Check** so you know it worked.
+
+> Commands copy with the **Copy** button on each fenced block, or paste them with
+> **Ctrl/Cmd+Shift+V** (the paste-backup) if a normal paste is swallowed by the terminal.
+
+> **Read** — Move 1, *Forward.* Paste the rung's **FORWARD PROMPT** into an AI coding assistant. Read
+> what it gives you for wire-validity and scope (correct port, plaintext, stdlib/`paho-mqtt`/Mosquitto,
+> a one-command run that also captures), then run it in the lab.
+
+> **Read** — Move 2, *Capture.* Sniff **out-of-band** to a `.pcap` (on the lab interface or the twin's
+> capture plane) so the sniffer never perturbs the traffic it records.
+
+**Do · Type** — capture your running target to a pcap (swap `<lab-if>` for your lab interface; stop
+with Ctrl-C after ~60 s):
+
+```
+tcpdump -i <lab-if> -w cap.pcap 'tcp port 1883 or tcp port 20000 or tcp port 502'
+```
+
+**Check —** `tcpdump` reports a rising packet count while the target runs; if it stays at `0 packets
+captured`, you are on the wrong interface — list them with `tcpdump -D` and retry.
+
+**Do · Type** — confirm the capture parses as a protocol, not just bare TCP:
+
+```
+tshark -r cap.pcap -Y 'dnp3 || mqtt || mbtcp'
+```
+
+**Check —** you should see DNP3, MQTT, or Modbus/TCP rows; if the result is empty you caught only the
+TCP handshake — re-capture while the app is mid-conversation.
+
+> **Read** — Move 3, *Reverse.* Do the rung's **REVERSE TASK** *without reading your own source* —
+> analyze the pcap as if it were an unseen incident, then diff your reconstruction against what you
+> actually built.
+
+> **Read** — Move 4, *Assemble.* Build the bundle in [§ Definition of done](#definition-of-done) and
+> self-score against [`ARTIFACT_RUBRIC.md`](ARTIFACT_RUBRIC.md). The worked exemplar of a Mastery
+> bundle is [`../verification/`](../verification/README.md).
 
 Ports are fixed so the curriculum transfers: **MQTT 1883** (plaintext) / **8883** (mTLS) · **DNP3
 20000** · **Modbus 502**. Protocol roles are named correctly throughout — DNP3 **master/outstation**,
@@ -94,18 +123,42 @@ single payload.*
 > it in Wireshark. Keep everything on 1883 and make the traffic parse cleanly under Zeek's MQTT
 > analyzer. It must only touch localhost/the lab bridge.
 
-**REVERSE TASK.** Close your source. From `sensor.pcap` alone, reproduce the Level 1–2 method:
+**REVERSE TASK.** Close your source. From `sensor.pcap` alone, reproduce the Level 1–2 method.
 
-- `tshark -r sensor.pcap -q -z endpoints,ip` and `-z conv,tcp` — identify the **broker** (the star
-  hub: most packets, common endpoint of every conversation) and the **rogue `#` subscriber** from
-  statistics alone, before reading any payload.
-- `tshark -r sensor.pcap -Y mqtt -T fields -e mqtt.msgtype | sort | uniq -c` — enumerate the control
-  vocabulary (CONNECT/CONNACK/SUBSCRIBE/SUBACK/PUBLISH/…).
-- Read the **cleartext credentials** straight off a CONNECT (`-e mqtt.username -e mqtt.passwd`) and
-  name the one control (TLS on 8883) that would have hidden them — and, precisely, what it would
-  *not* have hidden (an authorized rogue reading through the broker).
-- Reconstruct the topology (star), the roles, and the topic tree; then **diff that reconstruction
-  against what you actually coded.** Note anything you declared but never used.
+**Do · Type** — rank the endpoints and list the TCP conversations to find the hub:
+
+```
+tshark -r sensor.pcap -q -z endpoints,ip
+tshark -r sensor.pcap -q -z conv,tcp
+```
+
+**Check —** the **broker** is the busiest endpoint and the common endpoint of every conversation (the
+star hub), and the **rogue `#` subscriber** stands out — all from statistics, before you read any
+payload; if only one endpoint appears, your capture missed the clients — re-run the launch-and-capture
+command.
+
+**Do · Type** — enumerate the MQTT control-packet vocabulary:
+
+```
+tshark -r sensor.pcap -Y mqtt -T fields -e mqtt.msgtype | sort | uniq -c
+```
+
+**Check —** you should see the CONNECT / CONNACK / SUBSCRIBE / SUBACK / PUBLISH counts; if the result
+is empty the capture didn't parse as MQTT — confirm the broker really is on 1883 in cleartext.
+
+**Do · Type** — read the **cleartext credentials** straight off a CONNECT:
+
+```
+tshark -r sensor.pcap -Y mqtt.msgtype==1 -T fields -e mqtt.username -e mqtt.passwd
+```
+
+**Check —** the hardcoded username and password print in the clear; name the one control (TLS on 8883)
+that would have hidden them — and, precisely, what it would *not* have hidden (an authorized rogue
+reading through the broker).
+
+> **Read** — Finally, reconstruct the topology (a star), the roles (**broker / publisher /
+> subscriber**), and the topic tree; then **diff that reconstruction against what you actually coded.**
+> Note anything you declared but never used.
 
 **Concepts.** Endpoints/conversations, star topology, MQTT control-packet vocabulary, QoS/retain,
 cleartext credentials, wildcard subscribe, reconstructing design from statistics.
@@ -134,21 +187,39 @@ impostor tells on itself in one field.*
 > Trip). Self-test the CRC routine against the standard vector (`check("123456789") == 0xEA82`). Emit
 > everything to `dnp3_lab.pcap`, plaintext and **Zeek/ICSNPP-parseable**. Isolated lab only.
 
-**REVERSE TASK.** Analyze `dnp3_lab.pcap` as an unseen capture:
+**REVERSE TASK.** Analyze `dnp3_lab.pcap` as an unseen capture.
 
-- Add `ip.src` and `dnp3.src` as columns (`tshark … -e frame.number -e ip.src -e dnp3.src -e
-  dnp3.al.func`). Find the **single control frame where they disagree** — that is the injection.
-- State **which field the attacker forged** (the 16-bit DNP3 *link* address) and **why the outstation
-  cannot tell**: base DNP3 authenticates neither the IP nor the link address. Classify it as an
-  **authentication** failure (CWE-290 spoofed identity / CWE-306 missing auth on control), not an
-  authorization one — contrast with Rung 6's MQTT case.
-- **Recompute the CRCs yourself** in Python to prove the frame is byte-valid, not malformed — the
-  weakness is a legal message from the wrong party.
-- Run `zeek -C -r dnp3_lab.pcap icsnpp-dnp3`; find the single `dnp3_control.log` line that best
-  evidences the unauthorized control, and name the field. Then note the trap: the source-IP rule fires
-  here **only because the attacker left its real IP** — write the detector as an invariant over
-  `{link address ↔ expected source ↔ known-master set ↔ SELECT-before-OPERATE}` and show it still
-  fires when you regenerate the capture with different IPs/frame order.
+**Do · Type** — put `ip.src` and `dnp3.src` side by side on every control frame:
+
+```
+tshark -r dnp3_lab.pcap -Y "dnp3.al.func in {3,4,5}" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.al.func
+```
+
+**Check —** exactly one control frame shows `ip.src` and `dnp3.src` **disagreeing** (the injected
+`DIRECT_OPERATE` carrying a forged link address) — that is your injection; if every row agrees, the
+rogue kept a consistent identity — re-run the forward build with the spoofing host enabled.
+
+> **Read** — State **which field the attacker forged** (the 16-bit DNP3 *link* address) and **why the
+> outstation cannot tell**: base DNP3 authenticates neither the IP nor the link address. Classify it as
+> an **authentication** failure (CWE-290 spoofed identity / CWE-306 missing auth on control), not an
+> authorization one — contrast with Rung 6's MQTT case. Then **recompute the CRCs yourself** in Python
+> to prove the frame is byte-valid, not malformed — the weakness is a legal message from the wrong
+> party.
+
+**Do · Type** — turn the packets into structured logs with Zeek + the CISA ICSNPP DNP3 parser:
+
+```
+zeek -C -r dnp3_lab.pcap icsnpp-dnp3
+```
+
+**Check —** a `dnp3_control.log` is written; find the single line that best evidences the unauthorized
+control and name the field. If Zeek reports the parser is unknown, install it first with
+`zkg install icsnpp-dnp3`.
+
+> **Read** — Note the trap: the source-IP rule fires here **only because the attacker left its real
+> IP.** Write the detector as an invariant over `{link address ↔ expected source ↔ known-master set ↔
+> SELECT-before-OPERATE}` and show it still fires when you regenerate the capture with different
+> IPs / frame order.
 
 **Concepts.** DNP3 3+1 stack, data-link CRC framing, function codes (0x01/03/04/05/0D/81/82),
 ip.src vs dnp3.src, source spoofing, authN vs authZ, CWE-290/306, T0855/T0856, ICSNPP logs.
@@ -174,18 +245,30 @@ invariant — and measure precision and recall.*
 > `benign.pcap` (normal telemetry only) and `evasion.pcap` (normal telemetry **plus** the stealthy
 > harvest-and-inject). Keep everything cleartext on 1883 and Zeek-parseable. Lab only.
 
-**REVERSE TASK.** Turn a leaky signature into a durable invariant:
+**REVERSE TASK.** Turn a leaky signature into a durable invariant.
 
-- Run the naive "block `#`" rule against `evasion.pcap` and **show it miss** the injection.
-- Rewrite the detector to key on the **durable authorization invariant**: *anonymous CONNECT
-  (CONNACK rc=0, no username) → RETAINED PUBLISH to a control/`command` topic*, independent of the
-  subscription shape — the same invariant `mp/detector.py` uses. Prove it now fires on `evasion.pcap`.
-- **Measure precision and recall** against your own labels: the hardened rule must fire on the
-  injection **and stay silent on `benign.pcap`** (no false positives). A detector that sprays ALERT on
-  every frame is the anti-pattern — it has perfect recall and useless precision.
-- In two sentences, explain why "block `#`" was **signature thinking** (it enumerates one shape of the
-  attack) and yours is **invariant thinking** (it keys on the authorization property the attacker
-  cannot avoid while still succeeding).
+> **Read** — First run *your own* naive "block `#`" rule (the one you built in the FORWARD PROMPT)
+> against `evasion.pcap` and confirm it **misses** the injection: the stealthy attacker subscribed to
+> specific topics, never to `#`, so the signature never fires.
+
+**Do · Type** — show the durable **authorization invariant** on the wire — an anonymous CONNECT paired
+with a RETAINED publish to a `command` topic, independent of the subscription shape:
+
+```
+tshark -r evasion.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number -e mqtt.clientid
+tshark -r evasion.pcap -Y "mqtt.retain==1 && mqtt.topic contains \"command\"" -T fields -e frame.number -e mqtt.topic
+```
+
+**Check —** both the anonymous CONNECT and the retained command PUBLISH appear even though no client
+ever subscribed to `#`; that pair is exactly what your naive rule missed and what `mp/detector.py`
+keys on. Rebuild your detector to fire on this invariant and confirm it now flags `evasion.pcap`.
+
+> **Read** — **Measure precision and recall** against your own labels: the hardened rule must fire on
+> the injection **and stay silent on `benign.pcap`** (no false positives). A detector that sprays ALERT
+> on every frame is the anti-pattern — perfect recall, useless precision. Then, in two sentences,
+> explain why "block `#`" was **signature thinking** (it enumerates one shape of the attack) and yours
+> is **invariant thinking** (it keys on the authorization property the attacker cannot avoid while
+> still succeeding).
 
 **Concepts.** Signature vs invariant detection, retained messages, evasion resistance, precision/recall
 against labeled ground truth, false-positive scoping, Zeek/ICSNPP MQTT logs.
@@ -226,15 +309,26 @@ then prove an engineered backstop holds even with full write access.*
   *demonstrated protocol weakness* vs an *attributed incident* (analogy vs attribution).
 - Write an **`mp/report.md`-style incident report**: BLUF, evidence, authN-vs-authZ, impact tied to
   the **physical consequence (the SSO)**, and the control.
-- **Design the CIE backstop** that bounds the consequence *even with full DNP3+MQTT write access*:
-  clamp the setpoint in `hardened_wetwell.st`, arm the **hardwired high-high float**, and place each
-  control on the hierarchy (**eliminate / engineer / administer / add-on**). Boot `--hardened`, re-run
-  the *same* attack, and show **spill stays 0** — then **attribute which layer held** (setpoint clamp
-  vs stop-interlock vs the analog float), not the toggle bundle. State plainly what SAv5/the arm-latch
-  do **and do not** cover (e.g. the firewall "data-diode" does not stop broker-originated downward
-  delivery; the teaching HMAC gives authenticity, not freshness; a raw Modbus/502 path from the cell
-  bypasses the whole DNP3 story). Finally, research **TRITON/TRISIS** and argue why a discrete-I/O
-  float no register can write defeats an attacker who owns the logic solver.
+> **Read** — **Design the CIE backstop** that bounds the consequence *even with full DNP3+MQTT write
+> access*: clamp the setpoint in `hardened_wetwell.st`, arm the **hardwired high-high float**, and place
+> each control on the hierarchy (**eliminate / engineer / administer / add-on**).
+
+**Do · Type** — boot the hardened twin and replay the *same* attack from the granted cell foothold:
+
+```
+bash lab/twin/launch-twin.sh --hardened --attack
+```
+
+**Check —** the **spill counter stays 0** under identical full write access (`spill == 0` vs the
+vulnerable run's `spill > 0`); if it climbs, a control did not arm — confirm `FLOAT_ENABLED=true` and
+the clamp is in `hardened_wetwell.st`, then re-launch.
+
+> **Read** — Now **attribute which layer held** (setpoint clamp vs stop-interlock vs the analog float),
+> not the toggle bundle. State plainly what SAv5 / the arm-latch do **and do not** cover (e.g. the
+> firewall "data-diode" does not stop broker-originated downward delivery; the teaching HMAC gives
+> authenticity, not freshness; a raw Modbus/502 path from the cell bypasses the whole DNP3 story).
+> Finally, research **TRITON/TRISIS** and argue why a discrete-I/O float no register can write defeats
+> an attacker who owns the logic solver.
 
 **Concepts.** PLC Structured Text, Modbus↔DNP3 mapping, physical consequence, ATT&CK-for-ICS, CWE-1358,
 Cyber-Informed Engineering "even-if" test, hierarchy of controls, segmentation/data-diode myths,
@@ -268,12 +362,22 @@ point map and prove the engineered backstop, not the register, is what bounds th
 > (not master/slave). Provide one command that runs both and captures `skid.pcap` (`tcp port 502`),
 > plaintext and parseable as `mbtcp` in Wireshark/Zeek.
 
-**REVERSE TASK.** From `skid.pcap` alone:
+**REVERSE TASK.** From `skid.pcap` alone.
 
-- Enumerate the **function codes** and **reconstruct the full register/coil map** (which register is
-  level vs flow vs psi; which coils are P-1/P-2/alarm). Infer the **deadband setpoints** from where
-  coils toggle, and check whether **lead/lag alternation** is actually happening. Write a one-page
-  "as-found" point list and flag any register you declared but the logic never reads.
+**Do · Type** — enumerate the Modbus/TCP function codes the **client** issued against the **server**:
+
+```
+tshark -r skid.pcap -Y mbtcp -T fields -e mbtcp.func_code | sort | uniq -c
+```
+
+**Check —** you should see the read/write function codes (e.g. Read Coils 1, Read Input Registers 4,
+Write Single Coil 5); if nothing prints, the capture didn't parse as `mbtcp` — confirm the server is
+on port 502 in cleartext.
+
+> **Read** — From that vocabulary, **reconstruct the full register/coil map** (which register is level
+> vs flow vs psi; which coils are P-1 / P-2 / alarm). Infer the **deadband setpoints** from where coils
+> toggle, and check whether **lead/lag alternation** is actually happening. Write a one-page "as-found"
+> point list and flag any register you declared but the logic never reads.
 - Identify the **missing-authentication** weakness (CWE-306); map it to **T0836 Modify Parameter**.
   **Write `LEAD_START > 100%`** over Modbus and prove the well overflows (spill climbs).
 - Propose the **engineered control** — a **hardwired high-high float on discrete I/O** that
@@ -311,13 +415,18 @@ the broker authenticated the rogue — the gap is authorization.*
 > `#`, and publishes a **STOP** to the command topic. Capture `mqtt_fleet.pcap` on 1883, cleartext,
 > Zeek-parseable. Lab only.
 
-**REVERSE TASK.** Separate observe from control:
+**REVERSE TASK.** Separate observe from control.
 
-- Read the **cleartext credentials** off a CONNECT. Then, for the rogue session, cite the fields that
-  prove the broker **authenticated** it: the **anonymous CONNECT** (`mqtt.msgtype==1 && !mqtt.username`)
-  and the **CONNACK return code 0**. Conclude that the injection is an **authorization** failure — the
-  identity was accepted; the *permission* was never constrained. (Avoid the classic miss "MQTT has no
-  authentication": it authenticated the rogue anonymously.)
+**Do · Type** — pull the rogue's **anonymous CONNECT** the broker accepted:
+
+```
+tshark -r mqtt_fleet.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number -e mqtt.clientid
+```
+
+**Check —** the rogue session's CONNECT appears with **no username**, and its CONNACK carries return
+code 0 — proof the broker **authenticated** it anonymously; conclude the injection is an
+**authorization** failure (the identity was accepted; the *permission* was never constrained). Avoid
+the classic miss "MQTT has no authentication" — it authenticated the rogue anonymously.
 - Distinguish a **read-ACL gap** (the `#` eavesdrop, `SUBSCRIBE`/delivery) from a **write-ACL gap**
   (the `command` PUBLISH), with field evidence for each.
 - Swap in the **secure** config and **re-capture**: show the anonymous CONNECT now refused

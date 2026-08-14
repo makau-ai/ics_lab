@@ -1,0 +1,2 @@
+# MQTT: anonymous CONNECT (no username) the broker accepted
+tshark -r pcaps/mqtt_iot_telemetry.pcap -Y "mqtt.msgtype==1 && !mqtt.username" -T fields -e frame.number -e mqtt.clientid

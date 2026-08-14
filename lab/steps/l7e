@@ -1,0 +1,4 @@
+# Level 5, live: key on the invariant, watch it hold. Flip every CIE control on and replay the SAME attack.
+bash lab/twin/launch-twin.sh --hardened --attack
+cd lab/twin && docker compose -p ics-twin-liftstation -f docker-compose.twin.yml -f docker-compose.hardened.yml \
+  exec adversary-foothold python master.py --host 172.30.10.12 --attack

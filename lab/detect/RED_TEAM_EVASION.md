@@ -6,115 +6,145 @@
 > right rule" — it is **which layer of the signal the attacker can cheaply forge,
 > and which he cannot.**
 
-Everything here runs against captures already in `samples/`. No lab bring-up
-needed.
+> **Read — how to run the commands below.** Every fenced command has a **Copy**
+> button; click it, then paste into your terminal (keyboard paste-backup:
+> **Ctrl/Cmd+Shift+V**). These detectors are plain `python3 <script>.py <pcap>`,
+> not part of the leveled curriculum, so there is no short `lab` token for them.
+> Everything here runs against captures already in `samples/` — no lab bring-up
+> needed. Run each command from `lab/detect/`.
 
 ---
 
 ## The target
 
-`../../pcaps/dnp3_substation.pcap` — a DNP3 master (`10.20.0.5`, link address
-`100`) polling an outstation (`10.20.0.20`, link `10`). At frame 27 a rogue host
-(`10.20.0.66`) injects a **`DIRECT_OPERATE`** using the master's link address
-`100`, then a **`COLD_RESTART`** at frame 31. That is the attack you must detect.
+> **Read.** `../../pcaps/dnp3_substation.pcap` — a DNP3 **master** (`10.20.0.5`,
+> link address `100`) polling an **outstation** (`10.20.0.20`, link `10`). At frame
+> 27 a rogue host (`10.20.0.66`) injects a **`DIRECT_OPERATE`** using the master's
+> link address `100`, then a **`COLD_RESTART`** at frame 31. That is the attack you
+> must detect.
 
 ---
 
 ## Round 1 — the naive rule (and why it feels fine)
 
-The obvious SOC rule: *"DNP3 control is legitimate as long as it comes from the
-master's IP."* That is `naive_ip_rule.py`.
+> **Read.** The obvious SOC rule: *"DNP3 control is legitimate as long as it comes
+> from the master's IP."* That is `naive_ip_rule.py`. The module warns this rule
+> "survives this capture only by luck." Here is the luck running out.
+
+**Do · Type.** Run the naive rule against the original attack capture:
+
+```bash
+python3 naive_ip_rule.py ../../pcaps/dnp3_substation.pcap
+```
+
+**Check —** it **fires**. You should see:
 
 ```
-$ python3 naive_ip_rule.py ../../pcaps/dnp3_substation.pcap
-
 [NAIVE ALERT] frame=27 func=DIRECT_OPERATE from ip.src=10.20.0.66 (!= master 10.20.0.5)
 RESULT: ALERT -- 1 frame(s) violated the invariant.
 ```
 
-It fires. Case closed — on *this* capture. The module warns this rule
-"survives this capture only by luck." Here is the luck running out.
+Case closed — on *this* capture.
 
 ---
 
 ## Round 2 — the attacker reads your rule and spoofs the master's IP
 
-Your rule keys on **source IP**. Source IP is a field the attacker controls. If
-he can inject onto the segment at all, he can put the master's IP in the header.
-We ship that variant pre-built:
+> **Read.** Your rule keys on **source IP**, a field the attacker controls. If he
+> can inject onto the segment at all, he can put the master's IP in the header. We
+> ship that variant pre-built as `samples/dnp3_master_ip_spoof.pcap`: the same
+> attack, except every frame the rogue host sent now carries `ip.src = 10.20.0.5`
+> (the master's own IP). The injected control still lives in its **own TCP session**
+> (source port 40666) — a blind/offset injection, not part of the master's real
+> polling session on port 52100. (Rebuild it any time with
+> `python3 make_evasion_pcap.py`.)
+
+**Do · Type.** Run the same naive rule against the IP-spoof variant:
+
+```bash
+python3 naive_ip_rule.py samples/dnp3_master_ip_spoof.pcap
+```
+
+**Check —** it **MISSES**. You should see the attack go invisible:
 
 ```
-samples/dnp3_master_ip_spoof.pcap
-```
-
-It is the same attack, except every frame the rogue host sent now carries
-`ip.src = 10.20.0.5` (the master's own IP). The injected control still lives in
-its **own TCP session** (source port 40666) — a blind/offset injection, not part
-of the master's real polling session on port 52100. (Rebuild it any time with
-`python3 make_evasion_pcap.py`.)
-
-Run the naive rule again:
-
-```
-$ python3 naive_ip_rule.py samples/dnp3_master_ip_spoof.pcap
-
 (no control seen from a non-master IP -- naive rule is satisfied)
-RESULT: clean -- invariant held, no alert.     # <-- MISS. The attack is invisible.
+RESULT: clean -- invariant held, no alert.
 ```
 
-**The naive rule now MISSES the identical attack.** Nothing about the malicious
-`DIRECT_OPERATE` / `COLD_RESTART` changed — only a header field the attacker was
-always free to set.
+Nothing about the malicious `DIRECT_OPERATE` / `COLD_RESTART` changed — only a
+header field the attacker was always free to set.
 
 ---
 
 ## Round 3 — even the "one IP per link address" invariant is not enough
 
-Your first instinct after being burned by source IP is the link↔IP binding
-(`dnp3_link_spoof.py`): *a link address must come from exactly one IP.* On the
-**original** capture it nails the attack (link `100` from two IPs). But a serious
-attacker spoofs **both** the IP and the link address — which is exactly what the
-evasion fixture does:
+> **Read.** Your first instinct after being burned by source IP is the link↔IP
+> binding (`dnp3_link_spoof.py`): *a link address must come from exactly one IP.* On
+> the **original** capture it nails the attack (link `100` from two IPs). But a
+> serious attacker spoofs **both** the IP and the link address — which is exactly
+> what the evasion fixture does.
+
+**Do · Type.** Run the link↔IP binding detector against the IP-spoof variant:
+
+```bash
+python3 dnp3_link_spoof.py samples/dnp3_master_ip_spoof.pcap
+```
+
+**Check —** it **MISSES** too:
 
 ```
-$ python3 dnp3_link_spoof.py samples/dnp3_master_ip_spoof.pcap
-
-RESULT: clean -- invariant held, no alert.     # <-- also MISS
+RESULT: clean -- invariant held, no alert.
 ```
 
 Link `100` now appears from only one IP (`10.20.0.5`), so the binding looks
 consistent. **A signal built entirely from forgeable identity fields is
-forgeable.** This is the crux the module is making: an on-path adversary owns
-every addressing field — IP *and* DNP3 link address.
+forgeable** — an on-path adversary owns every addressing field, IP *and* DNP3 link
+address.
 
 ---
 
 ## Round 4 — the invariant that survives: protocol grammar, not identity
 
-What the attacker *cannot* cheaply forge is the **conversation that must have
-happened before a control fires**. DNP3 supervised control is `SELECT` → `OPERATE`
-on the same session within an arm window. An injected control either uses
-`DIRECT_OPERATE` (no SELECT phase exists) or lands as an `OPERATE` with no arming
-`SELECT` in its session. `dnp3_select_operate.py` keys on that:
+> **Read.** What the attacker *cannot* cheaply forge is the **conversation that must
+> have happened before a control fires**. DNP3 supervised control is `SELECT` →
+> `OPERATE` on the same session within an arm window. An injected control either
+> uses `DIRECT_OPERATE` (no SELECT phase exists) or lands as an `OPERATE` with no
+> arming `SELECT` in its session. `dnp3_select_operate.py` keys on that.
+
+**Do · Type.** Run the SELECT→OPERATE grammar detector against the IP-spoof
+variant:
+
+```bash
+python3 dnp3_select_operate.py samples/dnp3_master_ip_spoof.pcap
+```
+
+**Check —** it **SURVIVES** and alerts:
 
 ```
-$ python3 dnp3_select_operate.py samples/dnp3_master_ip_spoof.pcap
-
 [CONTROL WITHOUT SELECT] frame=27 func=DIRECT_OPERATE(5)
     WHY frame=27: DIRECT_OPERATE fires the point with NO SELECT handshake
     (ip.src=10.20.0.5, link 100->10). Off-baseline for a SELECT/OPERATE plant.
-RESULT: ALERT -- 1 frame(s) violated the invariant.     # <-- SURVIVES
+RESULT: ALERT -- 1 frame(s) violated the invariant.
 ```
 
-The companion invariant — **off-baseline function code** — survives for the same
-reason. `COLD_RESTART` is not something a steady-state poller emits, no matter
-what IP or link address it claims:
+> **Read.** The companion invariant — **off-baseline function code** — survives for
+> the same reason. `COLD_RESTART` is not something a steady-state poller emits, no
+> matter what IP or link address it claims.
+
+**Do · Type.** Run the off-baseline / rogue-master detector against the IP-spoof
+variant:
+
+```bash
+python3 dnp3_rogue_master.py samples/dnp3_master_ip_spoof.pcap
+```
+
+**Check —** it **SURVIVES** and alerts on both frames:
 
 ```
-$ python3 dnp3_rogue_master.py samples/dnp3_master_ip_spoof.pcap
 [OFF-BASELINE FUNCTION] frame=27 func=DIRECT_OPERATE(5)  ...
 [OFF-BASELINE FUNCTION] frame=31 func=COLD_RESTART(13)   ...
-RESULT: ALERT -- 2 frame(s) violated the invariant.      # <-- SURVIVES
+RESULT: ALERT -- 2 frame(s) violated the invariant.
 ```
 
 Both key on **what the attacker asked**, not **who he claimed to be**.
@@ -130,7 +160,15 @@ Both key on **what the attacker asked**, not **who he claimed to be**.
 | `dnp3_rogue_master.py` (off-baseline func) | *what* was requested | catches | **survives** |
 | `dnp3_select_operate.py` | protocol grammar (SELECT→OPERATE) | catches | **survives** |
 
-Run the whole thing at once: `./run_selftest.sh` asserts exactly this table.
+**Do · Type.** Assert exactly this table in one shot:
+
+```bash
+./run_selftest.sh
+```
+
+**Check —** every assertion passes (naive/link rules MISS the spoof variant, the
+grammar/off-baseline rules ALERT on it). If a verdict flips, the evasion fixture may
+be stale — rebuild it with `python3 make_evasion_pcap.py` and re-run.
 
 ---
 

@@ -1,0 +1,1 @@
+READ(1)/RESPONSE(129) polling from the SCADA master, plus the injected DIRECT_OPERATE(5); MQTT PUBLISH(3) telemetry plus the rogue CONNECT(1) and its injected PUBLISH.

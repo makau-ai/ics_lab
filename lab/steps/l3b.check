@@ -1,0 +1,1 @@
+plant/tank1/telemetry with QoS 0 and 1; retain False. (mqtt.retain prints True/False.)
