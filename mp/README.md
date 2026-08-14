@@ -155,5 +155,5 @@ integrity violation. Do not share the handout or captures with a public LLM serv
 
 ## 11. Late policy
 
-Instructor-set (e.g., a fixed per-hour penalty, as in CS 438's 2%/hour, or a small number of grace
+Instructor-set (e.g., a fixed per-hour penalty (for example 2%/hour) or a small number of grace
 hours). State it on your course page.

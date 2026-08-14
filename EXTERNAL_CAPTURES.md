@@ -47,7 +47,6 @@ check whether it is actually a university or vendor capture mirrored on a govern
 | **DNP3 Intrusion Detection Dataset** | **University of Western Macedonia (UOWM)** — Radoglou-Grammatikis, Kelli, Lagkas, Argyriou, Sarigiannidis (EU H2020 *ELECTRON* / *SDN-microSENSE*) | Zenodo: `https://zenodo.org/records/7348493` · IEEE DataPort DOI `10.21227/s7h0-b081` | Research/academic use; **cite the DOI**. Check the record's stated license before redistribution. | Per-entity **DNP3 pcaps** + CSV flow features for **nine** DNP3 attack scenarios (recon, enumeration, spoofing, DoS, replay, etc.), captured May 2020. Excellent "find-the-attack" practice at Level 4. |
 | **MQTTset** | **University of Genoa / CNR-IEIIT** (Vaccari et al.), *MDPI Sensors* 2020, 20(22):6578 | Kaggle: `https://www.kaggle.com/datasets/cnrieiit/mqttset` · Paper: `https://www.mdpi.com/1424-8220/20/22/6578` | Kaggle terms + **cite the paper**. | Real **MQTT** broker traffic (legit IoT telemetry) plus labeled attacks: flood, brute-force, malformed, DoS, slow-DoS. The best university MQTT set for Levels 2–4. |
 | **MQTT-IoT-IDS2020** | **Abertay University** (Hindy, Bayne) & **University of Strathclyde** (Tachtatzis, Atkinson, Bellekens) | IEEE DataPort: `https://ieee-dataport.org/open-access/mqtt-iot-ids2020-mqtt-internet-things-intrusion-detection-dataset` · DOI `10.21227/bhxy-ep04` | **Open Access**; free IEEE DataPort account to download; **cite the DOI**. | Raw **MQTT pcaps** (~1.35 GB) + packet/uni-flow/bi-flow CSVs across 5 scenarios: normal, aggressive scan, UDP scan, Sparta SSH brute-force, MQTT brute-force. |
-| **ICS-Security-Tools — `pcaps/`** | **University of Illinois — Information Trust Institute (ITI)** (Yardley et al.) | `https://github.com/ITI/ICS-Security-Tools/tree/master/pcaps` | **CC-BY-4.0** (reuse with attribution) | A curated ICS capture library (multiple protocols). Notable here because it is the **University of Illinois** ITI — the same institution whose CS Machine-Problem style shaped this kit's Level 6. |
 
 ---
 
@@ -56,7 +55,7 @@ check whether it is actually a university or vendor capture mirrored on a govern
 | Source | Maintainer | URL | License / terms | Contains |
 |---|---|---|---|---|
 | **Wireshark Sample Captures** | Wireshark Foundation (community wiki) | `https://wiki.wireshark.org/SampleCaptures` | Per-file provenance; freely downloadable | **DNP3 only** — three files: `dnp3_read.pcap`, `dnp3_select_operate.pcap`, `dnp3_write.pcap`. ⚠️ **Trap:** there is **no MQTT sample** on this wiki — don't cite `mqtt.pcap` from here. |
-| **Netresec — Public PCAP files** | Netresec AB | `https://www.netresec.com/?page=PcapFiles` | Aggregator index; each dataset has its own terms | Curated master list of public captures, including SCADA/ICS entries (4SICS, DigitalBond S4x CTF, ITI, automayt). |
+| **Netresec — Public PCAP files** | Netresec AB | `https://www.netresec.com/?page=PcapFiles` | Aggregator index; each dataset has its own terms | Curated master list of public captures, including SCADA/ICS entries (4SICS, DigitalBond S4x CTF, automayt). |
 | **4SICS / Geek Lounge ICS lab** | Netresec (traffic from the 4SICS village, now CS3Sthlm) | `https://www.netresec.com/?page=PCAP4SICS` | Free download; **attribute CS3Sthlm** if reused in training | Three large live-ICS-lab captures; protocols include **DNP3 (20000)**, Modbus/TCP (502), S7comm (102), plus IT protocols. Great for realistic Level-1 triage. |
 | **automayt/ICS-pcap** | automayt (J. Smith) | `https://github.com/automayt/ICS-pcap` | ⚠️ **No license file** — treat as *view-only*; do **not** rebundle into the kit | Protocol-indexed ICS/SCADA pcap collection with a top-level `DNP3/` folder. Fine to study from the source; not clearly licensed for redistribution. |
 
@@ -90,7 +89,7 @@ Machine Problem, is rehearsing).
 ## Citation & licensing reminder
 
 If you use a university dataset in coursework or a paper, **cite it** (DOI or the paper) as the
-authors ask. For redistribution inside a shared kit, only **CC-BY-4.0** (ITI) and the
+authors ask. For redistribution inside a shared kit, only the BSD-3-licensed
 BSD-3-licensed **CISA** trace are unambiguously safe to rebundle with attribution; the others are
 free to *download and analyze* but should be **linked, not copied**, unless their record states
 otherwise. This kit therefore links to them rather than shipping their files.

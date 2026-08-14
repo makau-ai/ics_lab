@@ -5,7 +5,7 @@ record. Nothing from Revision 2 was removed; the modules, lab, and MP are unchan
 
 **A structured Learning Path (Levels 0–6).** New `curriculum/` hub (`index.html`) and `CURRICULUM.md`
 render seven ordered levels — Orientation → Endpoints → Message types → Inside the packet → Find the
-attack → Detection → **a UIUC-style Machine Problem** — built to the exact progression requested:
+attack → Detection → **a university-style Machine Problem** — built to the exact progression requested:
 start with tshark/Wireshark and the protocol endpoints, then dive inside the packets. The HTML hub
 tracks progress (per-level "Done", saved in the browser), copies every command with one click, and
 reveals checkpoint answers on demand. Rendered by `build/build_curriculum.py` from a single source
@@ -25,7 +25,7 @@ and instructor solution. Verified: solution scores **100/100**, blank student co
 **External capture sources — government & universities.** New `EXTERNAL_CAPTURES.md` documents verified,
 well-provenanced DNP3/MQTT captures beyond the teaching set: **CISA** icsnpp-dnp3 (BSD-3), **UOWM** DNP3
 IDS dataset (Zenodo), **University of Genoa/CNR** MQTTset, **Abertay/Strathclyde** MQTT-IoT-IDS2020, and
-**University of Illinois ITI** ICS-Security-Tools (CC-BY-4.0) — each with URL, institution, and license.
+each with URL, institution, and license.
 Three honesty notes baked in: no government MQTT pcap exists; the Wireshark wiki has DNP3 but no MQTT;
 automayt/ICS-pcap is unlicensed (linked, not rebundled).
 

@@ -76,7 +76,12 @@ def main():
     MASTER_ADDR = args.src_addr
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((args.host, args.port))
+    s.settimeout(3.0)                       # never block forever on connect
+    try:
+        s.connect((args.host, args.port))
+    except OSError as e:
+        print(f"[master] connect to {args.host}:{args.port} failed: {e}")
+        return
     print(f"[master] connected to {args.host}:{args.port}")
     seq = 0
 

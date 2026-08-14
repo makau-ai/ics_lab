@@ -127,7 +127,6 @@ exist, with real URLs, publishing institution, and license/terms. Highlights:
   record `7348493`.
 - **University of Genoa / CNR-IEIIT** MQTTset (MDPI *Sensors* 2020) — Kaggle `cnrieiit/mqttset`.
 - **Abertay + Strathclyde** MQTT-IoT-IDS2020 — IEEE DataPort, DOI `10.21227/bhxy-ep04`.
-- **University of Illinois ITI** `ICS-Security-Tools/pcaps` — CC-BY-4.0.
 
 Three honesty corrections were baked in: **no government MQTT pcap** could be verified; the
 **Wireshark wiki has DNP3 but no MQTT** sample; and **automayt/ICS-pcap has no license** (linked,

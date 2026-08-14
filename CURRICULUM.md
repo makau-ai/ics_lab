@@ -1,6 +1,6 @@
 # ICS/OT Protocol Analysis — Leveled Learning Path
 
-From first packet to a UIUC-style Machine Problem. Work the levels in order. Every command and expected output here was verified with tshark against the shipped captures (`pcaps/dnp3_substation.pcap`, `pcaps/mqtt_iot_telemetry.pcap`).
+From first packet to a university-style Machine Problem. Work the levels in order. Every command and expected output here was verified with tshark against the shipped captures (`pcaps/dnp3_substation.pcap`, `pcaps/mqtt_iot_telemetry.pcap`).
 
 **The arc:** tooling → endpoints → message types → inside the packet → find the attack → detection → Machine Problem.
 
@@ -12,7 +12,7 @@ From first packet to a UIUC-style Machine Problem. Work the levels in order. Eve
 | 3 | [Inside the packet](#level-3) | Intermediate | ~40 min |
 | 4 | [Find the attack](#level-4) | Intermediate | ~35 min |
 | 5 | [Catch it automatically](#level-5) | Advanced | ~40 min |
-| 6 | [Machine Problem — ICS Intrusion Analysis](#level-6) | UIUC-level capstone | ~120 min |
+| 6 | [Machine Problem — ICS Intrusion Analysis](#level-6) | University-level capstone | ~120 min |
 
 > Prefer a clickable, progress-tracking version? Open `curriculum/index.html` (auto-opens in the Codespace).
 
@@ -356,7 +356,7 @@ tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.msgtype==8 && mqtt.topic=="#"' 
 
 *Capstone: analyze two unseen captures, build a detector, write the incident up*
 
-**Difficulty:** UIUC-level capstone &nbsp;·&nbsp; **Time:** ~120 min &nbsp;·&nbsp; **Prerequisite:** Levels 1–5.
+**Difficulty:** University-level capstone &nbsp;·&nbsp; **Time:** ~120 min &nbsp;·&nbsp; **Prerequisite:** Levels 1–5.
 
 **Goal.** Apply Levels 1–5 to captures you've never seen, using DIFFERENT attacks. Autograded (100 pts) + a written incident report.
 
@@ -368,7 +368,7 @@ tshark -r pcaps/mqtt_iot_telemetry.pcap -Y 'mqtt.msgtype==8 && mqtt.topic=="#"' 
 
 ## Background
 
-This is a formal, UIUC-style Machine Problem. The handout, the two evidence captures, an answer template, a self-check autograder, and the report rubric are all in the **`mp/`** folder. The attacks are new: a spoofed DNP3 status report (not a control), and an MQTT retained-message harvest + persistent command injection.
+This is a formal, university-style Machine Problem. The handout, the two evidence captures, an answer template, a self-check autograder, and the report rubric are all in the **`mp/`** folder. The attacks are new: a spoofed DNP3 status report (not a control), and an MQTT retained-message harvest + persistent command injection.
 
 ## Do this
 

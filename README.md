@@ -21,7 +21,7 @@ Everything was produced and verified with **tshark/Wireshark** and **CISA's ICSN
 every frame number, field value, and DNP3 CRC in the documentation matches the shipped captures.
 
 > **Revision 3** adds a **one-click, 7-level Learning Path** (`curriculum/`, auto-opens in the
-> Codespace) that ends in a **UIUC-style Machine Problem** (`mp/`), a verified list of **government &
+> Codespace) that ends in a **university-style Machine Problem** (`mp/`), a verified list of **government &
 > university** capture sources (`EXTERNAL_CAPTURES.md`), and a reproducible **formal-verification**
 > record (`FORMAL_VERIFICATION.md` + `build/verify_all.py`: 18/18 checks, 63/63 DNP3 CRCs). It builds on
 > **Revision 2's** five-persona red-team review (see `RED_TEAM_REVIEW.md` and `CHANGELOG.md`): an unseen
@@ -48,7 +48,7 @@ cloud, with a browser-visible **Wireshark GUI over noVNC**. A student does nothi
    a continuously-publishing sensor, an HMI subscriber, a pump-controller, and **Wireshark — already
    capturing on `lo`**. A short attack demo fires on its own.
 3. The **Learning Path** opens on its own on port **`8080`** — this is your front door. Work the
-   **7 levels in order** (Level 0 Orientation → Level 6, a UIUC-style Machine Problem); the page tracks
+   **7 levels in order** (Level 0 Orientation → Level 6, a university-style Machine Problem); the page tracks
    your progress. When Level 0 asks, open port **`6080`** ("noVNC Desktop", password **`vscode`**) to see
    the live packets in Wireshark.
 4. Re-run the attacks with **`./lab/intrude.sh`**; the multi-container + IEC 62443 segmentation labs also
@@ -82,7 +82,7 @@ Prefer print or an LMS? Every module also ships as **PDF**, **Word (.docx)**, an
 | `mp/` | The **Machine Problem** (Level 6): handout, two evidence captures, answer template, self-check autograder (`grade.py`), rubric, and instructor solution. |
 | `pcaps/` | Two teaching captures **plus two unseen assessment captures** (`dnp3_assessment.pcap`, `mqtt_assessment.pcap`). |
 | `modules/` | DNP3 & MQTT modules in **HTML** (interactive), **PDF**, **DOCX**, and **MD**. |
-| `EXTERNAL_CAPTURES.md` | Verified **government & university** DNP3/MQTT capture sources (CISA, UOWM, Genoa, Abertay, UIUC ITI) with provenance & licensing. |
+| `EXTERNAL_CAPTURES.md` | Verified **government & university** DNP3/MQTT capture sources (CISA, UOWM, Genoa, Abertay) with provenance & licensing. |
 | `FORMAL_VERIFICATION.md` | The reproducible verification record (18/18 checks, 63/63 DNP3 CRCs, autograder) + `build/verify_all.py`. |
 | `lab/` | Docker Compose lab (flat + `docker-compose.segmented.yml`): Mosquitto broker, Python DNP3 outstation/master, MQTT pub/sub + attacker + pump-controller, tcpdump capture, and Zeek + CISA ICSNPP. Plus `run-local.sh` / `open-wireshark.sh` for the Codespaces GUI path. See `lab/README.md`. |
 | `lab/worksheets/` | Student worksheet + instructor answer key (MD / DOCX / PDF). |

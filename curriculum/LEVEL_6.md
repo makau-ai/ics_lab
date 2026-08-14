@@ -2,7 +2,7 @@
 
 *Capstone: analyze two unseen captures, build a detector, write the incident up*
 
-**Difficulty:** UIUC-level capstone &nbsp;·&nbsp; **Time:** ~120 min &nbsp;·&nbsp; **Prerequisite:** Levels 1–5.
+**Difficulty:** University-level capstone &nbsp;·&nbsp; **Time:** ~120 min &nbsp;·&nbsp; **Prerequisite:** Levels 1–5.
 
 **Goal.** Apply Levels 1–5 to captures you've never seen, using DIFFERENT attacks. Autograded (100 pts) + a written incident report.
 
@@ -14,7 +14,7 @@
 
 ## Background
 
-This is a formal, UIUC-style Machine Problem. The handout, the two evidence captures, an answer template, a self-check autograder, and the report rubric are all in the **`mp/`** folder. The attacks are new: a spoofed DNP3 status report (not a control), and an MQTT retained-message harvest + persistent command injection.
+This is a formal, university-style Machine Problem. The handout, the two evidence captures, an answer template, a self-check autograder, and the report rubric are all in the **`mp/`** folder. The attacks are new: a spoofed DNP3 status report (not a control), and an MQTT retained-message harvest + persistent command injection.
 
 ## Do this
 

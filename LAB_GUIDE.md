@@ -4,7 +4,7 @@ Welcome. This Codespace **auto-started the whole lab** for you. You don't have t
 anything — just watch, filter, and poke.
 
 > **New here? Take the Learning Path instead.** For a structured, level-by-level route from your
-> first packet to a UIUC-style Machine Problem, open the **Learning Path** on port **8080** (it
+> first packet to a university-style Machine Problem, open the **Learning Path** on port **8080** (it
 > auto-opens), or `curriculum/index.html` / `CURRICULUM.md`. This guide is the quick "poke around"
 > companion — the Learning Path is the course.
 

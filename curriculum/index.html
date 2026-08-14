@@ -126,7 +126,7 @@ display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}.railh{width:100%}.navdot 
 <body>
 <header>
   <div class="kick">ICS / OT Protocol Analysis Lab Kit &nbsp;·&nbsp; Learning Path</div>
-  <h1>DNP3 &amp; MQTT — from first packet to a UIUC-style Machine Problem</h1>
+  <h1>DNP3 &amp; MQTT — from first packet to a university-style Machine Problem</h1>
   <p class="sub">Seven levels, in order. Start by watching live traffic, learn who is talking, then what they say,
   then open the packets byte by byte — and finish by catching an intruder you've never seen. Everything auto-starts
   in this Codespace; you just work the levels.</p>
@@ -384,7 +384,7 @@ tshark -r pcaps/mqtt_iot_telemetry.pcap -Y &#x27;mqtt.msgtype==8 &amp;&amp; mqtt
     <div class="lvlnum" aria-hidden="true">6</div>
     <div class="lvlmeta">
       <div class="lvltitle">Level 6 — Machine Problem — ICS Intrusion Analysis
-        <span class="dbadge d-cap">UIUC-level capstone</span>
+        <span class="dbadge d-cap">University-level capstone</span>
         <span class="mins">~120 min</span>
       </div>
       <div class="lvlsub">Capstone: analyze two unseen captures, build a detector, write the incident up</div>
@@ -402,7 +402,7 @@ tshark -r pcaps/mqtt_iot_telemetry.pcap -Y &#x27;mqtt.msgtype==8 &amp;&amp; mqtt
       <ul class="obj"><li>Triage two unseen captures and prove findings with named fields (Part 1, autograded).</li><li>Implement an invariant-based detector.py (Part 2, autograded).</li><li>Write an incident report with evidence, authN-vs-authZ, and controls (Part 3 + rubric).</li></ul>
       <p class="prereq"><b>Prerequisite:</b> Levels 1–5.</p>
       <h4>Background</h4>
-      <div class="bg"><p>This is a formal, UIUC-style Machine Problem. The handout, the two evidence captures, an answer template, a self-check autograder, and the report rubric are all in the <b><code>mp/</code></b> folder. The attacks are new: a spoofed DNP3 status report (not a control), and an MQTT retained-message harvest + persistent command injection.</p></div>
+      <div class="bg"><p>This is a formal, university-style Machine Problem. The handout, the two evidence captures, an answer template, a self-check autograder, and the report rubric are all in the <b><code>mp/</code></b> folder. The attacks are new: a spoofed DNP3 status report (not a control), and an MQTT retained-message harvest + persistent command injection.</p></div>
       <h4>Do this</h4>
       <div class="steps"><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term">cd mp &amp;&amp; cat README.md      # the full handout: parts, deliverables, grading</pre><div class="expect"><span class="explabel">Expected</span><pre class="expbody">MP: ICS Intrusion Analysis — Parts 1–3 + bonus.</pre></div></div><div class="step cmd"><div class="cmdbar"><span class="kind kind-cmd">Terminal</span><button class="copy" type="button" onclick="cpPre(this)">Copy</button></div><pre class="term"># analyze the two unseen captures
 ../lab/open-wireshark.sh captures/dnp3_assessment.pcap

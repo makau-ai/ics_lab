@@ -28,7 +28,7 @@ DIFF_CLASS = {
     "Introductory": "d-intro",
     "Intermediate": "d-inter",
     "Advanced": "d-adv",
-    "UIUC-level capstone": "d-cap",
+    "University-level capstone": "d-cap",
 }
 
 
@@ -280,7 +280,7 @@ display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px}.railh{width:100%}.navdot 
 <body>
 <header>
   <div class="kick">ICS / OT Protocol Analysis Lab Kit &nbsp;·&nbsp; Learning Path</div>
-  <h1>DNP3 &amp; MQTT — from first packet to a UIUC-style Machine Problem</h1>
+  <h1>DNP3 &amp; MQTT — from first packet to a university-style Machine Problem</h1>
   <p class="sub">Seven levels, in order. Start by watching live traffic, learn who is talking, then what they say,
   then open the packets byte by byte — and finish by catching an intruder you've never seen. Everything auto-starts
   in this Codespace; you just work the levels.</p>
@@ -462,7 +462,7 @@ def build_markdown():
     C = []
     C.append("# ICS/OT Protocol Analysis — Leveled Learning Path")
     C.append("")
-    C.append("From first packet to a UIUC-style Machine Problem. Work the levels in order. Every command and "
+    C.append("From first packet to a university-style Machine Problem. Work the levels in order. Every command and "
              "expected output here was verified with tshark against the shipped captures "
              "(`pcaps/dnp3_substation.pcap`, `pcaps/mqtt_iot_telemetry.pcap`).")
     C.append("")

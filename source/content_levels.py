@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Leveled curriculum content (single source of truth) — introductory → UIUC-style MP.
+"""Leveled curriculum content (single source of truth) — introductory → university-style MP.
 
 Progression: tooling → endpoints/conversations → message types → inside the packet →
 security → detection → capstone Machine Problem. Every command/output was verified
@@ -221,7 +221,7 @@ LEVELS = [
     {
         "n": 6, "id": "mp", "title": "Machine Problem — ICS Intrusion Analysis",
         "subtitle": "Capstone: analyze two unseen captures, build a detector, write the incident up",
-        "difficulty": "UIUC-level capstone", "minutes": 120,
+        "difficulty": "University-level capstone", "minutes": 120,
         "goal": "Apply Levels 1–5 to captures you've never seen, using DIFFERENT attacks. Autograded (100 pts) + a written incident report.",
         "objectives": [
             "Triage two unseen captures and prove findings with named fields (Part 1, autograded).",
@@ -230,7 +230,7 @@ LEVELS = [
         ],
         "prereq": "Levels 1–5.",
         "background": [
-            "This is a formal, UIUC-style Machine Problem. The handout, the two evidence captures, an answer template, a "
+            "This is a formal, university-style Machine Problem. The handout, the two evidence captures, an answer template, a "
             "self-check autograder, and the report rubric are all in the **`mp/`** folder. The attacks are new: a spoofed "
             "DNP3 status report (not a control), and an MQTT retained-message harvest + persistent command injection.",
         ],
