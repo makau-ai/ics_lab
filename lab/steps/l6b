@@ -1,3 +1,4 @@
-# analyze the two unseen captures
+# analyze the two unseen captures (the MP lives in mp/)
+cd mp
 ../lab/open-wireshark.sh captures/dnp3_assessment.pcap
 tshark -r captures/mqtt_assessment.pcap -Y mqtt

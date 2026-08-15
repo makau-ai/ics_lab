@@ -1,2 +1,3 @@
 # fill submission/answers.json, write detector.py and report.md, then self-check:
+cd mp
 python3 grade.py

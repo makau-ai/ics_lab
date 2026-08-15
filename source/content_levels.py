@@ -264,9 +264,9 @@ LEVELS = [
         "steps": [
             {"kind": "cmd", "text": "cd mp && cat README.md      # the full handout: parts, deliverables, grading",
              "expect": "MP: ICS Intrusion Analysis — Parts 1–3 + bonus."},
-            {"kind": "cmd", "text": "# analyze the two unseen captures\n../lab/open-wireshark.sh captures/dnp3_assessment.pcap\ntshark -r captures/mqtt_assessment.pcap -Y mqtt",
+            {"kind": "cmd", "text": "# analyze the two unseen captures (the MP lives in mp/)\ncd mp\n../lab/open-wireshark.sh captures/dnp3_assessment.pcap\ntshark -r captures/mqtt_assessment.pcap -Y mqtt",
              "expect": "two captures you have not walked — apply everything from Levels 1–5."},
-            {"kind": "cmd", "text": "# fill submission/answers.json, write detector.py and report.md, then self-check:\npython3 grade.py",
+            {"kind": "cmd", "text": "# fill submission/answers.json, write detector.py and report.md, then self-check:\ncd mp\npython3 grade.py",
              "expect": "PASS/FAIL per item and a score /100. Iterate to green."},
         ],
         "checkpoints": [

@@ -15,7 +15,7 @@ l5	5	a first-cut DNP3 rule: controls not from the master IP
 l5b	5	turn packets into readable logs with Zeek + CISA ICSNPP
 l5c	5	MQTT detections: anonymous connect, and a '#' subscribe
 l6	6	cd mp && cat README.md      # the full handout: parts, deliverables, grading
-l6b	6	analyze the two unseen captures
+l6b	6	analyze the two unseen captures (the MP lives in mp/)
 l6c	6	fill submission/answers.json, write detector.py and report.md, then self-check:
 l7	7	Level 1, headless: who is talking across the conduit right now?
 l7b	7	Level 2, live: classify the vocabulary on real multi-zone traffic

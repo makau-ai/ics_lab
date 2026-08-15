@@ -358,11 +358,11 @@ This is a formal, university-style Machine Problem. The handout, the two evidenc
 
 > **Check (expected):** MP: ICS Intrusion Analysis — Parts 1–3 + bonus.
 
-**⌨ Type:** `l6b`  — runs `../lab/open-wireshark.sh captures/dnp3_assessment.pcap ; tshark -r captures/mqtt_assessment.pcap -Y mqtt`
+**⌨ Type:** `l6b`  — runs `cd mp ; ../lab/open-wireshark.sh captures/dnp3_assessment.pcap ; tshark -r captures/mqtt_assessment.pcap -Y mqtt`
 
 > **Check (expected):** two captures you have not walked — apply everything from Levels 1–5.
 
-**⌨ Type:** `l6c`  — runs `python3 grade.py`
+**⌨ Type:** `l6c`  — runs `cd mp ; python3 grade.py`
 
 > **Check (expected):** PASS/FAIL per item and a score /100. Iterate to green.
 
