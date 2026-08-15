@@ -11,10 +11,11 @@
 > verification" in its plain sense — *mechanically checked and reproducible* — and are explicit
 > about the boundary. One genuine **property-based** assertion is now included (Section A/B: for
 > random subsets of DNP3 frames, *every* recomputed CRC must equal the stored CRC — a `∀`
-> invariant, not a fixed total). The one place a real property proof would matter most — the
-> digital twin's Cyber-Informed-Engineering "even-if" backstop (**spill == 0 under full DNP3+MQTT
-> write access**) — is today asserted only in prose; see *Where a real property check would add
-> value* below.
+> invariant, not a fixed total). The digital twin's Cyber-Informed-Engineering "even-if" backstop
+> (**spill == 0 under full DNP3+MQTT write access**) is proven **by execution** in
+> `lab/twin/test_twin.py` and validated live in a fresh Codespace (Part 5); a randomized-attack
+> generator over that same invariant is the remaining step to a `∀` proof — see *Where a real
+> property check would add value* below.
 
 This document records the verification pass over the ICS/OT Protocol Analysis Lab Kit: what was
 tested, the tools and versions used, the evidence, and the two content refinements applied as a
@@ -178,6 +179,36 @@ No other discrepancies were found between the documentation and the captures.
 
 ---
 
+## Part 5 — Digital twin: live bring-up validated in a fresh Codespace
+
+The multi-container digital twin was brought up from a **clean volume** in a fresh GitHub
+Codespace (`makau-ai/ics_lab @ 0e814fd`) with a single command and **no manual OpenPLC UI
+steps**, then evidenced end-to-end. Full transcript:
+`verification/evidence/30_twin_codespace_smoke.txt`. Highlights:
+
+- **Self-seeding OpenPLC.** The `openplc` container runs the `auto-seed.sh` entrypoint, which
+  adds the `wetwell-plant-sim` Modbus/TCP slave device, writes `mbconfig.cfg`
+  (`Num_Devices = 1`), sets `Start_run_mode=true` with the Modbus server on 502 (DNP3 and
+  EtherNet/IP off), compiles the selected ST, and hands off to OpenPLC's own launcher — which
+  auto-starts the runtime. `active_program = naive_wetwell.st` (not blank), and the Modbus
+  server answers on **502-OPEN** (the old first-boot "Connection refused" is gone).
+- **The ST compiles in the real toolchain.** matiec / `iec2c` runs to completion and the glue
+  map is exactly `__IW100/101/102`, `__IX100_0/1`, `__QX100_0/1/2`, `__MW10/11/12` — the same
+  located addresses the seed's `mbconfig.cfg` targets.
+- **The control loop is live.** `plant-sim` shows OpenPLC commanding pump P2 (`Qout=1350`) with
+  the well bounded at ~45 % and **`spill = 0.0 gal`** — a closed Modbus loop, not a static image.
+- **Cross-zone conduits pass on first boot.** The out-of-band taps captured `conduit_live.pcap`
+  (DNP3 + MQTT), `dnp3_live.pcap`, and `mqtt_live.pcap`, confirming the
+  `bridge-nf-call-iptables=0` conduit fix (commit `1fb3813`); the deny-by-default
+  `CONDUIT-DROP` tripwire still fires on non-conduit flows.
+
+This complements the headless proof: `lab/twin/test_twin.py` drives the plant model with the
+adversarial setpoint/command writes and asserts `spill > 0` (naive: 5528 gal) vs `spill == 0`
+(hardened), with every defense layer attributed — so the CIE "even-if" invariant is proven
+**by execution**, not prose.
+
+---
+
 ## Where a real property check would add value
 
 This pass is honest about its boundary (see the callout at the top). The checks are reproducible
@@ -186,9 +217,11 @@ property-based or model-checked proof would materially strengthen the kit, in pr
 
 1. **The twin's CIE "even-if" safety invariant.** `lab/twin/plant-sim/plant_sim.py` models
    hardwired-float / weir / motor-protection backstops whose whole purpose is to guarantee
-   `spill == 0` **even under full DNP3 + MQTT write access**. That is a true safety property. It
-   should be *proven by execution*: drive the sim with adversarial coil forcing and assert
-   `spill > 0` in vulnerable mode and `spill == 0` in hardened mode. Today it is asserted in prose.
+   `spill == 0` **even under full DNP3 + MQTT write access**. That is a true safety property.
+   `lab/twin/test_twin.py` now *proves it by execution* — driving the sim with the adversarial
+   `%MW10`/`%MW12` writes and asserting `spill > 0` in vulnerable mode (5528 gal) and `spill == 0`
+   in hardened mode, with clamp/interlock/float layers attributed (see Part 5). A Hypothesis-style
+   randomized-attack generator over the same invariant would harden it from a fixed scenario to a `∀`.
 2. **The detector invariants.** The MP detector keys on invariants — *a DNP3 link source address
    sourced from more than one IP*, and *anonymous-CONNECT + write to a `command` topic*. These are
    stated as properties in the `.labels.json` ground truth and are ideal targets for
@@ -203,7 +236,7 @@ direction; items 1–3 are tracked for the twin verification bundle.
 
 ---
 
-## Part 5 — How to reproduce
+## Part 6 — How to reproduce
 
 ```bash
 # 1. the automated suite (frame counts, 63/63 CRCs, curriculum commands, autograder)
@@ -218,6 +251,12 @@ tshark -r pcaps/dnp3_substation.pcap -Y "dnp3.al.func in {3,4,5}" \
 cd mp && cp solution/answers.solution.json submission/answers.json \
       && cp solution/detector.py detector.py && python3 grade.py   # 100/100
 #   (then restore the blanks, or just `git checkout` them)
+
+# 4. the digital twin — headless invariant + live bring-up (live needs Docker)
+python3 lab/twin/test_twin.py         # naive spills 5528 gal, hardened holds spill at 0
+docker compose -p ics-twin-liftstation -f lab/twin/docker-compose.twin.yml down -v
+bash lab/twin/launch-twin.sh          # OpenPLC self-seeds + self-starts; pumps run, spill=0
+#   (evidence transcript: verification/evidence/30_twin_codespace_smoke.txt)
 ```
 
 *Verification harness: `build/verify_all.py`. Last run: 21/21 checks passed, 63/63 DNP3 CRCs valid.

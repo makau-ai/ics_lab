@@ -1,0 +1,74 @@
+Digital twin — live bring-up smoke test (fresh GitHub Codespace)
+================================================================
+Provenance : makau-ai/ics_lab @ 0e814fd, 4-vCPU GitHub Codespace, docker-in-docker.
+Date       : 2026-08-15
+Procedure  : docker compose ... down -v   (wipe the openplc_persistent volume -> a
+             true first-boot), then `bash lab/twin/launch-twin.sh` (vulnerable mode),
+             then collect evidence. NO manual OpenPLC UI steps were performed.
+What it proves: the whole twin comes up configured + RUNNING on its own — the
+             OpenPLC auto-seed (entrypoint auto-seed.sh + seed-openplc.py), the ST
+             compile fix, and the cross-zone conduit fix (bridge-nf-call-iptables=0)
+             all working together from a clean volume, with the pump running and
+             the well held (spill = 0) with zero human interaction.
+
+=== up (build + auto-seed) ===
+  launch rc=0
+-- wait for dnp3-gw healthy --
+  healthy after ~20s
+
+=== PS (project ics-twin-liftstation) ===
+  dnp3-gw, historian, hmi (frangoteam/fuxa), iiot-gw, mqtt-broker (eclipse-mosquitto:2),
+  openplc  COMMAND "/workdir/auto-seed.…"  <- the auto-seed entrypoint is in effect,
+  plant-sim, pump-controller, route-broker/route-hmi/route-openplc (netshoot sidecars),
+  scada-master, sniff-conduit/sniff-dnp3/sniff-mqtt (tcpdump), wireshark, zone-fw
+  -> all services Up.
+
+=== AUTO-SEED + RUNTIME LOGS (docker logs openplc) ===
+[auto-seed] OpenPLC twin bring-up — selected program: naive_wetwell.st
+[auto-seed] copied twin ST programs into /docker_persistent/st_files
+[seed] added slave device wetwell-plant-sim (172.30.10.10:502)
+[seed] registered program naive_wetwell.st
+[seed] registered program hardened_wetwell.st
+[seed] settings: Start_run_mode=true, Modbus=502, DNP3=off, EtherNet/IP=off
+[seed] wrote /workdir/webserver/mbconfig.cfg (Num_Devices=1)
+[auto-seed] compiling naive_wetwell.st (active was: 'blank_program.st')…
+[compile] Generating C files...  POUS.c POUS.h LOCATED_VARIABLES.h VARIABLES.csv Config0.c Res0.c
+[compile] Compiling for Linux ... Generating object files ... Generating glueVars ...
+[compile] varName: __IW100 INT   __IW101 INT   __IW102 INT
+[compile] varName: __IX100_0 BOOL __IX100_1 BOOL
+[compile] varName: __QX100_0 BOOL __QX100_1 BOOL __QX100_2 BOOL
+[compile] varName: __MW10 INT   (…__MW11, __MW12)
+  -> the ST compiles cleanly and the glue map is exactly what the seed's mbconfig targets.
+
+=== MBCONFIG (openplc:/workdir/webserver/mbconfig.cfg) ===
+Num_Devices = "1"
+device0.name = "wetwell-plant-sim"
+device0.address = "172.30.10.10"
+device0.Coils_Size = "3"
+device0.Input_Registers_Start = "100"
+
+=== ACTIVE PROGRAM ===
+naive_wetwell.st          (not blank_program.st — the compile + select took)
+
+=== MODBUS 502 SERVER (openplc) ===
+502-OPEN                  (the pre-auto-seed "Connection refused" is gone; runtime auto-started)
+
+=== SPILL SCOREBOARD (docker logs plant-sim, tail) ===
+[plant-sim] t=  9.0s level= 46.1%  Qin= 285  Qout=    0  P1=0 P2=0  psi=  8  spill= 0.0gal
+[plant-sim] t= 10.0s level= 45.9%  Qin= 289  Qout= 1350  P1=0 P2=1  psi= 42  spill= 0.0gal
+[plant-sim] t= 11.0s level= 45.5%  Qin= 293  Qout= 1350  P1=0 P2=1  psi= 42  spill= 0.0gal
+[plant-sim] t= 12.0s level= 45.0%  Qin= 296  Qout= 1350  P1=0 P2=1  psi= 42  spill= 0.0gal
+  -> OpenPLC polled the sim, ran the compiled logic, and COMMANDED pump P2 (Qout=1350);
+     the level is bounded (~45%) and spill = 0.0 — the closed control loop is live.
+
+=== CROSS-ZONE CONDUIT CAPTURES (out-of-band tcpdump taps) ===
+11434 bytes  lab/twin/captures/conduit_live.pcap   (DNP3 + MQTT crossing the zone-fw conduit)
+ 1740 bytes  lab/twin/captures/dnp3_live.pcap
+ 4645 bytes  lab/twin/captures/mqtt_live.pcap
+  -> cross-zone traffic flows on first boot (bridge-nf conduit fix working); the
+     deny-by-default CONDUIT-DROP tripwire still fires on non-conduit flows (see the
+     zone-fw fix commit 1fb3813).
+
+RESULT: PASS — one command, no UI steps: twin builds, OpenPLC self-seeds + self-starts,
+        the ST control loop runs the pump, spill holds at 0, and DNP3/MQTT cross the
+        conduits live.

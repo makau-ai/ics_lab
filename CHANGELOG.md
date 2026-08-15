@@ -1,3 +1,49 @@
+# Revision 4 — Digital twin: one-command bring-up, validated live
+
+Revision 4 makes the optional **digital twin** (the multi-container Wastewater Lift Station) run
+end-to-end from a single command, and validates it live from a clean volume in a fresh GitHub
+Codespace. The core Learning Path, modules, lab, and Machine Problem are unchanged; this revision
+is entirely about the twin and the Codespace experience.
+
+**OpenPLC self-seeds and self-starts — no manual UI step.** The soft-PLC used to need a five-step
+manual bring-up in its web UI (add the slave device, upload + compile the ST, enable Modbus, Start
+PLC). A new container entrypoint (`lab/twin/openplc/auto-seed.sh` + `seed-openplc.py`) now does all
+of it on boot: it adds the `wetwell-plant-sim` Modbus/TCP slave device, rebuilds `mbconfig.cfg` from
+the database (OpenPLC only regenerates that file from its UI handlers, never at boot — so a bare DB
+insert would leave the Modbus master polling nothing), sets `Start_run_mode=true`, enables the
+Modbus server, leaves DNP3 + EtherNet/IP off, compiles the selected program, and hands off to
+OpenPLC's own launcher, which auto-starts the runtime. The old best-effort `load-program.sh` curl
+stub is removed.
+
+**The ST control programs now compile.** `naive_wetwell.st` and `hardened_wetwell.st` mixed
+`AT %…`-located I/O and plain working variables in a single `VAR` block, which OpenPLC's `iec2c`
+(matiec) rejects — both programs failed to compile, so the auto-seed would have fallen back to the
+blank program. Each now splits the declarations into separate located and working `VAR` blocks and
+compiles cleanly (verified with a locally-built `iec2c` and live in the Codespace). Pure
+declaration reorg; the control logic — and `test_twin.py`'s spill proof — is unchanged.
+
+**Cross-zone conduits actually pass.** On Docker 27+ (nftables + `br_netfilter`), bridged frames
+were run through the host isolation chains, which dropped the forwarded cross-zone packets, so every
+conduit timed out. `launch-twin.sh` now sets `net.bridge.bridge-nf-call-iptables=0` on bring-up so
+bridged frames bypass host isolation; `zone-fw` still enforces the deny-by-default conduits in its
+own namespace, so the security model is unchanged (the `CONDUIT-DROP` tripwire still fires on
+non-conduit flows).
+
+**OpenPLC builds from source; zones get explicit gateways.** OpenPLC v3 is not published to Docker
+Hub, so `openplc/Dockerfile` clones and compiles the runtime from canonical source (a slow first
+build; Docker layer-caches it afterward). Each of the five zone networks got an explicit `.254`
+gateway so `zone-fw` can own `.1` without colliding with Docker's auto-assigned gateway.
+
+**Copy-paste into the noVNC Wireshark desktop.** An `autocutsel` + `xclip` clipboard bridge in the
+devcontainer lets commands paste cleanly between the browser and the in-Codespace Wireshark desktop.
+
+**Validated live.** From a clean volume in a fresh Codespace, one command brings the whole twin up:
+OpenPLC self-seeds, compiles and runs the ST, drives pump P2 (`Qout=1350`) and holds the well at
+`spill = 0`, and DNP3 + MQTT cross the conduits (captured out-of-band). Transcript:
+`verification/evidence/30_twin_codespace_smoke.txt`; see `FORMAL_VERIFICATION.md` Part 5.
+
+---
+
 # Revision 3 — One-click leveled curriculum + formal verification
 
 This revision turns the kit into a **guided, one-click course** and adds a reproducible verification

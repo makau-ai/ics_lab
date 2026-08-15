@@ -38,11 +38,14 @@ That is the whole original use case in one step: open a clean, documented sample
 protocol on the wire. Everything below (modules, lab, curriculum, twin) builds outward from these
 same files.
 
-> **Revision 3** adds a **one-click, 7-level Learning Path** (`curriculum/`, auto-opens in the
-> Codespace) that ends in a **university-style Machine Problem** (`mp/`), a verified list of **government &
-> university** capture sources (`EXTERNAL_CAPTURES.md`), and a reproducible **formal-verification**
-> record (`FORMAL_VERIFICATION.md` + `build/verify_all.py`: 21/21 checks, 63/63 DNP3 CRCs). It builds on
-> **Revision 2's** five-persona red-team review (see `RED_TEAM_REVIEW.md` and `CHANGELOG.md`): an unseen
+> **Revision 4** makes the optional **digital twin** run end-to-end from a single command — OpenPLC
+> self-seeds and self-starts, the ST control loop runs the pumps (`spill = 0`), and DNP3 + MQTT cross the
+> five IEC-62443 conduits — validated live from a clean volume in a fresh Codespace
+> (`FORMAL_VERIFICATION.md` Part 5). It builds on **Revision 3's** **one-click, 7-level Learning Path**
+> (`curriculum/`, auto-opens in the Codespace) that ends in a **university-style Machine Problem** (`mp/`),
+> a verified list of **government & university** capture sources (`EXTERNAL_CAPTURES.md`), and a reproducible
+> **formal-verification** record (`FORMAL_VERIFICATION.md` + `build/verify_all.py`: 21/21 checks, 63/63 DNP3
+> CRCs); and on **Revision 2's** five-persona red-team review (see `RED_TEAM_REVIEW.md` and `CHANGELOG.md`): an unseen
 > graded assessment with a rubric, a segmented-network lab, honest scope framing, more realistic
 > detections, and keyboard/screen-reader accessibility fixes.
 
