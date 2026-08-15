@@ -53,7 +53,9 @@ services:
     environment:
       PLC_PROGRAM: naive_wetwell.st   # hardened.yml -> hardened_wetwell.st
     volumes:
-      - openplc_st:/opt/openplc/webserver/st_files
+      # persist OpenPLC's whole state dir (the source build stores db + st_files +
+      # active_program under /docker_persistent, symlinked from /workdir/webserver)
+      - openplc_persistent:/docker_persistent
       - ./openplc/st:/seed/st:ro
       - ./openplc/slave_devices.seed:/seed/slave_devices.seed:ro
     ports:
@@ -373,6 +375,6 @@ networks:
         - subnet: 172.30.66.0/24
 
 volumes:
-  openplc_st: {}
+  openplc_persistent: {}
   fuxa_appdata: {}
   influx_data: {}

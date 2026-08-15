@@ -322,11 +322,12 @@ P-1/P-2 · `%QX100.2` HLA · `%MW10` LEAD_START · `%MW11` STOP · `%MW12` REMOT
 
 ## 7. Live bring-up caveats (verify in the Codespace)
 
-1. **OpenPLC needs an image first, then seeding.** OpenPLC v3 is **not published to Docker
-   Hub**, so `docker compose up` cannot build the `openplc` service until you supply an
-   `openplc_v3` image — build it once from the canonical source (see `openplc/Dockerfile` for
-   the exact command). With the image present, the rest of the bring-up is a manual UI step
-   (headless ST load is UI-driven and version-specific). On first boot: web UI at
+1. **OpenPLC builds from source on first `up` (slow once).** OpenPLC v3 is **not published
+   to Docker Hub**, so `openplc/Dockerfile` clones and compiles the runtime from the canonical
+   source itself — a slow first build (~10 min; Docker layer-caches it afterwards). `docker
+   compose up` stays a single command; just be patient the first time. With the image built,
+   the rest of the bring-up is a manual UI step (headless ST load is UI-driven and
+   version-specific). On first boot: web UI at
    `http://localhost:8088` (default `openplc`/`openplc`)
    → **Slave Devices** add `wetwell-plant-sim` (values in `openplc/slave_devices.seed`)
    → **Programs** upload+compile the selected `st/*.st` → **Settings** enable Modbus,
