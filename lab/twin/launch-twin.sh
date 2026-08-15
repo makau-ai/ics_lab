@@ -85,13 +85,11 @@ cat <<EOF
     bash lab/twin/launch-twin.sh --logs      # watch 'level' and 'spill' (SSO gallons)
     PASS = spill stays 0 under full DNP3 + MQTT write access.
 
-  ONE MANUAL STEP — seed OpenPLC (first boot only) at http://localhost:8088 :
-    1) log in           openplc / openplc
-    2) Slave Devices  → add 'wetwell-plant-sim'  (values in openplc/slave_devices.seed)
-    3) Programs       → upload + compile  st/${STFILE}
-    4) Settings       → enable Modbus  (leave DNP3 + EtherNet/IP OFF)
-    5) Start PLC
-  Until it's seeded the pumps won't run and the well will spill — that's expected.
+  OpenPLC self-seeds — NO manual UI step. On boot auto-seed.sh adds the plant-sim
+  slave device, enables the Modbus server, compiles ${STFILE}, and starts the
+  runtime. First boot compiles the ST (~30–60 s), so give the pumps ~a minute
+  before judging the well. Watch/override it at http://localhost:8088 (openplc /
+  openplc) if you like — Slave Devices, Programs, and Settings come pre-filled.
 
   NEXT:
     bash lab/twin/launch-twin.sh --attack     # adversary foothold — run the injection, watch spill climb

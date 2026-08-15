@@ -326,14 +326,18 @@ P-1/P-2 · `%QX100.2` HLA · `%MW10` LEAD_START · `%MW11` STOP · `%MW12` REMOT
    to Docker Hub**, so `openplc/Dockerfile` clones and compiles the runtime from the canonical
    source itself — a slow first build (~10 min; Docker layer-caches it afterwards). `docker
    compose up` stays a single command; just be patient the first time. With the image built,
-   the rest of the bring-up is a manual UI step (headless ST load is UI-driven and
-   version-specific). On first boot: web UI at
-   `http://localhost:8088` (default `openplc`/`openplc`)
-   → **Slave Devices** add `wetwell-plant-sim` (values in `openplc/slave_devices.seed`)
-   → **Programs** upload+compile the selected `st/*.st` → **Settings** enable Modbus,
-   disable the DNP3 + EtherNet/IP servers. `openplc/load-program.sh` automates this
-   best-effort; verify it took. The naive-vs-hardened **spill** claim does not depend on
-   OpenPLC — it is proven headlessly by `test_twin.py`; OpenPLC is the live-realism layer.
+   **the bring-up is automatic** — no manual UI step. The container entrypoint
+   `openplc/auto-seed.sh` seeds OpenPLC on every boot: it calls `seed-openplc.py` to add the
+   `wetwell-plant-sim` slave device and rebuild `mbconfig.cfg` (the file the Modbus master
+   actually reads — OpenPLC only regenerates it from UI handlers, never at boot, so a bare DB
+   insert is not enough), sets `Start_run_mode=true`, enables the Modbus server, and leaves the
+   DNP3 + EtherNet/IP servers off; it then compiles the selected `st/*.st` (`$PLC_PROGRAM`, which
+   `hardened.yml` flips to `hardened_wetwell.st`) and hands off to OpenPLC's `start_openplc.sh`,
+   which auto-starts the runtime. **First boot compiles the ST (~30–60 s)**, so give the pumps a
+   minute before judging the well. Everything is inspectable/overridable at
+   `http://localhost:8088` (default `openplc`/`openplc`) — Slave Devices, Programs and Settings
+   come pre-filled. The naive-vs-hardened **spill** claim does not depend on OpenPLC — it is
+   proven headlessly by `test_twin.py`; OpenPLC is the live-realism layer.
 2. **OpenPLC Modbus register map.** `dnp3-gw`/`iiot-gw` default to `PLC_MAP=sim`
    (plant-sim's raw addresses, which also match OpenPLC's **input** registers).
    OpenPLC maps `%IX100.0`/`%QX100.0` to Modbus **bit offset 800** — once confirmed

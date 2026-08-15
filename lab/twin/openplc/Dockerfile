@@ -36,12 +36,18 @@ RUN ./install.sh docker \
     && ln -s /docker_persistent/st_files /workdir/webserver/st_files \
     && ln -s /docker_persistent/active_program /workdir/webserver/active_program
 
-# --- twin seed material (read by /seed/load-program.sh on boot) ---
+# --- twin seed material (consumed by auto-seed.sh on every boot) ---
 # ST_DIR points at the canonical layout (a symlink into the /docker_persistent volume).
 ENV ST_DIR=/workdir/webserver/st_files
 COPY st/ /seed/st/
 COPY slave_devices.seed /seed/slave_devices.seed
-COPY load-program.sh /seed/load-program.sh
-RUN chmod +x /seed/load-program.sh || true
 
-ENTRYPOINT ["./start_openplc.sh"]
+# auto-seed.sh wraps OpenPLC's start_openplc.sh so the soft-PLC boots already
+# configured + RUNNING (slave device added, Modbus server on 502, selected ST
+# compiled, runtime auto-started) — no manual clicks in the :8088 UI. It calls
+# seed-openplc.py to seed the SQLite DB and rebuild mbconfig.cfg from it.
+COPY auto-seed.sh    /workdir/auto-seed.sh
+COPY seed-openplc.py /workdir/seed-openplc.py
+RUN chmod +x /workdir/auto-seed.sh
+
+ENTRYPOINT ["/workdir/auto-seed.sh"]

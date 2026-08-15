@@ -45,11 +45,12 @@ lab/
   zone-fw/                         # NEW — nftables router-firewall (the conduit)
     Dockerfile  conduits.nft  entrypoint.sh
   openplc/                         # NEW — OpenPLC build + seeded config + ST programs
-    Dockerfile                     # FROM thiagoralves/OpenPLC_v3
+    Dockerfile                     # build OpenPLC v3 from source (no Docker Hub image)
     st/naive_wetwell.st            # §6 naive loop
     st/hardened_wetwell.st         # §6 hardened loop
     slave_devices.seed             # plant-sim as remote-I/O (Modbus client config)
-    load-program.sh                # seeds st_files + selects program via OpenPLC API
+    auto-seed.sh                   # entrypoint: seed + compile + auto-start (no manual UI step)
+    seed-openplc.py                # seeds openplc.db + rebuilds mbconfig.cfg from it
   dnp3/                            # EXTEND existing — add gateway + Modbus source + g41/unsol
     outstation.py -> reused by dnp3-gw (remapped);  master.py -> reused by scada-master
     dnp3lib.py    -> add obj_analog_outputs()/g41, unsolicited helper, arm-latch/allow-list
@@ -320,7 +321,7 @@ from `attacker_net` → the adversary is dropped at the boundary until the scena
 | `./captures:/caps` | bind | sniff-*, zeek | shared rolling pcaps (sniffers write, zeek/wireshark read) |
 | `./captures:/captures` | bind | wireshark | noVNC Wireshark opens the live pcaps |
 | `openplc_st` | named | openplc | persist `st_files/` + `openplc.db` (programs + slave-device config) |
-| `./openplc/st:/seed/st:ro` | bind | openplc | ship both ST programs into the image for `load-program.sh` |
+| `./openplc/st:/seed/st:ro` | bind | openplc | ship both ST programs in for `auto-seed.sh` to compile |
 | `./mosquitto/*.conf,passwd,acl` | bind (ro) | mqtt-broker | **the broker toggle surface** (insecure↔secure) |
 | `./mosquitto/certs:/…/certs:ro` | bind (ro) | mqtt-broker | 8883 mTLS certs (hardened) |
 | `./zone-fw/conduits.nft:/etc/nftables/conduits.nft:ro` | bind (ro) | zone-fw | the conduit ruleset |
@@ -339,9 +340,10 @@ from `attacker_net` → the adversary is dropped at the boundary until the scena
 
 OpenPLC runs **two Modbus roles at once**: (a) **Modbus client / "Slave Devices" remote-I/O** polling
 `plant-sim` (mapped to the `DIGITAL_TWIN §1.3` addresses), and (b) **Modbus TCP server on 502** exposing
-the same `%I/%Q/%MW` image to `dnp3-gw`, `iiot-gw`, and `hmi`. Configure via `slave_devices.seed`
-(`plant-sim` at 172.30.10.10:502) loaded by `load-program.sh` (seeds the DB / `mbconfig`, enables the
-Modbus client, selects `PLC_PROGRAM`, disables the DNP3 + ENIP servers). Point map = `DIGITAL_TWIN §1.3`:
+the same `%I/%Q/%MW` image to `dnp3-gw`, `iiot-gw`, and `hmi`. Configured automatically at boot by
+`auto-seed.sh` → `seed-openplc.py` (from `slave_devices.seed`'s values: `plant-sim` at 172.30.10.10:502)
+— seeds the DB, rebuilds `mbconfig`, enables the Modbus client + server, compiles `PLC_PROGRAM`, and
+disables the DNP3 + ENIP servers. Point map = `DIGITAL_TWIN §1.3`:
 
 ```
 %IW100 LT-101 level(0-10000)  %IW101 FIT-104 flow  %IW102 PIT-105 psi
