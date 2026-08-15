@@ -353,26 +353,31 @@ networks:
     ipam:
       config:
         - subnet: 172.30.10.0/24
+          gateway: 172.30.10.254   # zone-fw owns .1 (the conduit); keep Docker's gateway off it
   control_net:                     # L3 control center
     driver: bridge
     ipam:
       config:
         - subnet: 172.30.20.0/24
+          gateway: 172.30.20.254   # zone-fw owns .1 (the conduit); keep Docker's gateway off it
   dmz_net:                         # L3.5 OT-DMZ
     driver: bridge
     ipam:
       config:
         - subnet: 172.30.30.0/24
+          gateway: 172.30.30.254   # zone-fw owns .1 (the conduit); keep Docker's gateway off it
   ent_net:                         # L4 enterprise
     driver: bridge
     ipam:
       config:
         - subnet: 172.30.40.0/24
+          gateway: 172.30.40.254   # zone-fw owns .1 (the conduit); keep Docker's gateway off it
   attacker_net:                    # red team
     driver: bridge
     ipam:
       config:
         - subnet: 172.30.66.0/24
+          gateway: 172.30.66.254   # zone-fw owns .1 (the conduit); keep Docker's gateway off it
 
 volumes:
   openplc_persistent: {}
