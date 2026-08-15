@@ -38,6 +38,10 @@ PROGRAM main
     lead_start_raw AT %MW10 : INT;       (* LEAD_START setpoint *100 (UNCLAMPED) *)
     stop_raw       AT %MW11 : INT;       (* STOP setpoint *100 *)
     remote_cmd     AT %MW12 : INT;       (* momentary per-pump command (see contract) *)
+  END_VAR
+  (* matiec requires AT%-located variables and plain working variables in
+     SEPARATE VAR blocks — keep the located I/O above, the workers below. *)
+  VAR
     (* ---- working reals ---- *)
     level          : REAL;
     lead_start     : REAL;

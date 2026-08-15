@@ -46,6 +46,10 @@ PROGRAM main
     lead_start_raw AT %MW10 : INT;
     stop_raw       AT %MW11 : INT;
     remote_cmd     AT %MW12 : INT;
+  END_VAR
+  (* matiec requires AT%-located variables and plain working variables in
+     SEPARATE VAR blocks — keep the located I/O above, the workers below. *)
+  VAR
     (* working / state *)
     level              : REAL;
     lead_start         : REAL;
