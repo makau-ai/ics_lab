@@ -109,6 +109,17 @@ case "$DO" in
     echo "[twin] mode: $MODE   profiles: $PROFILES"
     echo "[twin] freeing loopback-lab ports (1883/20000)…"
     free_loopback_lab
+    # zone-fw is a container that ROUTES between five Docker bridges. On Docker 27+
+    # (nftables), br_netfilter (bridge-nf-call-iptables=1) runs bridged frames through
+    # the host isolation chains, which DROP the forwarded cross-zone packets (they carry
+    # a foreign source IP onto the destination bridge) -- so every conduit times out.
+    # Turning it off lets bridged frames bypass host isolation; zone-fw's OWN nftables
+    # (routed traffic, in its namespace) still enforces the deny-by-default conduits, so
+    # the deny-by-default security model is unchanged (verified: allowed conduit passes,
+    # non-conduit still hits the CONDUIT-DROP tripwire).
+    echo "[twin] enabling inter-zone conduit forwarding (bridge-nf-call-iptables=0)…"
+    sudo sysctl -w net.bridge.bridge-nf-call-iptables=0 >/dev/null 2>&1 \
+      || echo "[twin]   NOTE: could not set bridge-nf-call-iptables=0 — cross-zone conduits may not pass (needs root)."
     echo "[twin] running: $DC $PROJECT $BASE $HARDEN $PROFILES up -d --build"
     # shellcheck disable=SC2086
     $DC $PROJECT $BASE $HARDEN $PROFILES up -d --build
