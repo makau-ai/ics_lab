@@ -1,0 +1,105 @@
+{
+  "meta": {
+    "platform": "First Light — ICS/OT Protocol Analysis Lab Kit",
+    "note": "Ground truth for the guided-tour narration. Every command + output below is taken verbatim from content_levels.py (verified against the shipped pcaps with tshark). Do not invent commands, outputs, IPs, ports, frame numbers, or field values — use only what is here.",
+    "protocols": {"MQTT": "TCP/1883, IIoT publish/subscribe telemetry", "DNP3": "TCP/20000, SCADA electric/water utilities", "Modbus": "TCP/502, used inside the digital twin"}
+  },
+  "sections": [
+    {
+      "id": "orientation", "n": 0, "title": "Orientation — see it running",
+      "tagline": "One click, and the lab is already live: real DNP3 + MQTT packets moving.",
+      "storybeat": "The lab is alive and already breathing. Something in this traffic moves wrong — you just cannot name it yet.",
+      "onet_candidate": {"code": "15-1212.00", "title": "Information Security Analyst"},
+      "realWorldHook": "A SOC/OT analyst's first task on shift: confirm the sensors and the capture plane are live before hunting anything. Here two utility protocols already share one wire.",
+      "demos": [
+        {"command": "tshark -i lo -c 10 -f \"tcp port 1883 or tcp port 20000\"", "output": "10 packets summarised — a mix of MQTT (1883) and DNP3 (20000).", "sim": "Live capture: two protocols already flowing on one interface, no setup."}
+      ],
+      "visualSpec": "A control room / plant coming online at dawn: an MQTT (teal) IIoT sensor and a DNP3 (amber) SCADA link both breathing packets onto one shared wire, a Wireshark capture indicator pulsing. Conveys 'it is already live; you observe, you do not build.'"
+    },
+    {
+      "id": "endpoints", "n": 1, "title": "Who is talking?",
+      "tagline": "Map every host, its ports, and who connects to whom — before opening a single packet.",
+      "storybeat": "You can draw the map now — the broker at the center of its star, the master and its outstation, and two .66 addresses that fit nowhere.",
+      "onet_candidate": {"code": "15-1241.00", "title": "Computer Network Architect"},
+      "realWorldHook": "Real triage starts with the graph, not the bytes: an analyst ranks endpoints and conversations to find the hub and the host that does not belong. MQTT is a star (clients→one broker); DNP3 is a master↔outstation pair.",
+      "demos": [
+        {"command": "tshark -r pcaps/mqtt_iot_telemetry.pcap -q -z endpoints,ip", "output": "10.10.20.10  (61 pkts)  <- the broker (busiest)\n10.10.20.30  (22)   <- HMI\n10.10.20.7   (22)   <- sensor\n10.10.20.66  (17)   <- rogue", "sim": "The broker outweighs everyone; a fourth address (.66) has no business here."},
+        {"command": "tshark -r pcaps/dnp3_substation.pcap -q -z conv,tcp", "output": "the master (10.20.0.5) <-> outstation (10.20.0.20:20000), plus a second session from 10.20.0.66 — the rogue.", "sim": "One expected master↔outstation pair, and one extra session that should not exist."}
+      ],
+      "visualSpec": "A network map: an MQTT star (broker hub with client spokes, teal) and a DNP3 master↔outstation pair (amber), with a red intruder node .66 wired into both, standing out by shape alone."
+    },
+    {
+      "id": "messages", "n": 2, "title": "What kind of messages?",
+      "tagline": "Classify the control packets and function codes — feel the request/response rhythm.",
+      "storybeat": "You can count the vocabulary — every CONNECT and PUBLISH, every SELECT and OPERATE — and point straight at the control messages.",
+      "onet_candidate": {"code": "17-2072.00", "title": "Electronics Engineer (SCADA/control systems)"},
+      "realWorldHook": "A controls engineer reads a protocol's small vocabulary the way a dispatcher reads call types: telemetry reads are routine; the write/control verbs (DNP3 SELECT/OPERATE/DIRECT_OPERATE) are the dangerous few.",
+      "demos": [
+        {"command": "tshark -r pcaps/dnp3_substation.pcap -Y dnp3 -T fields -e dnp3.al.func | sort | uniq -c", "output": "READ(1)x2, SELECT(3), OPERATE(4), DIRECT_OPERATE(5), COLD_RESTART(13), RESPONSE(129)x6, UNSOL(130), CONFIRM(0).", "sim": "The whole DNP3 vocabulary in one histogram — the three control verbs stand out."},
+        {"command": "tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt -T fields -e mqtt.msgtype | sort | uniq -c", "output": "3 CONNECT(1), 3 CONNACK(2), 8 PUBLISH(3), 2 PUBACK(4), 2 SUBSCRIBE(8), 2 SUBACK(9), 1 PINGREQ(12), 1 PINGRESP(13), 1 DISCONNECT(14).", "sim": "8 PUBLISH vs 2 SUBSCRIBE — telemetry fans out; a client subscribes once."}
+      ],
+      "visualSpec": "An envelope/verb sorter: DNP3 function codes and MQTT control-packet types streaming past and being tallied, with the control verbs (SELECT/OPERATE/DIRECT_OPERATE) flagged amber as 'the dangerous few'."
+    },
+    {
+      "id": "inside", "n": 3, "title": "Inside the packet",
+      "tagline": "Open the layers: MQTT cleartext creds/topics, and DNP3's link address vs IP address.",
+      "storybeat": "You have read the fields with your own eyes — the cleartext password, and two source addresses that are supposed to agree and do not.",
+      "onet_candidate": {"code": "15-1212.00", "title": "Information Security Analyst (packet forensics)"},
+      "realWorldHook": "The analyst's scalpel: -T fields -e <name> pulls exact values. In OT this is where you learn a login rides in cleartext, and that a DNP3 frame carries TWO identities — the IP source and the 16-bit DNP3 link address — that can be made to disagree.",
+      "demos": [
+        {"command": "tshark -r pcaps/mqtt_iot_telemetry.pcap -Y mqtt.msgtype==1 -T fields -e mqtt.clientid -e mqtt.username -e mqtt.passwd", "output": "hmi-scada-01  hmi_operator  Plant!ntel2024   (…and the sensor's creds). Cleartext — no TLS.", "sim": "The HMI password is on the wire in the clear: Plant!ntel2024."},
+        {"command": "tshark -r pcaps/dnp3_substation.pcap -Y \"dnp3.al.func in {3,4,5}\" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.ctl.trip -e dnp3.ctl.op", "output": "the legitimate close (Close/Pulse-On) from the master, and the rogue Trip — note ip.src vs dnp3.src.", "sim": "A CROB (group 12 var 1) — the object that moves a 13.8 kV breaker; trip vs close is dark vs lit.", "consequence": "The CROB in this frame is what moves a 13.8 kV breaker — trip vs close is the difference between dark and lit."}
+      ],
+      "visualSpec": "An exploded DNP3 packet: three layers (data-link with source/dest link addresses + CRC, transport, application with function code + CROB) peeling apart; a magnifier reveals ip.src and dnp3.src as two DIFFERENT numbers. Alongside, an MQTT CONNECT with a password shown in cleartext."
+    },
+    {
+      "id": "security", "n": 4, "title": "Find the attack",
+      "tagline": "Turn field evidence into named findings: the forged DNP3 trip and the MQTT command injection.",
+      "storybeat": "The trip in frame 27 claims dnp3.src=100 — the master — yet it arrived from 10.20.0.66, the ghost. You can catch it by hand.",
+      "onet_candidate": {"code": "15-1299.04", "title": "Penetration Tester"},
+      "realWorldHook": "Attacks in these protocols rarely look malformed — they look like valid messages from the wrong party. The finding is a legal packet whose own fields tell on it, tied to a control (TLS, ACLs, DNP3-SA, segmentation).",
+      "demos": [
+        {"command": "tshark -r pcaps/dnp3_substation.pcap -Y \"dnp3.al.func==5 || dnp3.al.func==13\" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.al.func", "output": "DIRECT_OPERATE (5) and COLD_RESTART (13) from 10.20.0.66 — with dnp3.src forged to the master's 100.", "sim": "The unauthenticated trip + cold restart, from .66, wearing the master's link address.", "consequence": "This DIRECT_OPERATE trips a 13.8 kV feeder breaker — lights out downstream, from a host that never authenticated."},
+        {"command": "tshark -r pcaps/mqtt_iot_telemetry.pcap -Y \"mqtt.msgtype==1 && !mqtt.username\" -T fields -e frame.number -e mqtt.clientid", "output": "frame 38, client mqtt-explorer-x — no credentials.", "sim": "An anonymous CONNECT the broker accepted — then later publishes to a command topic (authorization failure)."}
+      ],
+      "visualSpec": "A forensic 'catch': the forged DNP3 trip frame highlighted, an arrow showing dnp3.src=100 but ip.src=10.20.0.66 (mismatch), and the breaker tripping. Beside it, an anonymous MQTT client sliding a command into plant/tank1/command."
+    },
+    {
+      "id": "detection", "n": 5, "title": "Catch it automatically",
+      "tagline": "Write detection that survives a spoof — key on an invariant, not a single field. Zeek + CISA ICSNPP.",
+      "storybeat": "You can write a detection that survives a spoof — bound to the invariant, not the address.",
+      "onet_candidate": {"code": "15-1212.00", "title": "Information Security Analyst (detection engineering)"},
+      "realWorldHook": "A detection is only as good as its evasion resistance. 'Alert if a control's source IP isn't the master' dies the moment the attacker spoofs it. The durable rule binds an invariant: link-address ↔ source ↔ known-master set ↔ SELECT-before-OPERATE. Zeek + ICSNPP turn packets into queryable logs.",
+      "demos": [
+        {"command": "tshark -r pcaps/dnp3_substation.pcap -Y \"dnp3.al.func in {3,4,5,13} && ip.src != 10.20.0.5\" -T fields -e frame.number -e ip.src -e dnp3.al.func", "output": "catches the rogue trip & restart HERE — but only because the attacker kept its real IP.", "sim": "A naive first-cut rule that works now — and breaks the instant the attacker spoofs the master's IP."},
+        {"command": "docker compose -f lab/docker-compose.yml --profile tools run --rm zeek run-zeek /kit/pcaps/dnp3_substation.pcap\ncat lab/zeek_reference_output/dnp3/dnp3_control.log | grep -i direct", "output": "a DIRECT_OPERATE / Trip / Success line whose source host is 10.20.0.66 — your best single alert.", "sim": "Zeek + CISA ICSNPP: raw packets become structured, alertable control logs."}
+      ],
+      "visualSpec": "Two rules side by side: a brittle 'source-IP != master' rule that an attacker slips past by spoofing, versus an invariant rule (link↔IP↔known-master↔SELECT-before-OPERATE) that holds. Packets flowing into Zeek and emerging as tidy log rows."
+    },
+    {
+      "id": "mp", "n": 6, "title": "Machine Problem — ICS Intrusion Analysis",
+      "tagline": "Capstone: two unseen captures, build an invariant detector, write the incident up. Autograded /100.",
+      "storybeat": "First light. You walked in unable to see the intruder; you leave able to catch one you have never met.",
+      "onet_candidate": {"code": "15-1212.00", "title": "Information Security Analyst (OT incident response)"},
+      "realWorldHook": "The proctored exam of the trade: new attacks (a spoofed DNP3 status report; an MQTT retained-message harvest + persistent command injection) on captures you have never walked. Your detector must generalize because the re-run uses freshly generated addresses.",
+      "demos": [
+        {"command": "cd mp && cat README.md", "output": "MP: ICS Intrusion Analysis — Parts 1-3 + bonus.", "sim": "The formal handout: parts, deliverables, grading."},
+        {"command": "cd mp\npython3 grade.py", "output": "PASS/FAIL per item and a score /100. Iterate to green.", "sim": "Self-check autograder over answers.json + detector.py + report format."}
+      ],
+      "visualSpec": "An exam / proving-ground: two sealed evidence captures opening, a detector.py being built, and a 100/100 scorecard resolving — the same pattern (forged source, cleartext creds, a broken invariant) generalizing to the unseen."
+    },
+    {
+      "id": "twin", "n": 7, "title": "The living plant",
+      "tagline": "Your field skills on the twin's LIVE multi-zone traffic — force an SSO spill, then harden and watch it refused.",
+      "storybeat": "The plant is live, the pumps are turning, the wet-well is filling in real time — and the same forged link address is reaching for the pumps.",
+      "onet_candidate": {"code": "17-2072.00", "title": "Control Systems Engineer (Cyber-Informed Engineering)"},
+      "realWorldHook": "A real wastewater lift station across five segmented IEC-62443 zones: OpenPLC driving a wet-well, a DNP3 outstation, an MQTT broker. The same forged-link attack forces the pumps off and spills sanitary sewage — until an engineered backstop (a hardwired high-high float) holds spill at 0 even under full write access. That is the Cyber-Informed-Engineering 'even-if' test.",
+      "demos": [
+        {"command": "bash lab/twin/launch-twin.sh --attack", "output": "OpenPLC :8088 · FUXA HMI :1881 · noVNC Wireshark :3000. Scoreboard = plant-sim SSO spill counter. Pass = spill stays 0 under full DNP3 + MQTT write access.", "sim": "Boot the whole multi-zone plant with the adversary foothold staged."},
+        {"command": "tshark -r lab/twin/captures/conduit_live.pcap -Y \"dnp3.al.func==5\" -T fields -e frame.number -e ip.src -e dnp3.src -e dnp3.al.func", "output": "a DIRECT_OPERATE whose dnp3.src claims 100 (the master) but whose ip.src is 172.30.10.66 (the foothold) — the Level 3 link-vs-IP contradiction, now on five-zone traffic.", "sim": "The exact same tell as the teaching capture — on live, multi-zone plant traffic.", "consequence": "Manipulation of control (ATT&CK for ICS T0831 / T0855): pumps forced off, the wet-well overflows, the SSO spill counter rises above 0 — a real sanitary-sewer overflow, mirrored in the twin."},
+        {"command": "bash lab/twin/launch-twin.sh --hardened --attack", "output": "the DIRECT_OPERATE is refused (status != Success); even if a control is bypassed, the hardwired HH float force-starts the pump at 95% — the spill counter stays 0.", "sim": "Same attacker, same full write access, opposite outcome: spill > 0 becomes spill == 0.", "consequence": "The CIE 'even-if' acceptance test — the outcome is held by an engineered backstop, not by trusting the network."}
+      ],
+      "visualSpec": "A wastewater lift station wet-well filling in real time, twin pumps, a high-high float; five color-banded IEC-62443 zones with a conduit firewall; the forged-link attack forces pumps off and the SSO spill gauge climbs — then in hardened mode the float force-starts the pump and the spill gauge holds at 0."
+    }
+  ]
+}

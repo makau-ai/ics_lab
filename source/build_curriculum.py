@@ -646,6 +646,12 @@ code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
 .enter:hover{gap:14px;background:rgba(255,255,255,.08);text-decoration:none}
 .enter .ea{transition:transform .5s var(--spring)}
 .enter:hover .ea{transform:translateY(3px)}
+.tourcta{display:inline-flex;align-items:center;gap:8px;margin-top:1.3em;margin-inline-start:12px;color:#fff;font-weight:700;
+  font-size:var(--step-0);background:linear-gradient(90deg,#6366f1,#7c3aed);border-radius:30px;padding:10px 22px;
+  box-shadow:0 10px 30px -10px rgba(99,102,241,.6);transition:filter .2s var(--ease),gap .25s var(--spring)}
+.tourcta:hover{filter:brightness(1.08);gap:12px;text-decoration:none;color:#fff}
+.tourcta .tn{font-weight:500;opacity:.85;font-size:.82em}
+@media (max-width:560px){.tourcta{margin-inline-start:0}}
 
 /* welcome-back banner */
 .welcome{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 18px;
@@ -1113,6 +1119,7 @@ html[data-theme="light"] .kind-read{color:#475569}
       <div class="progbar"><div class="progfill" id="progfill"></div></div>
     </div>
     <a class="enter" href="#level-0">Begin the descent <span class="ea" aria-hidden="true">↓</span></a>
+    <a class="tourcta" href="tour.html" aria-label="Take the narrated guided tour, in your language with captions">&#9658; Take the guided tour <span class="tn">&middot; narrated, your language</span></a>
   </div>
 </header>
 

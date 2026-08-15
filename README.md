@@ -38,6 +38,12 @@ That is the whole original use case in one step: open a clean, documented sample
 protocol on the wire. Everything below (modules, lab, curriculum, twin) builds outward from these
 same files.
 
+> **Revision 5** adds a one-click **Guided Tour** (`curriculum/tour.html`) — a narrated, full-screen
+> walk through all eight sections with the real commands and real output, an animated real-world scene
+> per step, and the O*NET role behind it. It speaks aloud in **10 languages** (English, Spanish, French,
+> German, Portuguese, Mandarin, Japanese, Arabic — full RTL, Hindi, Russian) with synchronized closed
+> captions, keyboard/screen-reader access, and reduced-motion support.
+>
 > **Revision 4** makes the optional **digital twin** run end-to-end from a single command — OpenPLC
 > self-seeds and self-starts, the ST control loop runs the pumps (`spill = 0`), and DNP3 + MQTT cross the
 > five IEC-62443 conduits — validated live from a clean volume in a fresh Codespace
