@@ -601,7 +601,7 @@ html[data-theme="light"] .kind-read{color:#475569}
       <span class="lg lg-ghost"><span>Red &middot; the rogue .66</span></span>
     </div>
     <div class="progwrap">
-      <div class="progrow"><span id="progtext" aria-live="polite">0 of 8 levels complete</span>
+      <div class="progrow"><span id="progtext" aria-live="polite">0 of 7 levels complete</span>
         <button class="reset" id="resetbtn" type="button">Reset progress</button></div>
       <div class="progbar"><div class="progfill" id="progfill"></div></div>
     </div>
@@ -797,7 +797,7 @@ var CASEFILE = [{"n": 0, "zoom": "NETWORK", "title": "Orientation \u2014 see it 
   var THEMEKEY = "icskit.path.theme.v1";
   var COKEY = "icskit.path.coldopen.v1";
   var IGNITEKEY = "icskit.path.ignited.v1";
-  var TOTAL = 8;
+  var TOTAL = 7;
   var done = new Set();
   var RM = false;
   try{ RM = window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){}
@@ -846,7 +846,8 @@ var CASEFILE = [{"n": 0, "zoom": "NETWORK", "title": "Orientation \u2014 see it 
         dot.setAttribute("data-reachable", (n <= md+1) ? "1" : "0");
       }
     });
-    var c = done.size, pct = TOTAL ? Math.round(c/TOTAL*100) : 0;
+    var c = 0; done.forEach(function(n){ if(n < TOTAL) c++; });   // count only the core levels (0..MP); the twin is a bonus
+    var pct = TOTAL ? Math.round(c/TOTAL*100) : 0;
     var fill = document.getElementById("progfill"); if(fill) fill.style.width = pct+"%";
     var t = document.getElementById("progtext"); if(t) t.textContent = c+" of "+TOTAL+" levels complete";
     var spine = document.querySelector(".spinefill"); if(spine) spine.style.height = pct+"%";

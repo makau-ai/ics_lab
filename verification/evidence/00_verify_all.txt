@@ -1,19 +1,22 @@
 
-A. Capture frame counts
-  [PASS] dnp3_substation.pcap readable (37 frames)  — 37 frames
-  [PASS] mqtt_iot_telemetry.pcap readable (61 frames)  — 61 frames
-  [PASS] dnp3_assessment.pcap readable (30 frames)  — 30 frames
-  [PASS] mqtt_assessment.pcap readable (66 frames)  — 66 frames
+A. Capture frame counts (EXACT — a regenerated/corrupted capture fails loudly)
+  [PASS] dnp3_substation.pcap == 37 frames (exact)  — 37 frames
+  [PASS] mqtt_iot_telemetry.pcap == 61 frames (exact)  — 61 frames
+  [PASS] dnp3_assessment.pcap == 30 frames (exact)  — 30 frames
+  [PASS] mqtt_assessment.pcap == 66 frames (exact)  — 66 frames
   [PASS] CRC-16/DNP self-test check('123456789')==0xEA82  — 0xea82
 
 B. DNP3 data-link CRC audit (recomputed over raw bytes)
   [PASS] dnp3_substation.pcap: 38/38 CRCs valid across 14 DNP3 frames  — 38/38
   [PASS] dnp3_assessment.pcap: 25/25 CRCs valid across 9 DNP3 frames  — 25/25
   [PASS] ALL DNP3 CRCs valid (63/63)  — 63/63
+  [PASS] PROPERTY: ∀ random DNP3 frame, recomputed CRC == stored CRC (1348 samples)  — 1348 CRC recomputations, 0 mismatches
 
 C. Documented frames exist in their capture
   [PASS] dnp3: 15 documented frames within 1..37  — 15 frames ok
   [PASS] mqtt: 17 documented frames within 1..61  — 17 frames ok
+  [PASS] dnp3_substation.labels.json: schema ok, 2 malicious frames within 1..37  — ok
+  [PASS] mqtt_iot_telemetry.labels.json: schema ok, 3 malicious frames within 1..61  — ok
 
 D. Curriculum commands reproduce their documented 'expect' values
   [PASS] MQTT broker 10.10.20.10 present & 61 pkts
@@ -29,10 +32,10 @@ E. MP autograder
 
 ============================================================
   Section A: 5/5
-  Section B: 3/3
-  Section C: 2/2
+  Section B: 4/4
+  Section C: 4/4
   Section D: 6/6
   Section E: 2/2
-  TOTAL: 18/18 checks passed
+  TOTAL: 21/21 checks passed
 ============================================================
-VERIFY_JSON {"passed": 18, "total": 18, "crc_ok": 63, "crc_total": 63, "counts": {"dnp3_substation.pcap": 37, "mqtt_iot_telemetry.pcap": 61, "dnp3_assessment.pcap": 30, "mqtt_assessment.pcap": 66}, "by_section": {"A": [5, 5], "B": [3, 3], "C": [2, 2], "D": [6, 6], "E": [2, 2]}}
+VERIFY_JSON {"passed": 21, "total": 21, "crc_ok": 63, "crc_total": 63, "counts": {"dnp3_substation.pcap": 37, "mqtt_iot_telemetry.pcap": 61, "dnp3_assessment.pcap": 30, "mqtt_assessment.pcap": 66}, "by_section": {"A": [5, 5], "B": [4, 4], "C": [4, 4], "D": [6, 6], "E": [2, 2]}}

@@ -137,7 +137,7 @@ the governing specifications and public taxonomies. Key load-bearing claims:
 | MQTT injection in the MP is an **authorization** failure (rogue authenticated anonymously, then acted beyond permission) | OASIS MQTT 3.1.1 auth model; capture: anon CONNECT accepted (CONNACK 0), then retained publish to a command topic | ✔ (also gated in `mp/rubric.md`) |
 | MP DNP3 attack = **T0856 Spoof Reporting Message**; teaching DNP3 trip = **T0855 Unauthorized Command Message** | MITRE ATT&CK for ICS (confirmed T0855/T0856/T0814/T0842/T0831 names) | ✔ |
 | O*NET personas resolve to real SOC codes (e.g., **15-1212.00 = Information Security Analysts**) | O*NET-SOC taxonomy (15-1212.00 confirmed via onetonline.org) | ✔ |
-| CISA ICSNPP DNP3 parser is BSD-3-Clause; example trace `tests/traces/dnp3_example.pcap` | github.com/cisagov/icsnpp-dnp3 | ✔ |
+| CISA ICSNPP DNP3 parser is BSD-3-Clause; example trace `testing/traces/dnp3_example.pcap` | github.com/cisagov/icsnpp-dnp3 | ✔ |
 
 **Two refinements applied during verification** (documented in `CHANGELOG.md`):
 
@@ -155,7 +155,7 @@ the governing specifications and public taxonomies. Key load-bearing claims:
 The government/university/community capture sources in `EXTERNAL_CAPTURES.md` were each checked to
 exist, with real URLs, publishing institution, and license/terms. Highlights:
 
-- **CISA** `icsnpp-dnp3` — BSD-3-Clause, `tests/traces/dnp3_example.pcap` (the only clearly
+- **CISA** `icsnpp-dnp3` — BSD-3-Clause, `testing/traces/dnp3_example.pcap` (the only clearly
   open, government-origin DNP3 capture found).
 - **UOWM** DNP3 Intrusion Detection Dataset (Radoglou-Grammatikis et al.; EU H2020) — Zenodo
   record `7348493`.

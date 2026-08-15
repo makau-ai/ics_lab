@@ -23,7 +23,7 @@ free to *use* but not to *rebundle*.
 
 | Source | Publisher | URL | License | Contains |
 |---|---|---|---|---|
-| **ICSNPP DNP3 — `dnp3_example.pcap`** | **CISA** (Cybersecurity & Infrastructure Security Agency) | `https://github.com/cisagov/icsnpp-dnp3` (trace at `tests/traces/dnp3_example.pcap`) | **BSD-3-Clause** | A small DNP3 test trace shipped to exercise CISA's Zeek DNP3 parser. Clean master/outstation DNP3 on TCP/20000. This is the same parser the kit uses in Level 5. |
+| **ICSNPP DNP3 — `dnp3_example.pcap`** | **CISA** (Cybersecurity & Infrastructure Security Agency) | `https://github.com/cisagov/icsnpp-dnp3` (trace at `testing/traces/dnp3_example.pcap`) | **BSD-3-Clause** | A small DNP3 test trace shipped to exercise CISA's Zeek DNP3 parser. Clean master/outstation DNP3 on TCP/20000. This is the same parser the kit uses in Level 5. |
 
 Why it matters: it is the one **government-origin** DNP3 capture with a clear open license, and it
 pairs directly with the ICSNPP parser you run in Level 5. Run it through the kit's Zeek profile:
@@ -31,8 +31,8 @@ pairs directly with the ICSNPP parser you run in Level 5. Run it through the kit
 ```bash
 # clone CISA's parser + trace, then parse with the kit's Zeek tooling
 git clone https://github.com/cisagov/icsnpp-dnp3
-zeek -Cr icsnpp-dnp3/tests/traces/dnp3_example.pcap icsnpp-dnp3
-tshark -r icsnpp-dnp3/tests/traces/dnp3_example.pcap -q -z conv,tcp   # Level 1 skills on real gov data
+zeek -Cr icsnpp-dnp3/testing/traces/dnp3_example.pcap icsnpp-dnp3
+tshark -r icsnpp-dnp3/testing/traces/dnp3_example.pcap -q -z conv,tcp   # Level 1 skills on real gov data
 ```
 
 There is **no CISA/US-Gov MQTT pcap** we could verify. If you find one cited as "government,"
@@ -47,6 +47,7 @@ check whether it is actually a university or vendor capture mirrored on a govern
 | **DNP3 Intrusion Detection Dataset** | **University of Western Macedonia (UOWM)** — Radoglou-Grammatikis, Kelli, Lagkas, Argyriou, Sarigiannidis (EU H2020 *ELECTRON* / *SDN-microSENSE*) | Zenodo: `https://zenodo.org/records/7348493` · IEEE DataPort DOI `10.21227/s7h0-b081` | Research/academic use; **cite the DOI**. Check the record's stated license before redistribution. | Per-entity **DNP3 pcaps** + CSV flow features for **nine** DNP3 attack scenarios (recon, enumeration, spoofing, DoS, replay, etc.), captured May 2020. Excellent "find-the-attack" practice at Level 4. |
 | **MQTTset** | **University of Genoa / CNR-IEIIT** (Vaccari et al.), *MDPI Sensors* 2020, 20(22):6578 | Kaggle: `https://www.kaggle.com/datasets/cnrieiit/mqttset` · Paper: `https://www.mdpi.com/1424-8220/20/22/6578` | Kaggle terms + **cite the paper**. | Real **MQTT** broker traffic (legit IoT telemetry) plus labeled attacks: flood, brute-force, malformed, DoS, slow-DoS. The best university MQTT set for Levels 2–4. |
 | **MQTT-IoT-IDS2020** | **Abertay University** (Hindy, Bayne) & **University of Strathclyde** (Tachtatzis, Atkinson, Bellekens) | IEEE DataPort: `https://ieee-dataport.org/open-access/mqtt-iot-ids2020-mqtt-internet-things-intrusion-detection-dataset` · DOI `10.21227/bhxy-ep04` | **Open Access**; free IEEE DataPort account to download; **cite the DOI**. | Raw **MQTT pcaps** (~1.35 GB) + packet/uni-flow/bi-flow CSVs across 5 scenarios: normal, aggressive scan, UDP scan, Sparta SSH brute-force, MQTT brute-force. |
+| **CICIoMT2024** | **Canadian Institute for Cybersecurity (CIC), University of New Brunswick (UNB)** | `https://www.unb.ca/cic/datasets/iomt-dataset-2024.html` · `http://cicresearch.ca/IOTDataset/CICIoMT2024/` | Research/academic use; **cite CIC/UNB** and check the dataset page's terms before redistribution. | Real **IoMT** traffic with benign + labeled attacks (spoofing, DoS, recon, and more) across several protocols, **MQTT** among them. Multi-GB archives — this is the set `lab/fetch_real_captures.sh` points at; take only the MQTT pcaps you need. |
 
 ---
 

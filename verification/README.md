@@ -17,7 +17,7 @@ can open.
 
 | Artifact | What it proves | Regenerate with |
 |---|---|---|
-| `evidence/00_verify_all.txt` | The reproducible verification pass: **18/18 checks**, **63/63 DNP3 CRCs** recomputed, curriculum commands re-run against expected output, MP autograder (blank 10/100, solution 100/100). | `cd source && python3 verify_all.py` |
+| `evidence/00_verify_all.txt` | The reproducible verification pass: **21/21 checks**, **63/63 DNP3 CRCs** recomputed, curriculum commands re-run against expected output, MP autograder (blank 10/100, solution 100/100). | `cd source && python3 verify_all.py` |
 | `evidence/20_dnp3_substation.txt` | The **DNP3 sample pcap** decodes to the documented endpoints, function-code mix, and the forged-link-address command injection (frame 27). | `tshark -r pcaps/dnp3_substation.pcap …` |
 | `evidence/21_mqtt_iot.txt` | The **MQTT sample pcap** decodes to the documented control-packet mix, the anonymous CONNECT, and the `#` wildcard eavesdrop. | `tshark -r pcaps/mqtt_iot_telemetry.pcap …` |
 | `live_lab.pcap` + `evidence/10–13_live_*.txt` | The **runnable lab, executed live**, generates the same DNP3 control lifecycle + rogue trip and MQTT anonymous-connect/eavesdrop/inject behavior — captured off the wire, not scripted. | `lab/run-local.sh up; …dnp3; …mqtt` while capturing on `lo` |
@@ -35,8 +35,8 @@ runs the Machine-Problem autograder against both a blank submission and the refe
 solution. Latest run (`evidence/00_verify_all.txt`):
 
 ```
-Section A: 5/5   Section B: 3/3   Section C: 2/2   Section D: 6/6   Section E: 2/2
-TOTAL: 18/18 checks passed   (CRC 63/63)
+Section A: 5/5   Section B: 4/4   Section C: 4/4   Section D: 6/6   Section E: 2/2
+TOTAL: 21/21 checks passed   (CRC 63/63)
 ```
 
 ## 2. The documented sample pcaps (the co-instructor's core ask)
@@ -113,7 +113,7 @@ The multi-container digital twin (`lab/twin/`) is verified at two levels:
 ## 5. Reproduce everything
 
 ```bash
-# 1) the reproducible verification pass (18/18)
+# 1) the reproducible verification pass (21/21)
 cd source && python3 verify_all.py && cd ..
 
 # 2) evidence from the sample pcaps

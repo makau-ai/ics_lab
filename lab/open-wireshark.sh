@@ -18,5 +18,5 @@ else
   nohup wireshark "$@" >/tmp/wireshark.log 2>&1 &
   echo "Wireshark launched on the noVNC desktop."
 fi
-echo "  -> Open the forwarded port 6080 in your browser (password: vscode) to see it."
+echo "  -> Open the forwarded port 6080 in your browser to see it — it opens straight to the desktop, no password prompt (if one ever appears, it is: vscode)."
 echo "  -> If you ever capture unfiltered, just type  mqtt or dnp3  in the filter bar."

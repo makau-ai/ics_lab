@@ -41,7 +41,7 @@ same files.
 > **Revision 3** adds a **one-click, 7-level Learning Path** (`curriculum/`, auto-opens in the
 > Codespace) that ends in a **university-style Machine Problem** (`mp/`), a verified list of **government &
 > university** capture sources (`EXTERNAL_CAPTURES.md`), and a reproducible **formal-verification**
-> record (`FORMAL_VERIFICATION.md` + `build/verify_all.py`: 18/18 checks, 63/63 DNP3 CRCs). It builds on
+> record (`FORMAL_VERIFICATION.md` + `build/verify_all.py`: 21/21 checks, 63/63 DNP3 CRCs). It builds on
 > **Revision 2's** five-persona red-team review (see `RED_TEAM_REVIEW.md` and `CHANGELOG.md`): an unseen
 > graded assessment with a rubric, a segmented-network lab, honest scope framing, more realistic
 > detections, and keyboard/screen-reader accessibility fixes.
@@ -101,7 +101,7 @@ Prefer print or an LMS? Every module also ships as **PDF**, **Word (.docx)**, an
 | Path | Contents |
 |---|---|
 | `.devcontainer/` | **GitHub Codespaces** build: Dockerfile + noVNC desktop (Wireshark GUI) + docker-in-docker + auto-served Learning Path. See `.devcontainer/README.md`. |
-| `curriculum/` | The **interactive Learning Path** — `index.html` (7 levels, progress-tracked) + `LEVEL_0..6.md`. The Codespace front door. |
+| `curriculum/` | The **interactive Learning Path** — `index.html` (7 levels, progress-tracked, plus an advanced Level 7 digital twin) + `LEVEL_0..7.md`. The Codespace front door. |
 | `CURRICULUM.md` | The whole leveled path as a single Markdown walkthrough. |
 | `mp/` | The **Machine Problem** (Level 6): handout, two evidence captures, answer template, self-check autograder (`grade.py`), rubric, and instructor solution. |
 | `pcaps/` | Two teaching captures **plus two unseen assessment captures** (`dnp3_assessment.pcap`, `mqtt_assessment.pcap`) and one real government-origin trace — all indexed in **`pcaps/README.md`** (the sample-capture manifest; start here for "just the pcaps"). |
@@ -110,7 +110,7 @@ Prefer print or an LMS? Every module also ships as **PDF**, **Word (.docx)**, an
 | `verification/` | **Platform-generated evidence** that the captures and lab behave as documented — the reproducible `verify_all` pass, per-pcap tshark decodes, and a live-lab capture. A worked exemplar of a Mastery-level artifact bundle. See `verification/README.md`. |
 | `lab/detect/` | **Runnable invariant detectors** (Python + `tshark`) for the durable detections the modules describe in prose — plus a red-team evasion exercise (`RED_TEAM_EVASION.md`). Ship the detections you teach, then evade them. |
 | `EXTERNAL_CAPTURES.md` | Verified **government & university** DNP3/MQTT capture sources (CISA, UOWM, Genoa, Abertay) with provenance & licensing. |
-| `FORMAL_VERIFICATION.md` | The reproducible verification record (18/18 checks, 63/63 DNP3 CRCs, autograder) + `build/verify_all.py`. |
+| `FORMAL_VERIFICATION.md` | The reproducible verification record (21/21 checks, 63/63 DNP3 CRCs, autograder) + `build/verify_all.py`. |
 | `lab/` | Docker Compose lab (flat + `docker-compose.segmented.yml`): Mosquitto broker, Python DNP3 outstation/master, MQTT pub/sub + attacker + pump-controller, tcpdump capture, and Zeek + CISA ICSNPP. Plus `run-local.sh` / `open-wireshark.sh` for the Codespaces GUI path. See `lab/README.md`. |
 | `lab/worksheets/` | Student worksheet + instructor answer key (MD / DOCX / PDF). |
 | `lab/zeek_reference_output/` | Real `dnp3_*.log` and `mqtt_*.log` produced from the captures. |

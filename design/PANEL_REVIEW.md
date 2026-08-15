@@ -26,7 +26,7 @@ own contributions:
 | Real-world connections to investigate | `projects/REAL_WORLD_CONNECTIONS.md` — a **web-verified** incident→source→ATT&CK→task index | Intelligence Analyst (+ all) |
 | Starter AI prompts (forward→reverse) | `projects/STARTER_AI_PROMPTS.md` — a scaffolded forward-engineer-then-reverse ladder | Instructional Coordinator (+ all) |
 | A grading rubric | `projects/ARTIFACT_RUBRIC.md` — 8 weighted dimensions, mastery gates, persona-validated | all six |
-| Generated pcaps/artifacts as formal verification | `verification/` — a live-captured pcap + tshark evidence + the 18/18 reproducible pass | Data Scientist (+ InfoSec) |
+| Generated pcaps/artifacts as formal verification | `verification/` — a live-captured pcap + tshark evidence + the 21/21 reproducible pass | Data Scientist (+ InfoSec) |
 | *(north-star, surfaced by the panel)* | `pcaps/README.md` — the sample-capture manifest the co-instructor actually needed | Technical Writer |
 
 An accuracy fix was also applied: the twin launcher's `--attack` copy was corrected (it brings

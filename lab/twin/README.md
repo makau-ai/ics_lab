@@ -322,12 +322,17 @@ P-1/P-2 · `%QX100.2` HLA · `%MW10` LEAD_START · `%MW11` STOP · `%MW12` REMOT
 
 ## 7. Live bring-up caveats (verify in the Codespace)
 
-1. **OpenPLC seeding is the one manual step.** Headless ST load is UI-driven and
-   version-specific. On first boot: web UI at `http://localhost:8088` (default `openplc`/`openplc`)
+1. **OpenPLC needs an image first, then seeding.** OpenPLC v3 is **not published to Docker
+   Hub**, so `docker compose up` cannot build the `openplc` service until you supply an
+   `openplc_v3` image — build it once from the canonical source (see `openplc/Dockerfile` for
+   the exact command). With the image present, the rest of the bring-up is a manual UI step
+   (headless ST load is UI-driven and version-specific). On first boot: web UI at
+   `http://localhost:8088` (default `openplc`/`openplc`)
    → **Slave Devices** add `wetwell-plant-sim` (values in `openplc/slave_devices.seed`)
    → **Programs** upload+compile the selected `st/*.st` → **Settings** enable Modbus,
    disable the DNP3 + EtherNet/IP servers. `openplc/load-program.sh` automates this
-   best-effort; verify it took.
+   best-effort; verify it took. The naive-vs-hardened **spill** claim does not depend on
+   OpenPLC — it is proven headlessly by `test_twin.py`; OpenPLC is the live-realism layer.
 2. **OpenPLC Modbus register map.** `dnp3-gw`/`iiot-gw` default to `PLC_MAP=sim`
    (plant-sim's raw addresses, which also match OpenPLC's **input** registers).
    OpenPLC maps `%IX100.0`/`%QX100.0` to Modbus **bit offset 800** — once confirmed

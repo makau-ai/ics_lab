@@ -111,7 +111,7 @@ cd build && python3 build_assessment.py
 
 # Full reproducible verification pass (byte-level CRCs, curriculum commands, MP anchors):
 cd build && python3 verify_all.py
-#   Expected: 18/18 checks, 63/63 DNP3 CRCs. Section E asserts a BLANK student copy
+#   Expected: 21/21 checks, 63/63 DNP3 CRCs. Section E asserts a BLANK student copy
 #   scores 10/100 (Part-3 format only) and the reference solution scores 100/100 —
 #   re-run these two anchors after building any variant before you proctor.
 

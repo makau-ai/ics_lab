@@ -3,7 +3,7 @@
 The DNP3 and MQTT modules describe *durable, invariant-based detection* in prose
 ("Detection under adversarial and operational reality") but the kit shipped no
 code a student could run — and then evade. This directory closes that gap
-(PANEL_REVIEW P0 item 3; `review_1.json`, `review_3.json`).
+(PANEL_REVIEW P0 item 3).
 
 Each detector is small, dependency-light (Python stdlib + the `tshark` binary),
 and **keyed on a protocol invariant, not a hard-coded frame number** — so it

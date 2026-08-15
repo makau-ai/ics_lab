@@ -1,4 +1,12 @@
-FROM thiagoralves/OpenPLC_v3
+# IMPORTANT — OpenPLC v3 is NOT published to Docker Hub under any name (the old
+# `thiagoralves/OpenPLC_v3` reference here was also invalid: image names must be
+# lowercase, so modern BuildKit rejects it outright). Before `docker compose up` can
+# build the twin you must PROVIDE an `openplc_v3` image — build it from the canonical
+# source once:  git clone https://github.com/thiagoralves/OpenPLC_v3 &&
+#   cd OpenPLC_v3 && docker build -t openplc_v3 .   (it self-installs; ~10 min).
+# The naive-vs-hardened SPILL claim is proven headlessly WITHOUT OpenPLC by
+# `lab/twin/test_twin.py` (the Python plant model); OpenPLC is the live-realism layer.
+FROM openplc_v3
 # The upstream image already contains the OpenPLC v3 runtime + web server on 8080
 # and the Modbus server on 502. We only add the twin's seed material; we do NOT
 # override the image's own start command, so OpenPLC boots normally.

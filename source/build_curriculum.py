@@ -463,6 +463,9 @@ def build_hub():
     # The Machine Problem is the ignite target — find it by flag, not by position, so an
     # advanced level appended after it (e.g. Level 7) doesn't steal the capstone glow.
     mp_level = next((lv["n"] for lv in LEVELS if lv.get("is_mp")), total - 1)
+    # The tracked path is the seven-station descent (Levels 0..MP); the digital twin
+    # (Level 7) is an advanced add-on you step into after it, not one of the counted levels.
+    core_total = mp_level + 1
 
     nav = ""
     for lv in LEVELS:
@@ -490,7 +493,7 @@ def build_hub():
     page = page.replace("__ACCENT__", ACCENT).replace("__ACCENT2__", ACCENT2)
     page = page.replace("__CARDS__", cards)
     page = page.replace("__NAV__", nav)
-    page = page.replace("__TOTAL__", str(total))
+    page = page.replace("__TOTAL__", str(core_total))
     page = page.replace("__MP_LEVEL__", str(mp_level))
     page = page.replace("__COLDOPEN__", e(COLDOPEN))
     page = page.replace("__GLOSSARY_JSON__", glossary_json)
@@ -1266,7 +1269,8 @@ var CASEFILE = __CASEFILE_JSON__;
         dot.setAttribute("data-reachable", (n <= md+1) ? "1" : "0");
       }
     });
-    var c = done.size, pct = TOTAL ? Math.round(c/TOTAL*100) : 0;
+    var c = 0; done.forEach(function(n){ if(n < TOTAL) c++; });   // count only the core levels (0..MP); the twin is a bonus
+    var pct = TOTAL ? Math.round(c/TOTAL*100) : 0;
     var fill = document.getElementById("progfill"); if(fill) fill.style.width = pct+"%";
     var t = document.getElementById("progtext"); if(t) t.textContent = c+" of "+TOTAL+" levels complete";
     var spine = document.querySelector(".spinefill"); if(spine) spine.style.height = pct+"%";

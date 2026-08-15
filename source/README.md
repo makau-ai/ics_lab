@@ -30,7 +30,7 @@ Typical rebuild:
 python3 build_dnp3.py && python3 build_mqtt.py && python3 build_assessment.py
 python3 build_html.py && python3 build_markdown.py && python3 build_worksheets.py
 python3 build_curriculum.py
-python3 verify_all.py          # expect: 18/18 checks passed
+python3 verify_all.py          # expect: 21/21 checks passed
 # secondary formats:
 pandoc ../modules/dnp3_module.md -o ../modules/dnp3_module.docx
 soffice --headless --convert-to pdf --outdir ../modules ../modules/dnp3_module.docx
